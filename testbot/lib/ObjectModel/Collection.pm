@@ -521,7 +521,7 @@ sub KeyChanged($$$)
 
   if (defined($self->{Items}{$NewKey}))
   {
-    die "Cant change key, new key $NewKey already exists";
+    die "Could not change key, new key $NewKey already exists";
   }
   $FullKey = $self->GetFullKey($NewKey);
   $ScopeItems->{$FullKey} = $Item if (defined $FullKey);
