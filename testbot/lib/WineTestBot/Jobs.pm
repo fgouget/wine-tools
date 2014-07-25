@@ -822,7 +822,7 @@ sub ScheduleOnHost($$$)
     $ActiveCount++ if ($VM->Status eq "off");
   }
 
-  # Prepare some VMs for the current jobs next step
+  # Prepare some VMs for the next step of the current jobs
   foreach my $VMKey (@VMsNext)
   {
     last if ($RevertingCount == $MaxReverts);
