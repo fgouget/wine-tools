@@ -770,4 +770,5 @@ FatalTAError(undef, $TAError, $PossibleCrash) if (defined $TAError);
 # Wrap up
 #
 
-WrapUpAndExit($NewStatus, $TaskFailures);
+# Don't retry running a timed out test if it has failures anyway
+WrapUpAndExit($NewStatus, $TaskFailures, ($TaskTimedOut and $TaskFailures == 1));
