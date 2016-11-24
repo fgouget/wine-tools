@@ -1,0 +1,287 @@
+#!/bin/sh
+#
+# Creates a backup of a QEMU/LibVirt VM.
+#
+# Copyright 2013-2016 Francois Gouget
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+
+name0=`basename "$0"`
+
+etcdir="etc/libvirt/qemu"
+snapdir="var/lib/libvirt/qemu/snapshot"
+
+
+#
+# Generic helpers
+#
+
+error()
+{
+    echo "$name0:error:" "$@" >&2
+}
+
+opt_dry_run=""
+opt_verbose=""
+dry_run()
+{
+    [ -n "$opt_verbose$opt_dry_run" ] && echo "$@"
+    if [ -z "$opt_dry_run" ]
+    then
+        "$@"
+    fi
+}
+
+
+#
+# Process the command line
+#
+
+check_opt_val()
+{
+    option="$1"
+    var="$2"
+    argc="$3"
+
+    if [ -n "$var" ]
+    then
+        error "$option can only be specified once"
+        usage=2 # but continue processing options
+    fi
+    if [ $argc -eq 0 ]
+    then
+        error "missing value for $option"
+        usage=2
+        return 1
+    fi
+    return 0
+}
+
+opt_vm=""
+opt_suffix=""
+opt_snapshot="1"
+opt_borg=""
+usage=""
+while [ $# -gt 0 ]
+do
+    arg="$1"
+    shift
+    case "$arg" in
+    --borg)
+        if check_opt_val "$arg" "$opt_borg" $#
+        then
+            opt_borg="$1"
+            shift
+        fi
+        ;;
+    --snapshot)
+        opt_snapshot="1"
+        ;;
+    --no-snapshot)
+        opt_snapshot=""
+        ;;
+    --verbose)
+        opt_verbose="1"
+        ;;
+    --dry-run)
+        opt_dry_run="1"
+        ;;
+    -\?|-h|--help)
+        usage=0
+        ;;
+    -*)
+        error "unknown option '$arg'"
+        usage=2
+        break
+        ;;
+    *)
+        if [ -z "$opt_vm" ]
+        then
+            opt_vm="$arg"
+        elif [ -z "$opt_suffix" ]
+        then
+            opt_suffix="$arg"
+        else
+            error "only one VM and suffix can be specified."
+            usage=2
+        fi
+        ;;
+    esac
+done
+
+if [ -z "$usage" ]
+then
+    if [ -z "$opt_vm" ]
+    then
+        error "you must specify the name of the VM to backup."
+        usage=2
+    fi
+fi
+
+if [ -n "$usage" ]
+then
+    if [ "$usage" != "0" ]
+    then
+        error "try '$name0 --help' for more information"
+        exit $usage
+    fi
+    cat <<EOF
+Usage: $name0 [--no-snapshot] [--verbose] [--dry-run] [--help] [--borg REPO]
+                VMNAME [SUFFIX]
+
+Creates a backup of the specified VM.
+
+Where:
+  VMNAME       The name of the VM to backup.
+  SUFFIX       A (short) string to add to the backup name. This can help
+               provide an indication of what features were added to this backup.
+  --borg REPO  The borg repository to backup to.
+  --no-snapshot It is ok for the VM to have no snapshot.
+  --verbose     Show all the commands as they are being run.
+  --dry-run     Show what would happen but do not extract or change anything.
+  --help, -h   Shows this help message.
+EOF
+    exit 0
+fi
+
+
+#
+# Prepare the backup
+#
+
+conf="/$etcdir/$opt_vm.xml"
+if [ ! -r "$conf" ]
+then
+    error "the '$conf' configuration file is not readable"
+    exit 2
+fi
+
+if [ -n "$opt_snapshot" ]
+then
+    snapdir="/$snapdir/$opt_vm"
+    if [ ! -d "$snapdir" ]
+    then
+        error "the '$opt_vm' VM does not seem to have snapshots! Use --no-snapshot if this is expected."
+        exit 2
+    fi
+else
+    snapdir=""
+fi
+
+imgs=`sed -e "s~^ *<source file='\([^']*\)' */> *\$~\\1~" -e t -e d "$conf" "$snapdir"/*.xml | sort | uniq`
+if [ -z "$imgs" ]
+then
+    error "could not find the disk images."
+    exit 2
+fi
+
+# Backup the symbolic links but also their targets!
+all_paths=""
+for file in "$conf" $snapdir $imgs
+do
+    all_paths="$all_paths $file"
+    while [ -h "$file" ]
+    do
+        target=`readlink "$file"`
+        case "$target" in
+            /*) file="$target" ;;
+            *)  file=`dirname "$file"`"/$target" ;;
+        esac
+        all_paths="$all_paths $file"
+    done
+done
+
+errors=""
+echo "$opt_vm uses the following files and directories:"
+for file in "$conf" $all_paths
+do
+    echo "  $file"
+    if [ ! -r "$file" ]
+    then
+	error "the '$file' is not readable."
+	errors=1
+    fi
+done
+[ -n "$errors" ] && exit 1
+echo
+
+
+#
+# Do the backup
+#
+
+fatal()
+{
+    error "$@"
+    exit 1
+}
+
+if virsh --connect qemu:///system list | grep -w "$opt_vm" >/dev/null
+then
+    fatal "$opt_vm is running. Try again when it has been powered off."
+fi
+
+backup="libvirt-$opt_vm-`date +%Y%m%d`"
+[ -n "$opt_suffix" ] && backup="$backup-$opt_suffix"
+
+if [ -n "$opt_borg" ]
+then
+    borg_opts=""
+    [ -n "$opt_verbose" ] && borg_opts="$borg_opts --verbose"
+    dry_run borg create --progress --stats -C lzma,9 \
+            "$opt_borg::$backup" "$conf" $all_paths
+    rc_borg=$?
+    if [ $rc_borg -ne 0 ]
+    then
+        fatal "an error occurred while saving the VM (borg=$rc_borg)"
+    fi
+    echo "Saved $opt_vm to '$opt_borg::$backup'"
+
+else
+    zipcmd=pbzip2
+    which pbzip2 >/dev/null || zipcmd=bzip2
+
+    tar_opts=""
+    [ -n "$opt_verbose" ] && tar_opts="-v"
+    if [ -n "$opt_verbose$opt_dry_run" ]
+    then
+        echo "tar cf - $tar_opts '$conf' $all_paths | $zipcmd -9 | split -d -b 2146435072 - '$backup.tar.bz2.'"
+    fi
+
+    if [ -n "$opt_dry_run" ]
+    then
+        rc_tar=0
+        rc_zip=0
+        rc_split=0
+    else
+        (tar cf - $tar_opts "$conf" $all_paths; echo $? >"rc_tar" ) | \
+            ($zipcmd -9; echo $? >"rc_zip") | \
+            split -d -b 2146435072 - "$backup.tar.bz2."
+        rc_split=$?
+        rc_zip=`cat "rc_zip"`
+        rc_tar=`cat "rc_tar"`
+        rm -f "rc_tar" "rc_zip"
+    fi
+    if [ "$rc_tar" != "0" -o "$rc_zip" != "0" -o "$rc_split" != "0" ]
+    then
+        fatal "an error occurred while saving the VM (tar=$rc_tar zip=$rc_zip split=$rc_split)"
+    fi
+    echo "Saved $opt_vm to '$backup.tar.bz2.*'"
+fi
+
+if virsh --connect qemu:///system list | grep -w "$opt_vm" >/dev/null
+then
+    fatal "$opt_vm is running. The backup may be bad."
+fi
