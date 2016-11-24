@@ -1,0 +1,488 @@
+#!/bin/sh
+#
+# Restores a QEMU/LibVirt VM.
+#
+# Copyright 2013-2016 Francois Gouget
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+
+name0=`basename "$0"`
+
+etcdir="etc/libvirt/qemu"
+snapdir="var/lib/libvirt/qemu/snapshot"
+imgdir="var/lib/libvirt/images"
+
+
+#
+# Generic helpers
+#
+
+error()
+{
+    echo "$name0:error:" "$@" >&2
+}
+
+opt_dry_run=""
+opt_verbose=""
+dry_run()
+{
+    [ -n "$opt_verbose$opt_dry_run" ] && echo "$@"
+    if [ -z "$opt_dry_run" ]
+    then
+        "$@"
+    fi
+}
+
+
+#
+# Process the command line
+#
+
+check_opt_val()
+{
+    option="$1"
+    var="$2"
+    argc="$3"
+
+    if [ -n "$var" ]
+    then
+        error "$option can only be specified once"
+        usage=2 # but continue processing options
+    fi
+    if [ $argc -eq 0 ]
+    then
+        error "missing value for $option"
+        usage=2
+        return 1
+    fi
+    return 0
+}
+
+opt_borg=""
+opt_tar=""
+opt_vm=""
+opt_restart=""
+opt_no_change=""
+opt_extract_only=""
+usage=""
+while [ $# -gt 0 ]
+do
+    arg="$1"
+    shift
+    case "$arg" in
+    --as)
+        if check_opt_val "$arg" "$opt_vm" $#
+        then
+            opt_vm="$1"
+            shift
+        fi
+        ;;
+    --restart)
+        opt_restart="1"
+        ;;
+    --no-restart)
+        opt_restart="0"
+        ;;
+    --no-change)
+        opt_no_change="1"
+        ;;
+    --extract-only)
+        opt_extract_only="1"
+        ;;
+    --verbose)
+        opt_verbose="1"
+        ;;
+    --dry-run)
+        opt_dry_run="1"
+        ;;
+    -\?|-h|--help)
+        usage=0
+        ;;
+    -*)
+        error "unknown option '$arg'"
+        usage=2
+        break
+        ;;
+    *::*)
+        if [ -n "$opt_borg" ]
+        then
+            error "only one borg backup can be specified."
+            usage=2
+        fi
+        opt_borg="$arg"
+        ;;
+    *)
+        if [ -n "$opt_tar" ]
+        then
+            error "only one tar backup can be specified."
+            usage=2
+        fi
+        opt_tar="$arg"
+        ;;
+    esac
+done
+
+if [ -z "$usage" ]
+then
+    if [ -z "$opt_extract_only" ]
+    then
+        if [ -d "/$etcdir"  -a -w "/$etcdir" -a \
+             -d "/$snapdir" -a -w "/$snapdir" -a \
+             -d "/$imgdir"  -a -w "/$imgdir" ]
+        then
+            tmpdir="/$imgdir/$name0.$$"
+        else
+            error "one or more libvirt directory is missing or not writable. Use --extract-only to extract the VM in the current directory."
+            usage=2
+        fi
+    fi
+
+    if [ -n "$opt_borg" -a -n "$opt_tar" ]
+    then
+        error "only one borg or tar backup can be specified."
+        usage=2
+    elif [ -n "$opt_borg" ]
+    then
+        case "$opt_borg" in
+        *:/*) break ;; # Remote repository
+        /*) break ;;   # Absolute path
+        *)  opt_borg="`pwd`/$opt_borg"; break ;;
+        esac
+        [ -n "$tmpdir" ] || tmpdir=`echo "$opt_borg" | sed -e 's/^.*:://'`
+
+    elif [ -n "$opt_tar" ]
+    then
+        opt_tar=`echo $opt_tar | sed -e 's/\.[0-9]*$//'`
+        if [ -f "$opt_tar.00" ]
+        then
+            opt_tar="$opt_tar.??"
+        elif [ ! -f "$opt_tar" ]
+        then
+            error "could not find the '$opt_tar' files"
+            usage=2
+        fi
+        case "$opt_tar" in
+        *\ *)
+            error "the backup filenames must not contain spaces."
+            usage=2
+            break
+            ;;
+        /*) break ;;
+        *)  opt_tar="`pwd`/$opt_tar"; break ;;
+        esac
+        [ -n "$tmpdir" ] || tmpdir=`basename "$opt_tar"`
+    else
+        error "you must specify a borg or tar backup to restore."
+        usage=2
+    fi
+    [ -z "$opt_restart$opt_extract_only" ] && opt_restart="1"
+fi
+
+if [ -n "$usage" ]
+then
+    if [ "$usage" != "0" ]
+    then
+        error "try '$name0 --help' for more information"
+        exit $usage
+    fi
+    cat <<EOF
+Usage: $name0 [--as VMNAME] [--extract-only] [--no-restart] [--no-change]
+                 [--dry-run] [--verbose] [--help] BORG|TAR
+
+Restores a VM from the specified backup files.
+
+Where:
+  BORG          The borg repository::archive containing the VM backup.
+  TAR           The stem of the files containing the VM backup.
+  --as VMNAME   Rename the VM when restoring it. Note that this also changes its
+                UUID, MAC address, etc so it can be used side-by-side with the
+                original VM.
+  --extract-only Extract the VM and check if the VM could be replaced, but do
+                not replace it. This leaves the files around for further
+                inspection. This implies --no-restart.
+  --no-restart  Do not restart libvirt after restoring the VM. This is mostly
+                useful when using this script solely to restore the disk images
+                to a pristine state.
+  --no-change   Refuse to restore the backup if it differs from the current VM.
+  --verbose     Show all the commands as they are being run.
+  --dry-run     Show what would happen but do not extract or change anything.
+  --help, -h    Shows this help message.
+EOF
+    exit 0
+fi
+
+
+#
+# Extract the VM
+#
+
+fatal()
+{
+    error "$@"
+    [ -n "$tmpdir" ] && rm -rf "$tmpdir"
+    exit 1
+}
+
+fatal_no_cleanup()
+{
+    error "$@"
+    echo "the VM files are in '$tmpdir'"
+    exit 1
+}
+
+
+dry_run mkdir "$tmpdir" || fatal "could not create the '$tmpdir' directory"
+dry_run cd "$tmpdir" || fatal "could not chdir to '$tmpdir'"
+
+if [ -n "$opt_borg" ]
+then
+    borg_opts=""
+    [ -n "$opt_verbose" ] && borg_opts="$borg_opts --verbose"
+    dry_run borg extract --sparse $borg_opts "$opt_borg"
+    rc_borg=$?
+    if [ $rc_borg -ne 0 ]
+    then
+        fatal "an error occurred while extracting the VM (borg=$rc_borg)"
+    fi
+else
+    zipcmd=pbzip2
+    which pbzip2 >/dev/null || zipcmd=bzip2
+    tar_opts=""
+    [ -n "$opt_verbose" ] && tar_opts="-v"
+    if [ -n "$opt_verbose$opt_dry_run" ]
+    then
+        echo "ionice cat $opt_tar | nice $zipcmd -c -d | ionice tar xf - $tar_opts"
+    fi
+
+    if [ -n "$opt_dry_run" ]
+    then
+        rc_tar=0
+        rc_zip=0
+        rc_cat=0
+    else
+        (ionice cat $opt_tar; echo $? >"$tmpdir/rc_cat") | \
+            (nice $zipcmd -c -d; echo $? >"$tmpdir/rc_zip") | \
+            ionice tar xf - $tar_opts
+        rc_tar=$?
+        rc_zip=`cat "$tmpdir/rc_zip"`
+        rc_cat=`cat "$tmpdir/rc_cat"`
+    fi
+    if [ "$rc_cat" != "0" -o "$rc_zip" != "0" -o "$rc_tar" != "0" ]
+    then
+        fatal "an error occurred while extracting the VM (cat=$rc_cat zip=$rc_zip tar=$rc_tar)"
+    fi
+fi
+
+vm=""
+for conffile in etc/libvirt/qemu/*.xml
+do
+    conffile=`basename "$conffile" .xml`
+    if [ -z "$vm" ]
+    then
+        vm="$conffile"
+    else
+        fatal_no_cleanup "found more than one VM in the backup: $vm and $conffile"
+    fi
+done
+
+
+#
+# Rename the VM
+#
+
+if [ -n "$opt_vm" ]
+then
+    conffile="etc/libvirt/qemu/$vm.xml"
+    old_uuid=`grep '<uuid>' "$conffile"`
+    new_uuid=`echo "$old_uuid" | sed -e 's!\([0-9a-f]\)\([0-9a-f]\)</uuid!\2\1</uuid!'`
+    old_mac=`grep '<mac address=' "$conffile" | head -n 1`
+    new_mac=`echo "$old_mac" | sed -e 's!:\([0-9a-f]\)\([0-9a-f]\)\(.\)/>!:\2\1\3/>!'`
+    dry_run sed -e "s!<name>$vm</name>!<name>$opt_vm</name>!" \
+        -e "s!$old_uuid!$new_uuid!" \
+        -e "s!$old_mac!$new_mac!" \
+        -e "s!/var/lib/libvirt/images/$vm!/var/lib/libvirt/images/$opt_vm!" \
+        "$conffile" >"$conffile.tmp"
+    mv "$conffile.tmp" "$conffile"
+    for conffile in var/lib/libvirt/qemu/snapshot/$vm/*.xml
+    do
+        if [ -f "$conffile" ]
+        then
+            dry_run sed -e "s!<name>$vm</name>!<name>$opt_vm</name>!" \
+                -e "s!$old_uuid!$new_uuid!" \
+                -e "s!$old_mac!$new_mac!" \
+                -e "s!/var/lib/libvirt/images/$vm!/var/lib/libvirt/images/$opt_vm!" \
+                "$conffile" >"$conffile.tmp"
+            mv "$conffile.tmp" "$conffile"
+        fi
+    done
+else
+    opt_vm="$vm"
+fi
+
+
+#
+# Check that the backup matches the current VM if any
+#
+
+if [ -n "$opt_no_change" ]
+then
+    for vmconf in "/etc/libvirt/qemu/$opt_vm.xml" "/var/lib/libvirt/qemu/snapshot/$opt_vm"/*.xml
+    do
+        bakconf=`echo "$vmconf" | sed -e 's#^/##' -e 's#/$opt_vm[./]?#$vm#'`
+        if [ ! -f "$bakconf" ]
+        then
+            fatal_no_cleanup "the backup is missing '$vmconf'"
+        fi
+        if ! diff -u "$vmconf" "$bakconf"
+        then
+            fatal_no_cleanup "the backup's copy of '$vmconf' does not match"
+        fi
+    done
+    if [ "$opt_restart" != "1" ]
+    then
+        for bakconf in "etc/libvirt/qemu/$vm.xml" "var/lib/libvirt/qemu/snapshot/$opt_vm"/*.xml
+        do
+            vmconf=`echo "/$bakconf" | sed -e 's#/$vm[./]?#$opt_vm#'`
+            if [ ! -f "$vmconf" ]
+            then
+                echo "$name0:warning: the backup has an extra file: $bakconf. You should really restart libvirt so it is taken into account" >&2
+            fi
+        done
+    fi
+fi
+
+
+#
+# Put the files in place
+#
+
+replaced=""
+replace()
+{
+    src="$1"
+    dst="$2"
+    case "$dst" in
+        /*) ;;
+        *)  dst="`pwd`/$dst" ;;
+    esac
+
+    # On ext3 deleting large files takes a long time which makes mv slow if the
+    # destination is a large file. So move the destination away so we can
+    # replace all the VM files as fast as possible.
+    if [ -e "$dst" ]
+    then
+        dry_run mv "$dst" "$dst.todelete"
+        replaced="$replaced:$dst.todelete"
+    fi
+    dry_run mv "$src" "$dst"
+}
+
+replace_undo()
+{
+    OLDIFS=$IFS
+    IFS=":"
+    for entry in $replaced
+    do
+        IFS=$OLDIFS
+        if [ -e "$entry" ]
+        then
+            orig=`echo "$entry" | sed -s 's/\.todelete$//'`
+            dry_run mv "$entry" "$orig"
+        fi
+    done
+    IFS=$OLDIFS
+    replaced=""
+}
+
+replace_cleanup()
+{
+    OLDIFS=$IFS
+    IFS=":"
+    for entry in $replaced
+    do
+        IFS=$OLDIFS
+        [ -n "$entry" ] && dry_run rm -rf "$entry"
+    done
+    IFS=$OLDIFS
+    replaced=""
+}
+
+if [ -n "$opt_extract_only" ]
+then
+    echo "The $vm files are in '$tmpdir'"
+
+    # Run the replacement commands as if in --dry-run mode
+    # so the user sees how to put the files in place.
+    saved_dry_run="$opt_dry_run"
+    opt_dry_run="1"
+
+else
+    # Wait until the VM has been stopped for a while in the hope
+    # it won't be restarted while we swap the files around.
+    count=1
+    while true
+    do
+        count=`expr $count + 1`
+        if dry_run virsh --connect qemu:///system list | grep -w "$opt_vm" >/dev/null
+        then
+            echo "$opt_vm is running, waiting for it to be powered off."
+            count=0
+        elif [ $count -ge 2 ]
+        then
+            break
+        fi
+        sleep 30
+    done
+fi
+
+# Now replace the files.
+success=1
+replace "$etcdir/$vm.xml" "/$etcdir/$opt_vm.xml" || success=0
+replace "$snapdir/$vm" "/$snapdir/$opt_vm" || success=0
+for src_disk in $imgdir/*
+do
+    dst_disk=`basename "$src_disk" | sed -e "s/$vm/$opt_vm/"`
+    replace "$src_disk" "/$imgdir/$dst_disk" || success=0
+done
+
+if [ "$success" = "1" ]
+then
+    replace_cleanup
+else
+    replace_undo
+fi
+
+if [ -n "$opt_extract_only" ]
+then
+    opt_dry_run="$saved_dry_run"
+    tmpdir=""
+fi
+
+
+#
+# Clean up and restart libvirt
+#
+
+cd /
+[ -n "$tmpdir" ] && rm -rf "$tmpdir"
+
+if [ "$opt_restart" = "1" ]
+then
+    libvirt="/etc/init.d/libvirt-bin"
+    [ -x "$libvirt" ] || libvirt="/etc/init.d/libvirtd"
+    dry_run "$libvirt" restart
+fi
+
+exit 0
