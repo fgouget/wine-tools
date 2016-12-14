@@ -58,6 +58,9 @@ typedef int SOCKET;
 
 int platform_init(void);
 
+/* Detach from the console so closing it won't kill testagentd. */
+void platform_detach_console(void);
+
 enum run_flags_t {
     RUN_DNT = 1,
     RUN_DNTRUNC_OUT = 2,
