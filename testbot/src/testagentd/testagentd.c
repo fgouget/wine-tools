@@ -1218,6 +1218,7 @@ int main(int argc, char** argv)
 {
     const char* p;
     char** arg;
+    int opt_detach = 0;
     char* opt_port = NULL;
     char* opt_srchost = NULL;
     struct addrinfo *addresses, *addrp;
@@ -1241,6 +1242,10 @@ int main(int argc, char** argv)
         if (strcmp(*arg, "--debug") == 0)
         {
             opt_debug = 1;
+        }
+        else if (strcmp(*arg, "--detach") == 0)
+        {
+            opt_detach = 1;
         }
         else if (strcmp(*arg, "--help") == 0)
         {
@@ -1313,7 +1318,7 @@ int main(int argc, char** argv)
     }
     if (opt_usage)
     {
-        printf("Usage: %s [--debug] [--help] PORT [SRCHOST]\n", name0);
+        printf("Usage: %s [--debug] [--detach] [--help] PORT [SRCHOST]\n", name0);
         printf("\n");
         printf("Provides a simple way to send/receive files and to run scripts on this host.\n");
         printf("\n");
@@ -1321,9 +1326,13 @@ int main(int argc, char** argv)
         printf("  PORT     The port to listen on for connections.\n");
         printf("  SRCHOST  If specified, only connections from this host will be accepted.\n");
         printf("  --debug  Prints detailed information about what happens.\n");
+        printf("  --detach Detach from the console / terminal. Note that on Windows you should\n");
+        printf("           combine this with start: start %s --detach ...\n", name0);
         printf("  --help   Shows this usage message.\n");
         exit(0);
     }
+    if (opt_detach)
+        platform_detach_console();
 
     /* Bind to the host in a protocol neutral way */
 #ifdef SOCK_CLOEXEC
