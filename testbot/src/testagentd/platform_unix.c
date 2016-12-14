@@ -328,6 +328,21 @@ void ta_freeaddrinfo(struct addrinfo *addresses)
     return freeaddrinfo(addresses);
 }
 
+void platform_detach_console(void)
+{
+    pid_t pid;
+
+    pid = fork();
+    if (pid != 0)
+        exit(0);
+
+    /* Daemonize */
+    signal(SIGHUP, SIG_IGN);
+    pid = fork();
+    if (pid != 0)
+        exit(0);
+}
+
 int platform_init(void)
 {
     struct sigaction sa, osa;
