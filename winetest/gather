@@ -633,8 +633,6 @@ sub get_result_title($$)
     if ($result->{status} eq "missing") { return "Test did not run for an unknown reason"; }
     if ($result->{status} eq "mixed") { return "Mixed results"; }
     if ($result->{status} eq "crash") { return "Test crashed"; }
-    if ($result->{status} eq "-2") { return "Test failed"; }
-    if ($result->{status} =~ /^-/) { return "Test crashed"; }
     if ($result->{status} eq "258") { return "Test timed out"; }
     return "";
 }
@@ -701,8 +699,6 @@ sub singletest($$$) {
     else
     {
         $msg = $status eq "crash" ? "crashed" :
-               $status eq "-2" ? "failed" :
-               $status =~ /^-/ ? "crashed" :
                $status eq "258" ? "timeout": "failed";
     }
     $title = join(" | ", $prefix, $title);
