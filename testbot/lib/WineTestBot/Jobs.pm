@@ -215,24 +215,23 @@ sub Cancel($)
     $Tasks->AddFilter("Status", ["queued", "running"]);
     foreach my $Task (@{$Tasks->GetItems()})
     {
+      my $VM = $Task->VM;
       if ($Task->Status eq "queued")
       {
         $Task->Status("skipped");
         my ($EProperty, $EMessage) = $Task->Save();
         $ErrMessage ||= "$EMessage ($EProperty)" if ($EMessage);
       }
-      elsif (defined $Task->ChildPid)
+      elsif (defined $VM->ChildPid)
       {
         require WineTestBot::Log;
         WineTestBot::Log::LogMsg("Canceling the " . join("/", $self->Id, $Step->No, $Task->No) . " task\n");
-        kill("TERM", $Task->ChildPid);
         $Task->Status("canceled");
-        $Task->ChildPid(undef);
         my ($EProperty, $EMessage) = $Task->Save();
         $ErrMessage ||= "$EMessage ($EProperty)" if ($EMessage);
 
-        my $VM = $Task->VM;
         $VM->Status('dirty');
+        $VM->KillChild();
         ($EProperty, $EMessage) = $VM->Save();
         $ErrMessage ||= "$EMessage ($EProperty)" if ($EMessage);
       }
@@ -285,7 +284,6 @@ sub Restart($)
         system("rm", "-rf", "$JobDir/" . $Step->No . "/" . $Task->No);
       }
       $Task->Status("queued");
-      $Task->ChildPid(undef);
       $Task->Started(undef);
       $Task->Ended(undef);
       $Task->TestFailures(undef);
@@ -493,6 +491,14 @@ sub ScheduleOnHost($$$)
     {
       $RunningCount++;
     }
+    elsif ($VMStatus eq "offline")
+    {
+      if (!$VM->HasRunningChild())
+      {
+        my $ErrMessage = $VM->RunMonitor();
+        return $ErrMessage if (defined $ErrMessage);
+      }
+    }
     else
     {
       my $Priority = $VM->Type eq "build" ? 10 :
@@ -621,7 +627,7 @@ sub ScheduleOnHost($$$)
     next if (exists $VMsToRevert{$VMKey});
 
     my $VM = $HostVMs->GetItem($VMKey);
-    next if ($VM->Status ne "dirty" or defined $VM->ChildPid);
+    next if ($VM->Status ne "dirty" or $VM->HasRunningChild());
 
     my $ErrMessage = $VM->RunPowerOff();
     return $ErrMessage if (defined $ErrMessage);
