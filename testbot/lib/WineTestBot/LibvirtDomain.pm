@@ -202,6 +202,27 @@ sub _GetSnapshot($$)
   return (_eval_err() || "Snapshot '$SnapshotName' not found", undef, undef);
 }
 
+sub GetSnapshotName($)
+{
+  my ($self) = @_;
+
+  my ($ErrMessage, $Domain) = $self->_GetDomain();
+  return ($ErrMessage, undef) if (defined $ErrMessage);
+
+  my $SnapshotName;
+  eval
+  {
+    if ($Domain->has_current_snapshot())
+    {
+      my $Snapshot = $Domain->current_snapshot();
+      $SnapshotName = $Snapshot->get_name() if ($Snapshot);
+    }
+  };
+  return $self->_Reset(_eval_err(), undef) if ($@);
+
+  return (undef, $SnapshotName);
+}
+
 sub RevertToSnapshot($)
 {
   my ($self) = @_;

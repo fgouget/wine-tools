@@ -112,32 +112,27 @@ sub Cleanup(;$$)
       foreach my $Task (@{$Tasks->GetItems()})
       {
         my $TaskKey = join("/", $Job->Id, $Step->No, $Task->No);
+        my $ChildPid = $Task->ChildPid;
+        $ChildPid = undef if (defined $ChildPid and !kill(0, $ChildPid));
 
         my $Requeue;
-        if (!defined $Task->ChildPid)
+        if (!defined $ChildPid)
         {
           # That task's process died somehow.
           $Requeue = 1;
         }
-        elsif (!$Task->VM->GetDomain()->IsPoweredOn())
+        elsif ($Task->VM->Status ne "running")
         {
-          # A running task should have a powered on VM.
+          # The Task and VM status should match.
           $Requeue = 1;
-          # Kill the task process if it's still there.
-          kill("TERM", $Task->ChildPid);
+          kill("TERM", $ChildPid);
         }
         elsif ($KillTasks)
         {
           # Kill the task and requeue. Note that since the VM is still running
           # we're not in the computer reboot case so ChildPid is probably
           # still valid.
-          kill("TERM", $Task->ChildPid);
-          $Requeue = 1;
-        }
-        elsif (!kill(0, $Task->ChildPid))
-        {
-          # The event that caused the WineTestBot server to restart probably
-          # also killed the task's child process.
+          kill("TERM", $ChildPid);
           $Requeue = 1;
         }
         else
@@ -181,36 +176,35 @@ sub Cleanup(;$$)
       next;
     }
 
-    my $Domain = $VM->GetDomain();
-    if ($Domain->IsPoweredOn())
+    if ($VM->HasRunningChild())
     {
       if ($KillVMs)
       {
         $VM->KillChild();
+        $VM->RunPowerOff();
       }
-      elsif ($VM->Status eq "idle")
+      elsif (!$VM->CanHaveChild())
       {
-        # Assume these are still ready for use
-        next;
+        # The VM should not have a process.
+        $VM->KillChild();
+        $VM->RunPowerOff();
       }
-      elsif ($VM->CanHaveChild() and $VM->HasRunningChild())
-      {
-        # This VM is still being reverted. Let that process run its course.
-        LogMsg "$VMKey is being reverted\n";
-        next;
-      }
-      LogMsg "Powering off $VMKey\n";
-      $Domain->PowerOff();
+      # else let the process finish its work
     }
     else
     {
-      next if ($VM->Status eq "off");
-      LogMsg "Marking $VMKey as off\n";
+      if ($VM->Status eq "idle")
+      {
+        $VM->RunCheckIdle();
+      }
+      else
+      {
+        # Power off the VM, even if its status is already off.
+        # This is the simplest way to resync the VM status field.
+        # Also powering off a powered off VM will detect offline VMs.
+        $VM->RunPowerOff();
+      }
     }
-
-    $VM->Status('off');
-    $VM->ChildPid(undef);
-    $VM->Save();
   }
 }
 
