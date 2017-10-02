@@ -591,13 +591,14 @@ sub ScheduleOnHost($$$)
   # Figure out how many VMs we will actually be able to revert now and only
   # keep the highest priority ones.
   my @SortedVMsToRevert = sort { $VMsToRevert{$a} <=> $VMsToRevert{$b} } keys %VMsToRevert;
-  # Sleeping VMs will soon be running
   my $MaxReverts = ($RunningCount > 0) ?
                    $MaxRevertsWhileRunningVMs : $MaxRevertingVMs;
-  my $ActiveCount = $IdleCount + $SleepingCount + $RunningCount + $RevertingCount;
+  my $ActiveCount = $IdleCount + $RunningCount + $RevertingCount + $SleepingCount + @DirtyVMs;
+  # This is the number of VMs we would revert if idle and dirty VMs did not
+  # stand in the way. And those that do will be shut down.
   my $RevertableCount = min(scalar(@SortedVMsToRevert),
                             $MaxReverts - $RevertingCount,
-                            $MaxActiveVMs - ($ActiveCount - $IdleCount));
+                            $MaxActiveVMs - ($ActiveCount - $IdleCount - @DirtyVMs));
   if ($RevertableCount < @SortedVMsToRevert)
   {
     $RevertableCount = 0 if ($RevertableCount < 0);
@@ -613,19 +614,20 @@ sub ScheduleOnHost($$$)
   # resources while waiting for their turn.
   foreach my $VMKey (@DirtyVMs)
   {
-    if (!exists $VMsToRevert{$VMKey})
-    {
-      my $VM = $HostVMs->GetItem($VMKey);
-      # FIXME Domain operations can be slow and should not be run by the Engine
-      my $ErrMessage = $VM->GetDomain()->PowerOff();
-      return $ErrMessage if (defined $ErrMessage);
-    }
+    next if (exists $VMsToRevert{$VMKey});
+
+    my $VM = $HostVMs->GetItem($VMKey);
+    next if ($VM->Status ne "dirty" or defined $VM->ChildPid);
+
+    my $ErrMessage = $VM->RunPowerOff();
+    return $ErrMessage if (defined $ErrMessage);
   }
 
   # Power off some idle VMs we don't need immediately so we can revert more
   # of the VMs we need now.
+  my $PlannedActiveCount = $ActiveCount - @DirtyVMs + @SortedVMsToRevert;
   if ($IdleCount > 0 && @SortedVMsToRevert > 0 &&
-      $ActiveCount + @SortedVMsToRevert > $MaxActiveVMs)
+      $PlannedActiveCount > $MaxActiveVMs)
   {
     # Sort from least important to most important
     my @SortedIdleVMs = sort { $VMPriorities{$a} <=> $VMPriorities{$b} } keys %IdleVMs;
@@ -634,25 +636,30 @@ sub ScheduleOnHost($$$)
       my $VM = $HostVMs->GetItem($VMKey);
       next if (!$IdleVMs{$VMKey});
 
-      # FIXME Domain operations can be slow and should not be run by the Engine
-      my $ErrMessage = $VM->GetDomain()->PowerOff();
+      my $ErrMessage = $VM->RunPowerOff();
       return $ErrMessage if (defined $ErrMessage);
-      $IdleCount--;
-      $ActiveCount--;
-      last if ($ActiveCount + @SortedVMsToRevert <= $MaxActiveVMs);
+      $PlannedActiveCount--;
+      last if ($PlannedActiveCount <= $MaxActiveVMs);
     }
+    # The scheduler will be run again when these VMs have been powered off and
+    # then we will do the reverts. In the meantime don't change $ActiveCount.
   }
 
   # Revert the VMs that are blocking jobs
   foreach my $VMKey (@SortedVMsToRevert)
   {
+    last if ($RevertingCount == $MaxReverts);
+
     my $VM = $HostVMs->GetItem($VMKey);
+    next if ($VM->Status eq "off" and $ActiveCount >= $MaxActiveVMs);
+
     delete $VMPriorities{$VMKey};
     my $ErrMessage = $VM->RunRevert();
     return $ErrMessage if (defined $ErrMessage);
+
+    $RevertingCount++;
+    $ActiveCount++ if ($VM->Status eq "off");
   }
-  $RevertingCount += @SortedVMsToRevert;
-  $ActiveCount += @SortedVMsToRevert;
 
   # Prepare some VMs for the current jobs next step
   foreach my $VMKey (@VMsNext)

@@ -380,15 +380,11 @@ sub HandleVMStatusChange($$$)
     return "0Invalid status";
   }
 
-  if ($OldStatus eq "reverting" || $OldStatus eq "running" ||
-      $NewStatus eq "idle" || $NewStatus eq "dirty")
+  my $ErrMessage = ScheduleJobs();
+  if (defined($ErrMessage))
   {
-    my $ErrMessage = ScheduleJobs();
-    if (defined($ErrMessage))
-    {
-      LogMsg "Scheduling problem in HandleVMStatusChange: $ErrMessage\n";
-      return "0$ErrMessage";
-    }
+    LogMsg "Scheduling problem in HandleVMStatusChange: $ErrMessage\n";
+    return "0$ErrMessage";
   }
 
   return "1OK";
