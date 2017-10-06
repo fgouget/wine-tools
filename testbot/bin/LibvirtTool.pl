@@ -104,7 +104,7 @@ while (@ARGV)
   {
     $LogOnly = 1;
   }
-  elsif ($Arg =~ /^(?:checkidle|monitor|poweroff|revert)$/)
+  elsif ($Arg =~ /^(?:checkidle|checkoff|monitor|poweroff|revert)$/)
   {
     $Action = $Arg;
   }
@@ -163,7 +163,7 @@ if (!defined $Usage)
 }
 if (defined $Usage)
 {
-  print "Usage: $Name0 [--debug] [--log-only] [--help] (checkidle|monitor|poweroff|revert) VMName\n";
+  print "Usage: $Name0 [--debug] [--log-only] [--help] (checkidle|checkoff|monitor|poweroff|revert) VMName\n";
   exit $Usage;
 }
 
@@ -277,23 +277,39 @@ sub Monitor()
       return 0;
     }
 
-    my $IsPoweredOn = $VM->GetDomain()->IsPoweredOn();
-    if ($IsPoweredOn)
+    my ($ErrMessage, $SnapshotName) = $VM->GetDomain()->GetSnapshotName();
+    if (defined $ErrMessage)
     {
-      my $ErrMessage = $VM->GetDomain()->PowerOff(1);
-      if (defined $ErrMessage)
-      {
-        Error "$ErrMessage\n";
-        $IsPoweredOn = undef;
-      }
+      Error "$ErrMessage\n";
     }
-    if (defined $IsPoweredOn)
+    else
     {
-      return 1 if (ChangeStatus("offline", "off", "done"));
-      NotifyAdministrator("The $VMKey VM is working again",
-                          "The $VMKey VM started working again after ".
-                          Elapsed($Start) ." seconds.");
-      return 0;
+      my $IsPoweredOn;
+      if (!defined $SnapshotName or $SnapshotName ne $VM->IdleSnapshot)
+      {
+        $IsPoweredOn = 0;
+      }
+      else
+      {
+        $IsPoweredOn = $VM->GetDomain()->IsPoweredOn();
+        if ($IsPoweredOn)
+        {
+          $ErrMessage = $VM->GetDomain()->PowerOff(1);
+          if (defined $ErrMessage)
+          {
+            Error "$ErrMessage\n";
+            $IsPoweredOn = undef;
+          }
+        }
+      }
+      if (defined $IsPoweredOn)
+      {
+        return 1 if (ChangeStatus("offline", "off", "done"));
+        NotifyAdministrator("The $VMKey VM is working again",
+                            "The $VMKey VM started working again after ".
+                            Elapsed($Start) ." seconds.");
+        return 0;
+      }
     }
 
     Debug(Elapsed($Start), " $VMKey is still unreachable\n");
@@ -320,9 +336,32 @@ sub CheckIdle()
 
   my ($ErrMessage, $SnapshotName) = $VM->GetDomain()->GetSnapshotName();
   FatalError("$ErrMessage\n") if (defined $ErrMessage);
-  return PowerOff() if ($SnapshotName ne $VM->IdleSnapshot);
 
-  return ChangeStatus("dirty", "idle", "done");
+  # If the snapshot does not match then the virtual machine may be used by
+  # another VM instance. So don't touch it. All that counts is that this
+  # VM instance is not running.
+  my $NewStatus = ($SnapshotName eq $VM->IdleSnapshot) ? "idle" : "off";
+  return ChangeStatus("dirty", $NewStatus, "done");
+}
+
+sub CheckOff()
+{
+  $CurrentStatus = "dirty";
+  my $IsPoweredOn = $VM->GetDomain()->IsPoweredOn();
+  return ChangeStatus("dirty", "offline", "done") if (!defined $IsPoweredOn);
+
+  if ($IsPoweredOn)
+  {
+    my ($ErrMessage, $SnapshotName) = $VM->GetDomain()->GetSnapshotName();
+    FatalError("$ErrMessage\n") if (defined $ErrMessage);
+    if ($SnapshotName eq $VM->IdleSnapshot)
+    {
+      my $ErrMessage = $VM->GetDomain()->PowerOff(1);
+      FatalError("$ErrMessage\n") if (defined $ErrMessage);
+    }
+  }
+
+  return ChangeStatus("dirty", "off", "done");
 }
 
 sub Revert()
@@ -385,6 +424,10 @@ my $Rc;
 if ($Action eq "checkidle")
 {
   $Rc = CheckIdle();
+}
+elsif ($Action eq "checkoff")
+{
+  $Rc = CheckOff();
 }
 elsif ($Action eq "monitor")
 {

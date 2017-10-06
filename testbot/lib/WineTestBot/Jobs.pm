@@ -417,6 +417,108 @@ sub min(@)
 =pod
 =over 12
 
+=item C<_TakeDomain()>
+
+Identifies hypervisor domains that are already in use by a VM instance.
+
+We allow multiple VM instances to refer to different snapshots of the same
+hypervisor domain (that is VM objects that have identical VirtURI and
+VirtDomain fields but different values for the IdleSnapshot one). This is
+typically used to test different configurations of the same base virtual
+machine.
+
+However a hypervisor domain cannot run two snapshots simultaneously so this
+function is used to ensure the scheduler does not simultaneously assign the
+same hypervisor domain to two VM instances.
+
+=back
+=cut
+
+sub _TakeDomain($$;$)
+{
+  my ($ActiveDomains, $VM, $Steal) = @_;
+
+  my $DomainKey = $VM->VirtURI ." ". $VM->VirtDomain;
+  my $ActiveVM = $ActiveDomains->{$DomainKey};
+  if (!defined $ActiveVM)
+  {
+    $ActiveDomains->{$DomainKey} = $VM;
+    return 1;
+  }
+  if ($ActiveVM->Name eq $VM->Name)
+  {
+    # Already ours
+    return 1;
+  }
+
+  if (defined $VM->ChildPid and !defined $ActiveVM->ChildPid)
+  {
+    my $NewActiveVM = CreateVMs()->GetItem($ActiveVM->GetKey());
+    $ActiveDomains->{$DomainKey} = $VM;
+    return 1;
+  }
+
+  # Allow taking over somewhat unused hypervisor domains
+  if ($Steal and !defined $ActiveVM->ChildPid and
+      $ActiveVM->Status =~ /^(?:dirty|idle)$/)
+  {
+    my $NewActiveVM = CreateVMs()->GetItem($ActiveVM->GetKey());
+    $ActiveVM->Status("off");
+    $ActiveVM->Save();
+    $ActiveDomains->{$DomainKey} = $VM;
+    return 1;
+  }
+
+  return 0;
+}
+
+=pod
+=over 12
+
+=item C<_GetActiveDomains()>
+
+Builds a hash table of the active VM instances indexed by their hypervisor
+domain.
+
+An active VM instance is one which is running a child process or has a status
+implying that it has exclusive access to its hypervisor domain, such as 'idle'.
+Note that on startup all VM instances using a given hypervisor domain would
+typically have Status==dirty but only one would have a running child process.
+This would be the active VM.
+
+This table makes it possible to quickly determine if a hypervisor domain is
+already in use and by which VM instance.
+
+=back
+=cut
+
+sub _GetActiveDomains($)
+{
+  my ($VMs) = @_;
+
+  my $ActiveDomains = {};
+  foreach my $VM (@{$VMs->GetItems()})
+  {
+    next if ($VM->Role !~ /^(?:extra|base|winetest)$/);
+    next if ($VM->Status !~ /^(?:dirty|idle|running)$/ and !defined $VM->ChildPid);
+    next if (_TakeDomain($ActiveDomains, $VM));
+
+    my $DomainKey = $VM->VirtURI ." ". $VM->VirtDomain;
+    my $ActiveVM = $ActiveDomains->{$DomainKey};
+    # It's ok for both VMs to be marked dirty right after startup.
+    # See Cleanup() in Engine.pm
+    if ($VM->Status ne "dirty" or $ActiveVM->Status ne "dirty")
+    {
+      require WineTestBot::Log;
+      WineTestBot::Log::LogMsg("The $DomainKey virtual machine is used by both ". $VM->Name ." (". $VM->Status .") and ". $ActiveVM->Name ." (". $ActiveVM->Status .")\n");
+    }
+  }
+  return $ActiveDomains;
+}
+
+=pod
+=over 12
+
 =item C<ScheduleOnHost()>
 
 This manages the VMs and WineTestBot::Task objects corresponding to the
@@ -469,10 +571,11 @@ sub ScheduleOnHost($$$)
 {
   my ($ScopeObject, $SortedJobs, $Hypervisors) = @_;
 
-
   my $HostVMs = CreateVMs($ScopeObject);
   $HostVMs->FilterEnabledRole();
   $HostVMs->FilterHypervisors($Hypervisors);
+
+  my $ActiveDomains = _GetActiveDomains($HostVMs);
 
   # Count the VMs that are 'active', that is, that use resources on the host,
   # and those that are reverting. Also build a prioritized list of those that
@@ -485,15 +588,28 @@ sub ScheduleOnHost($$$)
     my $VMStatus = $VM->Status;
     if ($VMStatus eq "reverting")
     {
-      $RevertingCount++;
+      if (!$VM->HasRunningChild() and _TakeDomain($ActiveDomains, $VM))
+      {
+        # Did the administrator set this Status manually?
+        my $ErrMessage = $VM->RunPowerOff();
+        return $ErrMessage if (defined $ErrMessage);
+      }
+      else
+      {
+        $RevertingCount++;
+      }
     }
-    elsif ($VMStatus eq "running")
+    elsif ($VMStatus eq "running" or
+           ($VMStatus eq "dirty" and $VM->HasRunningChild()))
     {
+      # Dirty VMs are still running user code, with all the CPU and I/O usage
+      # implication, until they are effectively off (or switched to reverting
+      # in which case they will be counted above).
       $RunningCount++;
     }
     elsif ($VMStatus eq "offline")
     {
-      if (!$VM->HasRunningChild())
+      if (!$VM->HasRunningChild() and _TakeDomain($ActiveDomains, $VM))
       {
         my $ErrMessage = $VM->RunMonitor();
         return $ErrMessage if (defined $ErrMessage);
@@ -509,13 +625,28 @@ sub ScheduleOnHost($$$)
       # Consider sleeping VMs to be 'almost idle'. We will check their real
       # status before starting a job on them anyway. But if there is no such
       # job, then they are expandable just like idle VMs.
-      if ($VMStatus eq "idle" || $VMStatus eq "sleeping")
+      if ($VMStatus eq "sleeping")
+      {
+        if (!$VM->HasRunningChild() and _TakeDomain($ActiveDomains, $VM))
+        {
+          my $ErrMessage = $VM->RunPowerOff();
+          return $ErrMessage if (defined $ErrMessage);
+        }
+        else
+        {
+          $IdleCount++;
+          $IdleVMs{$VMKey} = 1;
+        }
+      }
+      elsif ($VMStatus eq "idle")
       {
         $IdleCount++;
         $IdleVMs{$VMKey} = 1;
       }
       elsif ($VMStatus eq "dirty")
       {
+        # This only includes VMs where we have a choice between reverting and
+        # powering off (see dirty check above).
         push @DirtyVMs, $VMKey;
       }
     }
@@ -548,7 +679,8 @@ sub ScheduleOnHost($$$)
 
         my $VMStatus = $VM->Status;
         if ($VMStatus eq "idle" &&
-            ($RevertingCount == 0 || $MaxRevertsWhileRunningVMs > 0))
+            ($RevertingCount == 0 || $MaxRevertsWhileRunningVMs > 0) &&
+            _TakeDomain($ActiveDomains, $VM))
         {
           if ($ActiveCount < $MaxActiveVMs)
           {
@@ -599,9 +731,27 @@ sub ScheduleOnHost($$$)
     }
   }
 
+  # Sort the VMs by decreasing priority order and remove those which we won't
+  # be able to revert because their hypervisor domain is already in use.
+  my @SortedVMsToRevert = sort { $VMsToRevert{$a} <=> $VMsToRevert{$b} } keys %VMsToRevert;
+  my $i = 0;
+  while ($i < @SortedVMsToRevert)
+  {
+    my $VMKey = $SortedVMsToRevert[$i];
+    my $VM = $HostVMs->GetItem($VMKey);
+    if (!_TakeDomain($ActiveDomains, $VM, "steal"))
+    {
+      splice @SortedVMsToRevert, $i, 1;
+      delete $VMsToRevert{$VMKey};
+    }
+    else
+    {
+      $i++;
+    }
+  }
+
   # Figure out how many VMs we will actually be able to revert now and only
   # keep the highest priority ones.
-  my @SortedVMsToRevert = sort { $VMsToRevert{$a} <=> $VMsToRevert{$b} } keys %VMsToRevert;
   my $MaxReverts = ($RunningCount > 0) ?
                    $MaxRevertsWhileRunningVMs : $MaxRevertingVMs;
   # This is the number of VMs we would revert if idle and dirty VMs did not
@@ -627,7 +777,7 @@ sub ScheduleOnHost($$$)
     next if (exists $VMsToRevert{$VMKey});
 
     my $VM = $HostVMs->GetItem($VMKey);
-    next if ($VM->Status ne "dirty" or $VM->HasRunningChild());
+    next if (!_TakeDomain($ActiveDomains, $VM, "steal"));
 
     my $ErrMessage = $VM->RunPowerOff();
     return $ErrMessage if (defined $ErrMessage);
@@ -644,7 +794,7 @@ sub ScheduleOnHost($$$)
     foreach my $VMKey (@SortedIdleVMs)
     {
       my $VM = $HostVMs->GetItem($VMKey);
-      next if (!$IdleVMs{$VMKey});
+      next if (!$IdleVMs{$VMKey} or !_TakeDomain($ActiveDomains, $VM, "steal"));
 
       my $ErrMessage = $VM->RunPowerOff();
       return $ErrMessage if (defined $ErrMessage);
@@ -662,6 +812,7 @@ sub ScheduleOnHost($$$)
 
     my $VM = $HostVMs->GetItem($VMKey);
     next if ($VM->Status eq "off" and $ActiveCount >= $MaxActiveVMs);
+    next if (!_TakeDomain($ActiveDomains, $VM, "steal"));
 
     delete $VMPriorities{$VMKey};
     my $ErrMessage = $VM->RunRevert();
@@ -679,6 +830,8 @@ sub ScheduleOnHost($$$)
 
     my $VM = $HostVMs->GetItem($VMKey);
     next if ($VM->Status ne "off");
+    # There is no point stealing idle hypervisor domains here
+    next if (!_TakeDomain($ActiveDomains, $VM));
 
     my $ErrMessage = $VM->RunRevert();
     return $ErrMessage if (defined $ErrMessage);
@@ -699,6 +852,8 @@ sub ScheduleOnHost($$$)
 
       my $VM = $HostVMs->GetItem($VMKey);
       next if ($VM->Status ne "off");
+      # There is no point stealing idle hypervisor domains here
+      next if (!_TakeDomain($ActiveDomains, $VM));
 
       my $ErrMessage = $VM->RunRevert();
       return $ErrMessage if (defined $ErrMessage);
