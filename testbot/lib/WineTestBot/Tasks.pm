@@ -57,6 +57,30 @@ sub InitializeNew($$)
   $self->SUPER::InitializeNew($Collection);
 }
 
+sub _SetupTask($$)
+{
+  my ($VM, $Task) = @_;
+
+  # Capture Perl errors in the task's generic error log
+  my ($JobId, $StepNo, $TaskNo) = @{$Task->GetMasterKey()};
+  my $TaskDir = "$DataDir/jobs/$JobId/$StepNo/$TaskNo";
+  # Remove the previous run's files if any
+  rmtree $TaskDir;
+  mkdir $TaskDir;
+  if (open(STDERR, ">>", "$TaskDir/err"))
+  {
+    # Make sure stderr still flushes after each print
+    my $tmp=select(STDERR);
+    $| = 1;
+    select($tmp);
+  }
+  else
+  {
+    require WineTestBot::Log;
+    WineTestBot::Log::LogMsg("unable to redirect stderr to '$TaskDir/err': $!\n");
+  }
+}
+
 =pod
 =over 12
 
@@ -76,70 +100,20 @@ sub Run($$)
 {
   my ($self, $Step) = @_;
 
-  $self->Status("running");
-  $self->Save();
+  my ($JobId, $StepNo, $TaskNo) = @{$self->GetMasterKey()};
+  my $Script = $Step->Type eq "build" ? "Build" :
+               $Step->Type eq "reconfig" ? "Reconfig" :
+               "Task";
+  my $Args = ["$BinDir/${ProjectName}Run$Script.pl", "--log-only",
+              $JobId, $StepNo, $TaskNo];
 
-  my $VM = $self->VM;
-  $VM->Status("running");
-  my ($ErrProperty, $ErrMessage) = $VM->Save();
-  return $ErrMessage if (defined $ErrMessage);
-
-  my $RunScript;
-  if ($Step->Type eq "build")
+  my $ErrMessage = $self->VM->Run("running", $Args, \&_SetupTask, $self);
+  if (!$ErrMessage)
   {
-    $RunScript = "RunBuild.pl";
+    $self->Started(time());
+    my $_ErrProperty;
+    ($_ErrProperty, $ErrMessage) = $self->Save();
   }
-  elsif ($Step->Type eq "reconfig")
-  {
-    $RunScript = "RunReconfig.pl";
-  }
-  else
-  {
-    $RunScript = "RunTask.pl";
-  }
-
-  # Make sure the child process does not inherit the database connection
-  $self->GetBackEnd()->Close();
-
-  my $Pid = fork;
-  if (!defined $Pid)
-  {
-    return "Unable to fork for ${ProjectName}$RunScript: $!";
-  }
-  elsif (!$Pid)
-  {
-    require WineTestBot::Log;
-    # Capture Perl errors in the task's generic error log
-    my ($JobId, $StepNo, $TaskNo) = @{$self->GetMasterKey()};
-    my $TaskDir = "$DataDir/jobs/$JobId/$StepNo/$TaskNo";
-    # Remove the previous run's files if any
-    rmtree $TaskDir;
-    mkdir $TaskDir;
-    if (open(STDERR, ">>", "$TaskDir/err"))
-    {
-      # Make sure stderr still flushes after each print
-      my $tmp=select(STDERR);
-      $| = 1;
-      select($tmp);
-    }
-    else
-    {
-      WineTestBot::Log::LogMsg("unable to redirect stderr to '$TaskDir/err': $!\n");
-    }
-    $ENV{PATH} = "/usr/bin:/bin";
-    delete $ENV{ENV};
-    exec("$BinDir/${ProjectName}$RunScript", "--log-only", $JobId, $StepNo, $TaskNo) or
-    WineTestBot::Log::LogMsg("Unable to exec ${ProjectName}$RunScript: $!\n");
-    exit(1);
-  }
-
-  # Note that if the child process completes quickly (typically due to some
-  # error), it may set ChildPid to undef before we get here. So we may end up
-  # with non-running tasks for which ChildPid is set. That's ok because
-  # ChildPid should be ignored anyway if Status is not 'running'.
-  $self->ChildPid($Pid);
-  $self->Started(time);
-  ($ErrProperty, $ErrMessage) = $self->Save();
   return $ErrMessage;
 }
 
@@ -154,34 +128,37 @@ sub UpdateStatus($$)
   my ($self, $Skip) = @_;
 
   my $Status = $self->Status;
+  my $VM = $self->VM;
 
-  if (defined $self->ChildPid && !kill(0, $self->ChildPid) && $! == ESRCH)
+  if ($Status eq "running" and
+      ($VM->Status ne "running" or !$VM->HasRunningChild()))
   {
-    $self->ChildPid(undef);
-    if ($Status eq "running")
+    my ($JobId, $StepNo, $TaskNo) = @{$self->GetMasterKey()};
+    my $OldUMask = umask(002);
+    my $TaskDir = "$DataDir/jobs/$JobId/$StepNo/$TaskNo";
+    mkdir $TaskDir;
+    if (open TASKLOG, ">>$TaskDir/err")
     {
-      my ($JobId, $StepNo, $TaskNo) = @{$self->GetMasterKey()};
-      my $OldUMask = umask(002);
-      my $TaskDir = "$DataDir/jobs/$JobId/$StepNo/$TaskNo";
-      mkdir $TaskDir;
-      if (open TASKLOG, ">>$TaskDir/err")
-      {
-        print TASKLOG "Child process died unexpectedly\n";
-        close TASKLOG;
-      }
-      umask($OldUMask);
-      # This probably indicates a bug in the task script.
-      # Don't requeue the task to avoid an infinite loop.
-      require WineTestBot::Log;
-      WineTestBot::Log::LogMsg("Child process for task $JobId/$StepNo/$TaskNo died unexpectedly\n");
-      $self->Status("boterror");
-      $Status = "boterror";
+      print TASKLOG "Child process died unexpectedly\n";
+      close TASKLOG;
+    }
+    umask($OldUMask);
+    # This probably indicates a bug in the task script.
+    # Don't requeue the task to avoid an infinite loop.
+    require WineTestBot::Log;
+    WineTestBot::Log::LogMsg("Child process for task $JobId/$StepNo/$TaskNo died unexpectedly\n");
+    $self->Status("boterror");
+    $self->Save();
 
-      my $VM = $self->VM;
+    if ($VM->Status eq "running")
+    {
       $VM->Status('dirty');
+      $VM->ChildPid(undef);
       $VM->Save();
     }
-    $self->Save();
+    # else it looks like this is not our VM anymore
+
+    $Status = "boterror";
   }
   elsif ($Skip && $Status eq "queued")
   {
@@ -222,7 +199,7 @@ BEGIN
     CreateItemrefPropertyDescriptor("VM", "VM", !1,  1, \&CreateVMs, ["VMName"]),
     CreateBasicPropertyDescriptor("Timeout", "Timeout", !1, 1, "N", 4),
     CreateBasicPropertyDescriptor("CmdLineArg", "Command line args", !1, !1, "A", 256),
-    # Note: ChildPid is only valid when Status == 'running'.
+    # Note: ChildPid is not used anymore.
     CreateBasicPropertyDescriptor("ChildPid", "Child process id", !1, !1, "N", 5),
     CreateBasicPropertyDescriptor("Started", "Execution started", !1, !1, "DT", 19),
     CreateBasicPropertyDescriptor("Ended", "Execution ended", !1, !1, "DT", 19),

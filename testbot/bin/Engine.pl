@@ -81,16 +81,17 @@ It has to contend with three main scenarios:
 - The Engine startup after a reboot. All task processes will be dead and need
   to be requeued. But the VMs are likely to be hosted on a separate machine so
   it is quite possible that they will still be running. Hopefully any running
-  process matching a Task's ChildPid will belong to another user so we don't
+  process matching a VM's ChildPid will belong to another user so we don't
   mistake that case for the previous one.
-- A shutdown of the Engine and its Tasks / VMs. In this case it's used to
-  kill the running tasks and requeue them, and/or power off the VMs.
+- A shutdown of the Engine and its Tasks / VMs. In this case Cleanup() is used
+  to kill the running tasks and requeue them, and/or power off the VMs.
 
-In all cases we only trust that a VM status field is still valid if:
-- It is 'running' and used by a Task that is still running.
-- It can have a running process and that process is still running.
-- It is 'idle' and powered on.
-In all other cases the VM will be powered off and marked as such.
+In all cases the VM status field cannot be trusted blindly.
+If the VM status indicates it can have a running process and it actually has
+a running process then we will trust the VM status.
+If the VM status is 'idle' we let RunCheckIdle() perform the relevant domain
+checks and update the status as appropriate.
+In all other cases the VM is powered off and marked as such.
 
 =back
 =cut
@@ -112,27 +113,22 @@ sub Cleanup(;$$)
       foreach my $Task (@{$Tasks->GetItems()})
       {
         my $TaskKey = join("/", $Job->Id, $Step->No, $Task->No);
-        my $ChildPid = $Task->ChildPid;
-        $ChildPid = undef if (defined $ChildPid and !kill(0, $ChildPid));
+        my $VM = $Task->VM;
 
         my $Requeue;
-        if (!defined $ChildPid)
+        if (!$VM->HasRunningChild())
         {
           # That task's process died somehow.
           $Requeue = 1;
         }
-        elsif ($Task->VM->Status ne "running")
+        elsif ($VM->Status ne "running")
         {
           # The Task and VM status should match.
           $Requeue = 1;
-          kill("TERM", $ChildPid);
         }
         elsif ($KillTasks)
         {
-          # Kill the task and requeue. Note that since the VM is still running
-          # we're not in the computer reboot case so ChildPid is probably
-          # still valid.
-          kill("TERM", $ChildPid);
+          # We will kill the Task's process so requeue the Task.
           $Requeue = 1;
         }
         else
@@ -147,7 +143,6 @@ sub Cleanup(;$$)
           LogMsg "Requeuing $TaskKey\n";
           system("rm", "-r", "-f", "$DataDir/jobs/$TaskKey");
           $Task->Status("queued");
-          $Task->ChildPid(undef);
           $Task->Started(undef);
           $Task->Ended(undef);
           $Task->TestFailures(undef);
@@ -178,7 +173,12 @@ sub Cleanup(;$$)
 
     if ($VM->HasRunningChild())
     {
-      if ($KillVMs)
+      if ($KillTasks and $VM->Status eq "running")
+      {
+        $VM->KillChild();
+        $VM->RunPowerOff();
+      }
+      elsif ($KillVMs and $VM->Status ne "running")
       {
         $VM->KillChild();
         # $KillVMs is normally used on shutdown so don't start a process that

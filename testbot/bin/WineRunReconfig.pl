@@ -227,7 +227,6 @@ sub WrapUpAndExit($;$)
   # Update the Task and Job
   $Task->Status($Status);
   $Task->TestFailures($TestFailures);
-  $Task->ChildPid(undef);
   if ($Status eq 'queued')
   {
     $Task->Started(undef);
@@ -246,6 +245,7 @@ sub WrapUpAndExit($;$)
   if ($VM->Status eq 'running')
   {
     $VM->Status($NewVMStatus);
+    $VM->ChildPid(undef);
     $VM->Save();
   }
 
