@@ -109,7 +109,6 @@ BEGIN
     CreateBasicPropertyDescriptor("FileName", "File name",  !1,  1, "A", 64),
     CreateBasicPropertyDescriptor("FileType", "File Type",  !1,  1, "A", 64),
     CreateBasicPropertyDescriptor("CmdLineArg", "Command line args", !1, !1, "A", 256),
-    CreateBasicPropertyDescriptor("ChildPid", "Child process id", !1, !1, "N", 5),
     CreateBasicPropertyDescriptor("Started", "Execution started", !1, !1, "DT", 19),
     CreateBasicPropertyDescriptor("Ended", "Execution ended", !1, !1, "DT", 19),
     CreateBasicPropertyDescriptor("TestFailures", "Number of test failures", !1, !1, "N", 5),
@@ -152,7 +151,6 @@ sub _initialize($$)
       }
       $StepTask->FileType($Step->FileType);
       $StepTask->CmdLineArg($Task->CmdLineArg);
-      $StepTask->ChildPid($Task->ChildPid);
       $StepTask->Started($Task->Started);
       $StepTask->Ended($Task->Ended);
       $StepTask->TestFailures($Task->TestFailures);
