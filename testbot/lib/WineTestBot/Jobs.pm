@@ -514,6 +514,7 @@ sub ScheduleOnHost($$$)
       }
     }
   }
+  my $ActiveCount = $IdleCount + $RunningCount + $RevertingCount + @DirtyVMs;
 
   # It usually takes longer to revert a VM than to run a test. So readyness
   # (idleness) trumps the Job priority and thus we start jobs on the idle VMs
@@ -543,15 +544,19 @@ sub ScheduleOnHost($$$)
         if ($VMStatus eq "idle" &&
             ($RevertingCount == 0 || $MaxRevertsWhileRunningVMs > 0))
         {
-          $IdleVMs{$VMKey} = 0;
-          $IdleCount--;
+          if ($ActiveCount < $MaxActiveVMs)
+          {
+            $IdleVMs{$VMKey} = 0;
+            $IdleCount--;
 
-          my $ErrMessage = $Task->Run($Step);
-          return $ErrMessage if (defined $ErrMessage);
+            my $ErrMessage = $Task->Run($Step);
+            return $ErrMessage if (defined $ErrMessage);
 
-          $Job->UpdateStatus();
-          $RunningCount++;
-          $PrepareNextStep = 1;
+            $Job->UpdateStatus();
+            $RunningCount++;
+            # $ActiveCount does not change
+            $PrepareNextStep = 1;
+          }
         }
         elsif ($VMStatus eq "sleeping" and $IdleVMs{$VMKey})
         {
@@ -593,7 +598,6 @@ sub ScheduleOnHost($$$)
   my @SortedVMsToRevert = sort { $VMsToRevert{$a} <=> $VMsToRevert{$b} } keys %VMsToRevert;
   my $MaxReverts = ($RunningCount > 0) ?
                    $MaxRevertsWhileRunningVMs : $MaxRevertingVMs;
-  my $ActiveCount = $IdleCount + $RunningCount + $RevertingCount + $SleepingCount + @DirtyVMs;
   # This is the number of VMs we would revert if idle and dirty VMs did not
   # stand in the way. And those that do will be shut down.
   my $RevertableCount = min(scalar(@SortedVMsToRevert),
