@@ -273,9 +273,10 @@ sub IsPoweredOn($)
     return undef;
   }
 
-  my $IsActive;
-  eval { $IsActive = $Domain->is_active() };
-  return $@ ? $self->_Reset(undef) : $IsActive;
+  my ($State, $_Reason);
+  eval { ($State, $_Reason) = $Domain->get_state() };
+  return $self->_Reset(undef) if ($@);
+  return ($State == Sys::Virt::Domain::STATE_RUNNING);
 }
 
 sub PowerOff($$)
