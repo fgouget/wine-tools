@@ -840,15 +840,14 @@ sub ScheduleOnHost($$$)
   }
 
   # Finally, if we are otherwise idle, prepare some VMs for future jobs
-  my $MaxIdleVMs = defined $MaxVMsWhenIdle ? $MaxVMsWhenIdle : $MaxActiveVMs;
-  if ($ActiveCount - $IdleCount == 0 && $ActiveCount < $MaxIdleVMs)
+  if ($ActiveCount == $IdleCount && $ActiveCount < $MaxVMsWhenIdle)
   {
     # Sort from most important to least important
     my @SortedVMs = sort { $VMPriorities{$b} <=> $VMPriorities{$a} } keys %VMPriorities;
     foreach my $VMKey (@SortedVMs)
     {
       last if ($RevertingCount == $MaxReverts);
-      last if ($ActiveCount >= $MaxIdleVMs);
+      last if ($ActiveCount >= $MaxVMsWhenIdle);
 
       my $VM = $HostVMs->GetItem($VMKey);
       next if ($VM->Status ne "off");

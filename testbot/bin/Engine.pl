@@ -700,6 +700,26 @@ sub main()
   $WineTestBot::Engine::Notify::RunningInEngine = 1;
   LogMsg "Starting the WineTestBot Engine\n";
 
+  # Validate the configuration options
+  $MaxActiveVMs ||= 1;
+  $MaxRevertingVMs ||= $MaxActiveVMs;
+  if ($MaxRevertingVMs > $MaxActiveVMs)
+  {
+    $MaxRevertingVMs = $MaxActiveVMs;
+    LogMsg "Capping MaxRevertingVMs to MaxActiveVMs ($MaxRevertingVMs)\n";
+  }
+  $MaxRevertsWhileRunningVMs ||= 0;
+  if ($MaxRevertsWhileRunningVMs > $MaxRevertingVMs)
+  {
+    $MaxRevertsWhileRunningVMs = $MaxRevertingVMs;
+    LogMsg "Capping MaxRevertsWhileRunningVMs to MaxRevertingVMs ($MaxRevertsWhileRunningVMs)\n";
+  }
+  $MaxVMsWhenIdle ||= 0;
+  if ($MaxVMsWhenIdle > $MaxActiveVMs)
+  {
+    $MaxVMsWhenIdle = $MaxActiveVMs;
+    LogMsg "Capping MaxVMsWhenIdle to MaxActiveVMs ($MaxVMsWhenIdle)\n";
+  }
   Cleanup();
 
   # Check for patches that arrived while the server was off.
