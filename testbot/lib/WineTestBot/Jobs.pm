@@ -562,7 +562,8 @@ sub ScheduleOnHost($$$)
           $SleepingCount++;
           $PrepareNextStep = 1;
         }
-        elsif ($VMStatus eq "off" || $VMStatus eq "dirty")
+        elsif (($VMStatus eq "off" or $VMStatus eq "dirty") and
+               !$VM->HasRunningChild())
         {
           $RevertNiceness++;
           $VMsToRevert{$VMKey} = $RevertNiceness;

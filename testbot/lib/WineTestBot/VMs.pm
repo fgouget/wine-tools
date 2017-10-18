@@ -241,7 +241,7 @@ Returns true if the VM status is compatible with ChildPid being set.
 sub CanHaveChild($)
 {
   my ($self) = @_;
-  return ($self->Status =~ /^(?:reverting|sleeping)$/);
+  return ($self->Status =~ /^(?:dirty|reverting|sleeping)$/);
 }
 
 =pod
@@ -307,12 +307,12 @@ sub OnSaved($)
   }
 }
 
-sub RunRevert($)
+sub _RunVMTool($$$)
 {
-  my ($self) = @_;
+  my ($self, $NewStatus, $Args) = @_;
 
   my $Tool = "LibvirtTool.pl";
-  my $Args = ["$BinDir/$Tool", "--log-only", "revert", $self->GetKey()];
+  unshift @$Args, "$BinDir/$Tool";
 
   # There are two $VM->ChildPid race conditions to avoid:
   # - Between the child process and new calls to ScheduleJobs().
@@ -321,8 +321,8 @@ sub RunRevert($)
   #   which would result in a new child being started.
   #   Note that the status is not guaranteed to change in _RunVMTool() so it
   #   cannot be relied on to avoid this race.
-  # - Between RunRevert() and the exit of the child process.
-  #   The child process may exit before RunRevert() gets around to setting
+  # - Between _RunVMTool() and the exit of the child process.
+  #   The child process may exit before _RunVMTool() gets around to setting
   #   ChildPid after the fork(). This would result in ChildPid remaining set
   #   indefinitely.
   # So set ChildPid in the parent and synchronize with the child so it only
@@ -347,7 +347,7 @@ sub RunRevert($)
     close($fd_read);
 
     # Set the Status and ChildPid
-    $self->Status("reverting");
+    $self->Status($NewStatus);
     $self->ChildPid($Pid);
     my ($ErrProperty, $ErrMessage) = $self->Save();
     if ($ErrMessage)
@@ -396,6 +396,51 @@ sub RunRevert($)
   exit 1;
 }
 
+=pod
+=over 12
+
+=item C<RunPowerOff()>
+
+Powers off the VM so that it stops using resources.
+
+The power off need not perform a clean shut down of the guest OS.
+This operation can take a long time so it is performed in a separate process.
+
+=back
+=cut
+
+sub RunPowerOff($)
+{
+  my ($self) = @_;
+  # This can be used to power off VMs from any state, including 'idle' but we
+  # don't want the job scheduler to think it can use the VM while it is being
+  # powered off. So force the status to dirty.
+  return $self->_RunVMTool("dirty", ["--log-only", "poweroff", $self->GetKey()]);
+}
+
+=pod
+=over 12
+
+=item C<RunRevert()>
+
+Reverts the VM so that it is ready to run jobs.
+
+Note that in addition to the hypervisor revert operation this implies checking
+that it responds to our commands ($WaitForToolsInVM) and possibly letting the
+VM settle down ($SleepAfterRevert). If this operation fails the administrator
+is notified and the VM is marked as offline.
+
+This operation can take a long time so it is performed in a separate process.
+
+=back
+=cut
+
+sub RunRevert($)
+{
+  my ($self) = @_;
+  return $self->_RunVMTool("reverting", ["--log-only", "revert", $self->GetKey()]);
+}
+
 
 package WineTestBot::VMs;
 
@@ -430,7 +475,6 @@ BEGIN
     CreateEnumPropertyDescriptor("Type", "Type of VM", !1, 1, ['win32', 'win64', 'build']),
     CreateEnumPropertyDescriptor("Role", "VM Role", !1, 1, ['extra', 'base', 'winetest', 'retired', 'deleted']),
     CreateEnumPropertyDescriptor("Status", "Current status", !1, 1, ['dirty', 'reverting', 'sleeping', 'idle', 'running', 'off', 'offline', 'maintenance']),
-    # Note: ChildPid is only valid when Status == 'reverting' or 'sleeping'.
     CreateBasicPropertyDescriptor("ChildPid", "Child process id", !1, !1, "N", 5),
     CreateBasicPropertyDescriptor("VirtURI", "LibVirt URI of the VM", !1, 1, "A", 64),
     CreateBasicPropertyDescriptor("VirtDomain", "LibVirt Domain for the VM", !1, 1, "A", 32),

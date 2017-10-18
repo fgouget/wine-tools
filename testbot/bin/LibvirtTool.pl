@@ -1,9 +1,9 @@
 #!/usr/bin/perl -Tw
 # -*- Mode: Perl; perl-indent-level: 2; indent-tabs-mode: nil -*-
 #
-# Reverts a VM so that it is ready to run jobs.
-# This operation can take quite a bit of time, particularly in case of
-# network trouble, and thus is best performed in a separate process.
+# Performs poweroff and revert operations on the specified VM.
+# These operations can take quite a bit of time, particularly in case of
+# network trouble, and thus are best performed in a separate process.
 #
 # Copyright 2009 Ge van Geldorp
 # Copyright 2012-2017 Francois Gouget
@@ -104,7 +104,7 @@ while (@ARGV)
   {
     $LogOnly = 1;
   }
-  elsif ($Arg eq "revert")
+  elsif ($Arg =~ /^(?:poweroff|revert)$/)
   {
     $Action = $Arg;
   }
@@ -163,7 +163,7 @@ if (!defined $Usage)
 }
 if (defined $Usage)
 {
-  print "Usage: $Name0 [--debug] [--log-only] [--help] revert VMName\n";
+  print "Usage: $Name0 [--debug] [--log-only] [--help] (poweroff|revert) VMName\n";
   exit $Usage;
 }
 
@@ -251,6 +251,16 @@ sub ChangeStatus($$;$)
   return 0;
 }
 
+sub PowerOff()
+{
+  # Power off VMs no matter what their initial status is
+  $CurrentStatus = $VM->Status;
+  my $ErrMessage = $VM->GetDomain()->PowerOff(1);
+  FatalError("$ErrMessage\n") if (defined $ErrMessage);
+
+  return ChangeStatus(undef, "off", "done");
+}
+
 sub Revert()
 {
   my $VM = CreateVMs()->GetItem($VMKey);
@@ -308,7 +318,11 @@ sub Revert()
 
 
 my $Rc;
-if ($Action eq "revert")
+if ($Action eq "poweroff")
+{
+  $Rc = PowerOff();
+}
+elsif ($Action eq "revert")
 {
   $Rc = Revert();
 }
