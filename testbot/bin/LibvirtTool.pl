@@ -176,6 +176,18 @@ my $Start = Time();
 
 my $CurrentStatus;
 
+=pod
+=over 12
+
+=item C<FatalError()>
+
+Logs the fatal error, notifies the administrator and exits the process.
+
+This function never returns!
+
+=back
+=cut
+
 sub FatalError($)
 {
   my ($ErrMessage) = @_;
@@ -200,6 +212,20 @@ sub FatalError($)
   exit 1;
 }
 
+=pod
+=over 12
+
+=item C<ChangeStatus()>
+
+Checks that the VM status has not been tampered with and sets it to the new
+value.
+
+Returns a value suitable for the process exit code: 0 in case of success,
+1 otherwise.
+
+=back
+=cut
+
 sub ChangeStatus($$;$)
 {
   my ($From, $To, $Done) = @_;
@@ -209,7 +235,9 @@ sub ChangeStatus($$;$)
   if (!$VM or (defined $From and $VM->Status ne $From))
   {
     LogMsg "Not changing status\n";
-    return undef;
+    # Not changing the status is allowed in debug mode so the VM can be
+    # put in 'maintenance' mode to avoid interference from the TestBot.
+    return $Debug ? 0 : 1;
   }
 
   $VM->Status($To);
@@ -220,7 +248,7 @@ sub ChangeStatus($$;$)
     FatalError("Could not change the $VMKey VM status: $ErrMessage\n");
   }
   $CurrentStatus = $To;
-  return 1;
+  return 0;
 }
 
 sub Revert()
@@ -252,7 +280,7 @@ sub Revert()
   }
 
   # The VM is now sleeping which may allow some tasks to run
-  return 1 if (!ChangeStatus("reverting", "sleeping"));
+  return 1 if (ChangeStatus("reverting", "sleeping"));
 
   # Check the TestAgent connection. Note that this may take some time
   # if the VM needs to boot first.
@@ -275,7 +303,7 @@ sub Revert()
     sleep($SleepAfterRevert);
   }
 
-  return ChangeStatus("sleeping", "idle", "done") ? 0 : 1;
+  return ChangeStatus("sleeping", "idle", "done");
 }
 
 
