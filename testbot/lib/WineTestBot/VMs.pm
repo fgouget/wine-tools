@@ -399,6 +399,23 @@ sub _RunVMTool($$$)
 =pod
 =over 12
 
+=item C<RunCheckIdle()>
+
+If the virtual machine state matches that of this VM instance, sets its status
+to idle. If not the VM is simply marked as off. While this is happening the
+VM status is set to dirty so the job scheduler does not try to use it.
+
+This operation can take a long time so it is performed in a separate process.
+
+=back
+=cut
+
+sub RunCheckIdle($)
+{
+  my ($self) = @_;
+  return $self->_RunVMTool("dirty", ["--log-only", "checkidle", $self->GetKey()]);
+}
+
 =item C<RunPowerOff()>
 
 Powers off the VM so that it stops using resources.

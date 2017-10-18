@@ -104,7 +104,7 @@ while (@ARGV)
   {
     $LogOnly = 1;
   }
-  elsif ($Arg =~ /^(?:poweroff|revert)$/)
+  elsif ($Arg =~ /^(?:checkidle|poweroff|revert)$/)
   {
     $Action = $Arg;
   }
@@ -163,7 +163,7 @@ if (!defined $Usage)
 }
 if (defined $Usage)
 {
-  print "Usage: $Name0 [--debug] [--log-only] [--help] (poweroff|revert) VMName\n";
+  print "Usage: $Name0 [--debug] [--log-only] [--help] (checkidle|poweroff|revert) VMName\n";
   exit $Usage;
 }
 
@@ -261,6 +261,20 @@ sub PowerOff()
   return ChangeStatus(undef, "off", "done");
 }
 
+sub CheckIdle()
+{
+  $CurrentStatus = "dirty";
+  my $IsPoweredOn = $VM->GetDomain()->IsPoweredOn();
+  return ChangeStatus("dirty", "offline", "done") if (!defined $IsPoweredOn);
+  return ChangeStatus("dirty", "off", "done") if (!$IsPoweredOn);
+
+  my ($ErrMessage, $SnapshotName) = $VM->GetDomain()->GetSnapshotName();
+  FatalError("$ErrMessage\n") if (defined $ErrMessage);
+  return PowerOff() if ($SnapshotName ne $VM->IdleSnapshot);
+
+  return ChangeStatus("dirty", "idle", "done");
+}
+
 sub Revert()
 {
   my $VM = CreateVMs()->GetItem($VMKey);
@@ -318,7 +332,11 @@ sub Revert()
 
 
 my $Rc;
-if ($Action eq "poweroff")
+if ($Action eq "checkidle")
+{
+  $Rc = CheckIdle();
+}
+elsif ($Action eq "poweroff")
 {
   $Rc = PowerOff();
 }
