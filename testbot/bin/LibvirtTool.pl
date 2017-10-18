@@ -243,6 +243,7 @@ sub Revert()
     LogMsg "Trying the revert anyway...\n";
   }
 
+  # Revert the VM (and power it on if necessary)
   Debug(Elapsed($Start), " Reverting $VMKey to ", $VM->IdleSnapshot, "\n");
   $ErrMessage = $Domain->RevertToSnapshot();
   if (defined $ErrMessage)
@@ -253,6 +254,8 @@ sub Revert()
   # The VM is now sleeping which may allow some tasks to run
   return 1 if (!ChangeStatus("reverting", "sleeping"));
 
+  # Check the TestAgent connection. Note that this may take some time
+  # if the VM needs to boot first.
   Debug(Elapsed($Start), " Trying the TestAgent connection\n");
   LogMsg "Waiting for ". $VM->Name ." (up to ${WaitForToolsInVM}s per attempt)\n";
   my $TA = $VM->GetAgent();
