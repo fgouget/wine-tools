@@ -71,8 +71,9 @@ $MaxRevertsWhileRunningVMs = 1;
 $MaxActiveVMs = 2;
 $MaxVMsWhenIdle = undef;
 
-# How long to wait when connecting to the VM's TestAgent server after a revert
-# (in seconds).
+# How long to wait for each of the 3 connection attempts to the VM's TestAgent
+# server after a revert (in seconds). If there are powered off snapshots this
+# must be long enough for the VM to boot up first.
 $WaitForToolsInVM = 30;
 # How long to let the VM settle down after the revert before starting a task on
 # it (in seconds).

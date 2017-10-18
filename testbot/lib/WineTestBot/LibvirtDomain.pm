@@ -210,6 +210,7 @@ sub RevertToSnapshot($)
   my ($ErrMessage, $Domain, $Snapshot) = $self->_GetSnapshot($SnapshotName);
   return $ErrMessage if (defined $ErrMessage);
 
+  # Note that if the snapshot was of a powered off domain, this boots it up
   eval { $Snapshot->revert_to(Sys::Virt::DomainSnapshot::REVERT_RUNNING) };
   return $@ ? $self->_Reset(_eval_err()) : $self->_UpdateStatus($Domain);
 }

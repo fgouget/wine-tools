@@ -141,8 +141,11 @@ Dependencies:
   Where PORT is the $AgentPort that was configured in ConfigLocal.pl
   on the WineTestBot server, and SRCHOST is either omitted or the hostname
   of the WineTestBot server.
-- Take a snapshot of the running VM. Make sure restoring this snapshot
-  will result in a running build VM.
+- Take a snapshot of the VM. The shorter the revert time the better. This
+  usually implies taking a snapshot of the running VM as set up in the previous
+  step. However it is also possible to use snapshots of the powered off VM. In
+  that case make sure booting the VM will automatically start the TestAgent
+  server in the right configuration.
 - Register this VM as a build VM on the web site.
 
 
@@ -156,8 +159,12 @@ Dependencies:
   Where PORT is the $AgentPort that was configured in ConfigLocal.pl
   on the WineTestBot server, and SRCHOST is either omitted or the hostname
   of the WineTestBot server.
-- Take a snapshot of the running VM. Make sure restoring this snapshot
-  will result in a running Windows VM.
+- Take a snapshot of the VM. The shorter the revert time the better. This
+  usually implies taking a snapshot of the running VM as set up in the previous
+  step. However it is also possible to use snapshots of the powered off VM. In
+  that case make sure booting the VM will automatically log in and start the
+  TestAgent server in the right configuration and with the appropriate
+  privileges.
 - Register this VM on the web site. On a production WineTestBot server
   you would likely want to make it an 'extra' VM until you have
   confirmed that it works as expected.
