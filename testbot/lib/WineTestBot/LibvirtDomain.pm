@@ -151,32 +151,6 @@ sub _GetDomain($)
   return (undef, $Domain);
 }
 
-sub _UpdateStatus($$)
-{
-  my ($self, $Domain) = @_;
-
-  return undef if ($self->{VM}->Status eq "offline");
-
-  my ($State, $Reason);
-  eval { ($State, $Reason) = $Domain->get_state() };
-  return $self->_Reset(_eval_err()) if ($@);
-
-  if ($State == Sys::Virt::Domain::STATE_SHUTDOWN or
-      $State == Sys::Virt::Domain::STATE_SHUTOFF or
-      $State == Sys::Virt::Domain::STATE_CRASHED)
-  {
-    $self->{VM}->Status("off");
-    $self->{VM}->Save();
-  }
-  elsif ($self->{VM}->Status eq "off")
-  {
-    $self->{VM}->Status("dirty");
-    $self->{VM}->Save();
-  }
-
-  return undef;
-}
-
 sub _GetSnapshot($$)
 {
   my ($self, $SnapshotName) = @_;
@@ -233,7 +207,7 @@ sub RevertToSnapshot($)
 
   # Note that if the snapshot was of a powered off domain, this boots it up
   eval { $Snapshot->revert_to(Sys::Virt::DomainSnapshot::REVERT_RUNNING) };
-  return $@ ? $self->_Reset(_eval_err()) : $self->_UpdateStatus($Domain);
+  return $@ ? $self->_Reset(_eval_err()) : undef;
 }
 
 sub CreateSnapshot($)
@@ -279,9 +253,9 @@ sub IsPoweredOn($)
   return ($State == Sys::Virt::Domain::STATE_RUNNING);
 }
 
-sub PowerOff($$)
+sub PowerOff($)
 {
-  my ($self, $NoStatus) = @_;
+  my ($self) = @_;
 
   my ($ErrMessage, $Domain) = $self->_GetDomain();
   return $ErrMessage if (defined $ErrMessage);
@@ -298,9 +272,8 @@ sub PowerOff($$)
       $ErrMessage = "The VM is still active";
     }
   }
-  $ErrMessage ||= $self->_UpdateStatus($Domain) if (!$NoStatus);
-  return undef if (!defined $ErrMessage);
 
+  return undef if (!defined $ErrMessage);
   return $self->_Reset("Could not power off ". $self->{VM}->Name .": $ErrMessage");
 }
 

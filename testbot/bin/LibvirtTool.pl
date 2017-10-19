@@ -305,7 +305,7 @@ sub PowerOff()
 {
   # Power off VMs no matter what their initial status is
   $CurrentStatus = $VM->Status;
-  my $ErrMessage = $VM->GetDomain()->PowerOff(1);
+  my $ErrMessage = $VM->GetDomain()->PowerOff();
   FatalError("$ErrMessage\n") if (defined $ErrMessage);
 
   return ChangeStatus(undef, "off", "done");
@@ -338,7 +338,7 @@ sub Revert()
   # Some QEmu/KVM versions are buggy and cannot revert a running VM
   Debug(Elapsed($Start), " Powering off the VM\n");
   my $Domain = $VM->GetDomain();
-  my $ErrMessage = $Domain->PowerOff(1);
+  my $ErrMessage = $Domain->PowerOff();
   if (defined $ErrMessage)
   {
     LogMsg "Could not power off $VMKey: $ErrMessage\n";
