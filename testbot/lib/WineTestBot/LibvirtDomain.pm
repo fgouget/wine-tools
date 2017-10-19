@@ -253,6 +253,23 @@ sub IsPoweredOn($)
   return ($State == Sys::Virt::Domain::STATE_RUNNING);
 }
 
+sub _GetStateName($)
+{
+  my ($State) = @_;
+
+  my %StateNames = {
+    Sys::Virt::Domain::STATE_NOSTATE => "no state",
+    Sys::Virt::Domain::STATE_RUNNING => "running",
+    Sys::Virt::Domain::STATE_BLOCKED => "blocked",
+    Sys::Virt::Domain::STATE_PAUSED => "paused",
+    Sys::Virt::Domain::STATE_SHUTDOWN => "shutdown",
+    Sys::Virt::Domain::STATE_SHUTOFF => "shutoff",
+    Sys::Virt::Domain::STATE_CRASHED => "crashed",
+    Sys::Virt::Domain::STATE_PMSUSPENDED => "pmsuspended",
+  };
+  return $StateNames{$State} || "unknown";
+}
+
 sub PowerOff($)
 {
   my ($self) = @_;
@@ -260,21 +277,26 @@ sub PowerOff($)
   my ($ErrMessage, $Domain) = $self->_GetDomain();
   return $ErrMessage if (defined $ErrMessage);
 
-  if ($self->IsPoweredOn())
-  {
-    eval { $Domain->destroy() };
-    if ($@)
-    {
-      $ErrMessage = _eval_err();
-    }
-    elsif ($self->IsPoweredOn())
-    {
-      $ErrMessage = "The VM is still active";
-    }
-  }
+  eval { $Domain->destroy() };
+  return undef if (!$@); # Success
+  $ErrMessage = _eval_err();
 
-  return undef if (!defined $ErrMessage);
-  return $self->_Reset("Could not power off ". $self->{VM}->Name .": $ErrMessage");
+  # destroy() sets $@->code to Sys::Virt::Error::ERR_OPERATION_INVALID (55)
+  # if the domain was already off. But this could happen for other reasons so
+  # just check the domain state.
+  my ($State, $_Reason);
+  eval { ($State, $_Reason) = $Domain->get_state() };
+  if ($@)
+  {
+    # Only return the initial error
+    return $self->_Reset("Could not power off ". $self->{VM}->Name .": $ErrMessage");
+  }
+  if ($State == Sys::Virt::Domain::STATE_SHUTOFF)
+  {
+    # This is what we wanted so ignore past errors
+    return undef;
+  }
+  return $self->_Reset($self->{VM}->Name ." is not off (". _GetStateName($State)  ."): $ErrMessage");
 }
 
 my %_StreamData;
