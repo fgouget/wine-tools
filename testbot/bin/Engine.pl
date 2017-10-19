@@ -181,7 +181,9 @@ sub Cleanup(;$$)
       if ($KillVMs)
       {
         $VM->KillChild();
-        $VM->RunPowerOff();
+        # $KillVMs is normally used on shutdown so don't start a process that
+        # will get stuck 'forever' waiting for an offline VM.
+        $VM->RunPowerOff() if ($VM->Status ne "offline");
       }
       elsif (!$VM->CanHaveChild())
       {

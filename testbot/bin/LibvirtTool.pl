@@ -1,7 +1,7 @@
 #!/usr/bin/perl -Tw
 # -*- Mode: Perl; perl-indent-level: 2; indent-tabs-mode: nil -*-
 #
-# Performs poweroff and revert operations on the specified VM.
+# Performs poweroff, revert and other operations on the specified VM.
 # These operations can take quite a bit of time, particularly in case of
 # network trouble, and thus are best performed in a separate process.
 #
@@ -104,7 +104,7 @@ while (@ARGV)
   {
     $LogOnly = 1;
   }
-  elsif ($Arg =~ /^(?:checkidle|poweroff|revert)$/)
+  elsif ($Arg =~ /^(?:checkidle|monitor|poweroff|revert)$/)
   {
     $Action = $Arg;
   }
@@ -163,7 +163,7 @@ if (!defined $Usage)
 }
 if (defined $Usage)
 {
-  print "Usage: $Name0 [--debug] [--log-only] [--help] (checkidle|poweroff|revert) VMName\n";
+  print "Usage: $Name0 [--debug] [--log-only] [--help] (checkidle|monitor|poweroff|revert) VMName\n";
   exit $Usage;
 }
 
@@ -251,6 +251,56 @@ sub ChangeStatus($$;$)
   return 0;
 }
 
+sub Monitor()
+{
+  $CurrentStatus = "offline";
+  while (1)
+  {
+    # Get a fresh status
+    $VM = CreateVMs()->GetItem($VMKey);
+    if (!defined $VM or $VM->Role eq "retired" or $VM->Role eq "deleted" or
+        $VM->Status eq "maintenance")
+    {
+      my $Reason = $VM ? "Role=". $VM->Role ."\nStatus=". $VM->Status :
+                         "$VMKey does not exist anymore";
+      NotifyAdministrator("The $VMKey VM is not relevant anymore",
+                          "The $VMKey VM was offline but ceased to be relevant after ".
+                          Elapsed($Start). " seconds:\n\n$Reason\n");
+      return 1;
+    }
+    if ($VM->Status ne "offline")
+    {
+      NotifyAdministrator("The $VMKey VM is working again (". $VM->Status .")",
+                          "The status of the $VMKey VM unexpectedly switched from offline\n".
+                          "to ". $VM->Status ." after ". Elapsed($Start)
+                          ." seconds.");
+      return 0;
+    }
+
+    my $IsPoweredOn = $VM->GetDomain()->IsPoweredOn();
+    if ($IsPoweredOn)
+    {
+      my $ErrMessage = $VM->GetDomain()->PowerOff(1);
+      if (defined $ErrMessage)
+      {
+        Error "$ErrMessage\n";
+        $IsPoweredOn = undef;
+      }
+    }
+    if (defined $IsPoweredOn)
+    {
+      return 1 if (ChangeStatus("offline", "off", "done"));
+      NotifyAdministrator("The $VMKey VM is working again",
+                          "The $VMKey VM started working again after ".
+                          Elapsed($Start) ." seconds.");
+      return 0;
+    }
+
+    Debug(Elapsed($Start), " $VMKey is still unreachable\n");
+    sleep(60);
+  }
+}
+
 sub PowerOff()
 {
   # Power off VMs no matter what their initial status is
@@ -335,6 +385,10 @@ my $Rc;
 if ($Action eq "checkidle")
 {
   $Rc = CheckIdle();
+}
+elsif ($Action eq "monitor")
+{
+  $Rc = Monitor();
 }
 elsif ($Action eq "poweroff")
 {

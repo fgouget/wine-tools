@@ -241,7 +241,7 @@ Returns true if the VM status is compatible with ChildPid being set.
 sub CanHaveChild($)
 {
   my ($self) = @_;
-  return ($self->Status =~ /^(?:dirty|reverting|sleeping)$/);
+  return ($self->Status =~ /^(?:dirty|reverting|sleeping|offline)$/);
 }
 
 =pod
@@ -416,6 +416,31 @@ sub RunCheckIdle($)
   return $self->_RunVMTool("dirty", ["--log-only", "checkidle", $self->GetKey()]);
 }
 
+=pod
+=over 12
+
+=item C<RunMonitor()>
+
+Monitors an offline VM to detect when it becomes accessible again.
+When the VM can again be accessed through the hypervisor it is powered off and
+its status is set to 'off'.
+
+This operation can obviously take a long time so it is performed in a separate
+process.
+
+=back
+=cut
+
+sub RunMonitor($)
+{
+  my ($self) = @_;
+  # In fact the status is already set
+  return $self->_RunVMTool("offline", ["--log-only", "monitor", $self->GetKey()]);
+}
+
+=pod
+=over 12
+
 =item C<RunPowerOff()>
 
 Powers off the VM so that it stops using resources.
@@ -547,8 +572,8 @@ sub FilterEnabledRole($)
 sub FilterEnabledStatus($)
 {
   my ($self) = @_;
-  # Filter out the disabled VMs, that is the offline and maintenance ones
-  $self->AddFilter("Status", ["dirty", "reverting", "sleeping", "idle", "running", "off"]);
+  # Filter out the maintenance VMs
+  $self->AddFilter("Status", ["dirty", "reverting", "sleeping", "idle", "running", "off", "offline"]);
 }
 
 sub FilterHypervisors($$)
