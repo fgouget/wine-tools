@@ -457,8 +457,11 @@ reverting too many VMs at once.
 =item *
 
 Once there are no jobs to run anymore the scheduler can prepare up to
-$MaxVMsWhenIdle VMs (or $MaxActiveVMs if not set) for future jobs. This can be
-set to 0 to minimize the TestBot resource usage when idle.
+$MaxVMsWhenIdle VMs (or $MaxActiveVMs if not set) for future jobs.
+This can be set to 0 to minimize the TestBot resource usage when idle.
+This can also be set to a value greater than $MaxActiveVMs. Then only
+$MaxActiveVMs tasks will be run simultaneously but the extra idle VMs will be
+kept on standby so they are ready when their turn comes.
 
 =cut
 
@@ -546,23 +549,28 @@ sub ScheduleOnHost($$$)
         next if (!$HostVMs->ItemExists($VMKey) || exists $VMsToRevert{$VMKey});
 
         my $VMStatus = $VM->Status;
-        if ($VMStatus eq "idle" &&
-            ($RevertingCount == 0 || $MaxRevertsWhileRunningVMs > 0))
+        if ($VMStatus eq "idle")
         {
+          # Even if we cannot start the task right away this VM is not a
+          # candidate for shutdown since it will be needed next.
           $IdleVMs{$VMKey} = 0;
-          $IdleCount--;
 
-          my $ErrMessage = $Task->Run($Step);
-          return $ErrMessage if (defined $ErrMessage);
+          if ($RunningCount < $MaxActiveVMs and
+              ($RevertingCount == 0 || $RevertingCount < $MaxRevertsWhileRunningVMs))
+          {
+            my $ErrMessage = $Task->Run($Step);
+            return $ErrMessage if (defined $ErrMessage);
 
-          $Job->UpdateStatus();
-          $RunningCount++;
-          $PrepareNextStep = 1;
+            $Job->UpdateStatus();
+            $IdleCount--;
+            $RunningCount++;
+            $PrepareNextStep = 1;
+          }
         }
         elsif ($VMStatus eq "sleeping" and $IdleVMs{$VMKey})
         {
           # It's not running jobs yet but soon will be
-          # so it's not a candidate for shutdown.
+          # so it's not a candidate for shutdown or revert.
           $IdleVMs{$VMKey} = 0;
           $IdleCount--;
           $SleepingCount++;
@@ -587,7 +595,7 @@ sub ScheduleOnHost($$$)
           my $VM = $Task->VM;
           my $VMKey = $VM->GetKey();
           push @VMsNext, $VMKey;
-          # Not a candidate for shutdown
+          # If idle already this is not a candidate for shutdown
           $IdleVMs{$VMKey} = 0;
         }
       }
@@ -667,11 +675,11 @@ sub ScheduleOnHost($$$)
     $ActiveCount++ if ($VM->Status eq "off");
   }
 
-  # Prepare some VMs for the current jobs next step
+  # Prepare some VMs for the next step of the current jobs
   foreach my $VMKey (@VMsNext)
   {
     last if ($RevertingCount == $MaxReverts);
-    last if ($ActiveCount == $MaxActiveVMs);
+    last if ($ActiveCount >= $MaxActiveVMs);
 
     my $VM = $HostVMs->GetItem($VMKey);
     next if ($VM->Status ne "off");
