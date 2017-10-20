@@ -307,12 +307,11 @@ sub OnSaved($)
   }
 }
 
-sub _RunVMTool($$$)
+sub Run($$$$$)
 {
-  my ($self, $NewStatus, $Args) = @_;
+  my ($self, $NewStatus, $Args, $ChildSetup, $SetupData) = @_;
 
-  my $Tool = "LibvirtTool.pl";
-  unshift @$Args, "$BinDir/$Tool";
+  my $Tool = basename($Args->[0]);
 
   # There are two $VM->ChildPid race conditions to avoid:
   # - Between the child process and new calls to ScheduleJobs().
@@ -377,9 +376,7 @@ sub _RunVMTool($$$)
 
   require WineTestBot::Log;
   WineTestBot::Log::LogMsg("Starting child: @$Args\n");
-
-  # Set up the file descriptors for the new process
-  WineTestBot::Log::SetupRedirects();
+  $ChildSetup->($VM, $SetupData);
 
   $ENV{PATH} = "/usr/bin:/bin";
   exec(@$Args) or
@@ -394,6 +391,23 @@ sub _RunVMTool($$$)
     WineTestBot::Log::LogMsg("Could not remove the $Tool pid: $ErrMessage ($ErrProperty)\n");
   }
   exit 1;
+}
+
+sub _SetupChild($$)
+{
+  my ($VM, $_UserData) = @_;
+
+  # Set up the file descriptors for the new process
+  WineTestBot::Log::SetupRedirects();
+}
+
+sub _RunVMTool($$$)
+{
+  my ($self, $NewStatus, $Args) = @_;
+
+  my $Tool = "LibvirtTool.pl";
+  unshift @$Args, "$BinDir/$Tool";
+  return $self->Run($NewStatus, $Args, \&_SetupChild, undef);
 }
 
 =pod
