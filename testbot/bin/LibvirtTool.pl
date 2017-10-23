@@ -277,23 +277,39 @@ sub Monitor()
       return 0;
     }
 
-    my $IsPoweredOn = $VM->GetDomain()->IsPoweredOn();
-    if ($IsPoweredOn)
+    my ($ErrMessage, $SnapshotName) = $VM->GetDomain()->GetSnapshotName();
+    if (defined $ErrMessage)
     {
-      my $ErrMessage = $VM->GetDomain()->PowerOff();
-      if (defined $ErrMessage)
-      {
-        Error "$ErrMessage\n";
-        $IsPoweredOn = undef;
-      }
+      Error "$ErrMessage\n";
     }
-    if (defined $IsPoweredOn)
+    else
     {
-      return 1 if (ChangeStatus("offline", "off", "done"));
-      NotifyAdministrator("The $VMKey VM is working again",
-                          "The $VMKey VM started working again after ".
-                          Elapsed($Start) ." seconds.");
-      return 0;
+      my $IsPoweredOn;
+      if (!defined $SnapshotName or $SnapshotName ne $VM->IdleSnapshot)
+      {
+        $IsPoweredOn = 0;
+      }
+      else
+      {
+        $IsPoweredOn = $VM->GetDomain()->IsPoweredOn();
+        if ($IsPoweredOn)
+        {
+          $ErrMessage = $VM->GetDomain()->PowerOff();
+          if (defined $ErrMessage)
+          {
+            Error "$ErrMessage\n";
+            $IsPoweredOn = undef;
+          }
+        }
+      }
+      if (defined $IsPoweredOn)
+      {
+        return 1 if (ChangeStatus("offline", "off", "done"));
+        NotifyAdministrator("The $VMKey VM is working again",
+                            "The $VMKey VM started working again after ".
+                            Elapsed($Start) ." seconds.");
+        return 0;
+      }
     }
 
     Debug(Elapsed($Start), " $VMKey is still unreachable\n");
