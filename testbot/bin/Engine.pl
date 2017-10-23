@@ -202,8 +202,8 @@ sub Cleanup($;$$)
       {
         # The VM should not have a process.
         $VM->KillChild();
-        $VM->RunPowerOff();
-        $VM->RecordStatus($Records, "dirty poweroff (unexpected process)");
+        $VM->RunCheckOff();
+        $VM->RecordStatus($Records, "dirty off check (unexpected process)");
       }
       # else let the process finish its work
     }
@@ -219,8 +219,8 @@ sub Cleanup($;$$)
         # Power off the VM, even if its status is already off.
         # This is the simplest way to resync the VM status field.
         # Also powering off a powered off VM will detect offline VMs.
-        $VM->RunPowerOff();
-        $VM->RecordStatus($Records, "dirty poweroff");
+        $VM->RunCheckOff();
+        $VM->RecordStatus($Records, "dirty off check");
       }
     }
   }
