@@ -414,6 +414,242 @@ sub min(@)
 =pod
 =over 12
 
+=item C<_CanScheduleOnVM()>
+
+Checks if a task or VM operation can be performed on the specified VM.
+
+=back
+=cut
+
+sub _CanScheduleOnVM($$)
+{
+  my ($Sched, $VM) = @_;
+
+  # If the VM is busy we cannot schedule a new task on it
+  my $VMKey = $VM->GetKey();
+  return !$Sched->{busyvms}->{$VMKey};
+}
+
+=pod
+=over 12
+
+=item C<_SacrificeVM()>
+
+Looks for and powers off a VM we don't need now in order to free resources
+for one we do need now.
+
+=back
+=cut
+
+sub _SacrificeVM($$)
+{
+  my ($Sched, $HostVMs) =@_;
+
+  # Grab the lowest priority lamb and sacrifice it
+  my $Priorities = $Sched->{vmpriorities};
+  my ($Victim, $VictimKey, $VictimStatusPrio);
+  foreach my $VMKey (keys %{$Sched->{lambvms}})
+  {
+    my $VM = $HostVMs->GetItem($VMKey);
+    my $VMStatusPrio = $VM->Status eq "idle" ? 2 :
+                       $VM->Status eq "sleeping" ? 1 :
+                       0; # Status eq dirty
+
+    if ($Victim)
+    {
+      my $Cmp = $VictimStatusPrio <=> $VMStatusPrio ||
+                $Priorities->{$VictimKey} <=> $Priorities->{$VMKey};
+      next if ($Cmp < 0);
+    }
+
+    $Victim = $VM;
+    $VictimKey = $VMKey;
+    $VictimStatusPrio = $VMStatusPrio;
+  }
+  return undef if (!$Victim);
+
+  delete $Sched->{lambvms}->{$VictimKey};
+  $Sched->{busyvms}->{$VictimKey} = 1;
+  $Sched->{$Victim->Status}--;
+  $Sched->{dirty}++;
+  $Victim->RunPowerOff();
+  return 1;
+}
+
+=pod
+=over 12
+
+=item C<_CheckAndClassifyVMs()>
+
+Checks the VMs state consistency, counts the VMs in each state and classifies
+them.
+
+=over
+
+=item *
+
+Checks that each VM's state is consistent and fixes the VM state if not. For
+instance, if Status == running then the VM should have a child process. If
+there is no such process, or if it died, then the VM should be brought back
+to a coherent state, typically by marking it dirty so it is either powered off
+or reverted.
+
+=item *
+
+Counts the VMs in each state so the scheduler can respect the limits put on the
+number of simultaneous active VMs, reverting VMs, and so on.
+
+=item *
+
+Puts the VMs in one of three sets:
+- The set of busyvms.
+  This is the set of VMs that are doing something important, for instance
+  running a Task, and should not be messed with.
+- The set of lambvms.
+  This is the set of VMs that use resources (they are powered on), but are
+  not doing anything important (idle, sleeping and dirty VMs). If the scheduler
+  is hitting the limits but still needs to power on one more VM, it can power
+  off one of these to make room.
+- The set of powered off VMs.
+  These are the VMs which are in neither the busyvms nor the lambvms set. Since
+  they are powered off they are not using resources.
+
+=item *
+
+Each VM is given a priority describing the likelyhood that it will be needed
+by a future job. When no other VM is running this can be used to decide which
+VMs to start in advance.
+
+=cut
+
+=back
+=cut
+
+sub _CheckAndClassifyVMs($)
+{
+  my ($HostVMs) = @_;
+
+  my $Sched = {active => 0,
+               idle => 0,
+               reverting => 0,
+               sleeping => 0,
+               running => 0,
+               dirty => 0,
+               busyvms => {},
+               lambvms=> {},
+               vmpriorities => {},
+  };
+
+  # Count the VMs that are 'active', that is, that use resources on the host,
+  # and those that are reverting. Also build a prioritized list of those that
+  # are ready to run tests: the idle ones.
+  foreach my $VM (@{$HostVMs->GetItems()})
+  {
+    my $VMKey = $VM->GetKey();
+    if ($VM->HasRunningChild())
+    {
+      if ($VM->Status =~ /^(?:dirty|running|reverting)$/)
+      {
+        $Sched->{busyvms}->{$VMKey} = 1;
+        $Sched->{$VM->Status}++;
+        $Sched->{active}++;
+      }
+      elsif ($VM->Status eq "sleeping")
+      {
+        # Note that in the case of powered off VM snapshots, a sleeping VM is
+        # in fact booting up thus taking CPU and I/O resources.
+        # So don't count it as idle.
+        $Sched->{lambvms}->{$VMKey} = 1;
+        $Sched->{sleeping}++;
+        $Sched->{active}++;
+      }
+      elsif ($VM->Status eq "offline")
+      {
+        # The VM cannot be used until it comes back online
+        $Sched->{busyvms}->{$VMKey} = 1;
+      }
+      elsif ($VM->Status eq "maintenance")
+      {
+        # Maintenance VMs should not have a child process!
+        $VM->KillChild();
+        $VM->Save();
+        # And the scheduler should not touch them
+        $Sched->{busyvms}->{$VMKey} = 1;
+      }
+      elsif ($VM->Status =~ /^(?:idle|off)$/)
+      {
+        # idle and off VMs should not have a child process!
+        # Mark the VM dirty so a poweroff or revert brings it to a known state.
+        # Note: The revert or poweroff will save the VM object.
+        $VM->KillChild();
+        $VM->Status("dirty");
+        $Sched->{lambvms}->{$VMKey} = 1;
+        $Sched->{dirty}++;
+        $Sched->{active}++;
+      }
+      else
+      {
+        require WineTestBot::Log;
+        WineTestBot::Log::LogMsg("Unexpected $VMKey status ". $VM->Status ."\n");
+        # Don't interfere with this VM
+        $Sched->{busyvms}->{$VMKey} = 1;
+      }
+    }
+    else
+    {
+      if (defined $VM->ChildPid or
+          $VM->Status =~ /^(?:running|reverting|sleeping)$/)
+      {
+        # The VM is missing its child process or it died unexpectedly. Mark
+        # the VM dirty so a revert or shutdown brings it back to a known state.
+        # Note: The revert or poweroff will save the VM object.
+        $VM->ChildPid(undef);
+        $VM->Status("dirty");
+        $Sched->{lambvms}->{$VMKey} = 1;
+        $Sched->{dirty}++;
+        $Sched->{active}++;
+      }
+      elsif ($VM->Status =~ /^(?:dirty|idle)$/)
+      {
+        $Sched->{lambvms}->{$VMKey} = 1;
+        $Sched->{$VM->Status}++;
+        $Sched->{active}++;
+      }
+      elsif ($VM->Status eq "offline")
+      {
+        # Ignore the VM for this round since we cannot use it
+        $Sched->{busyvms}->{$VMKey} = 1;
+        my $ErrMessage = $VM->RunMonitor();
+        return ($ErrMessage, undef) if (defined $ErrMessage);
+      }
+      elsif ($VM->Status eq "maintenance")
+      {
+        # Don't touch the VM while the administrator is working on it
+        $Sched->{busyvms}->{$VMKey} = 1;
+      }
+      elsif ($VM->Status ne "off")
+      {
+        require WineTestBot::Log;
+        WineTestBot::Log::LogMsg("Unexpected $VMKey status ". $VM->Status ."\n");
+        # Don't interfere with this VM
+        $Sched->{busyvms}->{$VMKey} = 1;
+      }
+      # Note that off VMs are neither in busyvms nor lambvms
+    }
+
+    my $Priority = $VM->Type eq "build" ? 100 :
+                   $VM->Role ne "base" ? 1 :
+                   $VM->Type eq "win32" ? 10 :
+                   20; # win64
+    $Sched->{vmpriorities}->{$VMKey} = $Priority;
+  }
+
+  return (undef, $Sched);
+}
+
+=pod
+=over 12
+
 =item C<ScheduleOnHost()>
 
 This manages the VMs and WineTestBot::Task objects corresponding to the
@@ -469,63 +705,16 @@ sub ScheduleOnHost($$$)
 {
   my ($ScopeObject, $SortedJobs, $Hypervisors) = @_;
 
-
   my $HostVMs = CreateVMs($ScopeObject);
   $HostVMs->FilterEnabledRole();
   $HostVMs->FilterHypervisors($Hypervisors);
 
-  # Count the VMs that are 'active', that is, that use resources on the host,
-  # and those that are reverting. Also build a prioritized list of those that
-  # are ready to run tests: the idle ones.
-  my ($RevertingCount, $RunningCount, $IdleCount) = (0, 0, 0);
-  my (%VMPriorities, %IdleVMs, @DirtyVMs);
-  foreach my $VM (@{$HostVMs->GetItems()})
-  {
-    my $VMKey = $VM->GetKey();
-    my $VMStatus = $VM->Status;
-    if ($VMStatus eq "reverting")
-    {
-      $RevertingCount++;
-    }
-    elsif ($VMStatus eq "running")
-    {
-      $RunningCount++;
-    }
-    elsif ($VMStatus eq "offline")
-    {
-      if (!$VM->HasRunningChild())
-      {
-        my $ErrMessage = $VM->RunMonitor();
-        return $ErrMessage if (defined $ErrMessage);
-      }
-    }
-    else
-    {
-      my $Priority = $VM->Type eq "build" ? 10 :
-                     $VM->Role ne "base" ? 0 :
-                     $VM->Type eq "win32" ? 1 : 2;
-      $VMPriorities{$VMKey} = $Priority;
+  my ($ErrMessage, $Sched) = _CheckAndClassifyVMs($HostVMs);
+  return $ErrMessage if ($ErrMessage);
 
-      # Consider sleeping VMs to be 'almost idle'. We will check their real
-      # status before starting a job on them anyway. But if there is no such
-      # job, then they are expandable just like idle VMs.
-      if ($VMStatus eq "idle" || $VMStatus eq "sleeping")
-      {
-        $IdleCount++;
-        $IdleVMs{$VMKey} = 1;
-      }
-      elsif ($VMStatus eq "dirty")
-      {
-        push @DirtyVMs, $VMKey;
-      }
-    }
-  }
-
-  # It usually takes longer to revert a VM than to run a test. So readyness
-  # (idleness) trumps the Job priority and thus we start jobs on the idle VMs
-  # right away. Then we build a prioritized list of VMs to revert.
-  my (%VMsToRevert, @VMsNext);
-  my ($RevertNiceness, $SleepingCount) = (0, 0);
+  # Then we build a prioritized list of VMs to revert.
+  my %VMsToRevert;
+  my $RevertNiceness;
   foreach my $Job (@$SortedJobs)
   {
     my $Steps = $Job->Steps;
@@ -545,39 +734,40 @@ sub ScheduleOnHost($$$)
         my $VMKey = $VM->GetKey();
         next if (!$HostVMs->ItemExists($VMKey) || exists $VMsToRevert{$VMKey});
 
-        my $VMStatus = $VM->Status;
-        if ($VMStatus eq "idle")
+        # The jobs are sorted by decreasing order of priority. Also, most of
+        # the time reverting a VM takes longer than running a Task.
+        # So if a VM is ready (i.e. idle) we can start the first task we
+        # find for it, even if we could revert another VM to run a higher
+        # priority job.
+        if ($VM->Status eq "idle")
         {
           # Even if we cannot start the task right away this VM is not a
           # candidate for shutdown since it will be needed next.
-          $IdleVMs{$VMKey} = 0;
+          delete $Sched->{lambvms}->{$VMKey};
 
-          if ($RunningCount < $MaxActiveVMs and
-              ($RevertingCount == 0 || $RevertingCount < $MaxRevertsWhileRunningVMs))
+          if ($Sched->{active} - $Sched->{idle} < $MaxActiveVMs and
+              ($Sched->{reverting} == 0 || $Sched->{reverting} <= $MaxRevertsWhileRunningVMs))
           {
+            $Sched->{busyvms}->{$VMKey} = 1;
             my $ErrMessage = $Task->Run($Step);
             return $ErrMessage if (defined $ErrMessage);
-
             $Job->UpdateStatus();
-            $IdleCount--;
-            $RunningCount++;
-            $PrepareNextStep = 1;
+            $Sched->{idle}--;
+            $Sched->{running}++;
           }
-        }
-        elsif ($VMStatus eq "sleeping" and $IdleVMs{$VMKey})
-        {
-          # It's not running jobs yet but soon will be
-          # so it's not a candidate for shutdown or revert.
-          $IdleVMs{$VMKey} = 0;
-          $IdleCount--;
-          $SleepingCount++;
           $PrepareNextStep = 1;
         }
-        elsif (($VMStatus eq "off" or $VMStatus eq "dirty") and
-               !$VM->HasRunningChild())
+        elsif ($VM->Status eq "sleeping")
+        {
+          # It's not running jobs yet but soon will be so it's not a candidate
+          # for shutdown or revert and we should prepare the next step.
+          delete $Sched->{lambvms}->{$VMKey};
+          $PrepareNextStep = 1;
+        }
+        elsif ($VM->Status eq "off" or $Sched->{lambvms}->{$VMKey})
         {
           $RevertNiceness++;
-          $VMsToRevert{$VMKey} = $RevertNiceness;
+          $VMsToRevert{$VMKey} ||= $RevertNiceness;
         }
       }
       if ($PrepareNextStep && @SortedSteps >= 2)
@@ -589,122 +779,79 @@ sub ScheduleOnHost($$$)
         @SortedTasks = sort { $a->No <=> $b->No } @{$Tasks->GetItems()};
         foreach my $Task (@SortedTasks)
         {
-          my $VM = $Task->VM;
-          my $VMKey = $VM->GetKey();
-          push @VMsNext, $VMKey;
+          my $VMKey = $Task->VM->GetKey();
+          next if (!$HostVMs->ItemExists($VMKey));
+          $RevertNiceness++;
+          $VMsToRevert{$VMKey} ||= 100 + $RevertNiceness;
           # If idle already this is not a candidate for shutdown
-          $IdleVMs{$VMKey} = 0;
+          delete $Sched->{lambvms}->{$VMKey};
         }
       }
     }
   }
 
-  # Figure out how many VMs we will actually be able to revert now and only
-  # keep the highest priority ones.
-  my @SortedVMsToRevert = sort { $VMsToRevert{$a} <=> $VMsToRevert{$b} } keys %VMsToRevert;
-  my $MaxReverts = ($RunningCount > 0) ?
+  # Sort the VMs that Tasks need by decreasing priority order and revert them
+  my $MaxReverts = ($Sched->{running} > 0) ?
                    $MaxRevertsWhileRunningVMs : $MaxRevertingVMs;
-  my $ActiveCount = $IdleCount + $RunningCount + $RevertingCount + $SleepingCount + @DirtyVMs;
-  # This is the number of VMs we would revert if idle and dirty VMs did not
-  # stand in the way. And those that do will be shut down.
-  my $RevertableCount = min(scalar(@SortedVMsToRevert),
-                            $MaxReverts - $RevertingCount,
-                            $MaxActiveVMs - ($ActiveCount - $IdleCount - @DirtyVMs));
-  if ($RevertableCount < @SortedVMsToRevert)
-  {
-    $RevertableCount = 0 if ($RevertableCount < 0);
-    for (my $i = $RevertableCount; $i < @SortedVMsToRevert; $i++)
-    {
-      my $VMKey = $SortedVMsToRevert[$i];
-      delete $VMsToRevert{$VMKey};
-    }
-    splice @SortedVMsToRevert, $RevertableCount;
-  }
-
-  # Power off all the VMs that we won't be reverting now so they don't waste
-  # resources while waiting for their turn.
-  foreach my $VMKey (@DirtyVMs)
-  {
-    next if (exists $VMsToRevert{$VMKey});
-
-    my $VM = $HostVMs->GetItem($VMKey);
-    next if ($VM->Status ne "dirty" or $VM->HasRunningChild());
-
-    my $ErrMessage = $VM->RunPowerOff();
-    return $ErrMessage if (defined $ErrMessage);
-  }
-
-  # Power off some idle VMs we don't need immediately so we can revert more
-  # of the VMs we need now.
-  my $PlannedActiveCount = $ActiveCount - @DirtyVMs + @SortedVMsToRevert;
-  if ($IdleCount > 0 && @SortedVMsToRevert > 0 &&
-      $PlannedActiveCount > $MaxActiveVMs)
-  {
-    # Sort from least important to most important
-    my @SortedIdleVMs = sort { $VMPriorities{$a} <=> $VMPriorities{$b} } keys %IdleVMs;
-    foreach my $VMKey (@SortedIdleVMs)
-    {
-      my $VM = $HostVMs->GetItem($VMKey);
-      next if (!$IdleVMs{$VMKey});
-
-      my $ErrMessage = $VM->RunPowerOff();
-      return $ErrMessage if (defined $ErrMessage);
-      $PlannedActiveCount--;
-      last if ($PlannedActiveCount <= $MaxActiveVMs);
-    }
-    # The scheduler will be run again when these VMs have been powered off and
-    # then we will do the reverts. In the meantime don't change $ActiveCount.
-  }
-
-  # Revert the VMs that are blocking jobs
+  my @SortedVMsToRevert = sort { $VMsToRevert{$a} <=> $VMsToRevert{$b} } keys %VMsToRevert;
   foreach my $VMKey (@SortedVMsToRevert)
   {
-    last if ($RevertingCount == $MaxReverts);
+    last if ($Sched->{reverting} >= $MaxReverts);
+    last if ($Sched->{active} > $MaxActiveVMs);
 
     my $VM = $HostVMs->GetItem($VMKey);
-    next if ($VM->Status eq "off" and $ActiveCount >= $MaxActiveVMs);
-
-    delete $VMPriorities{$VMKey};
-    my $ErrMessage = $VM->RunRevert();
-    return $ErrMessage if (defined $ErrMessage);
-
-    $RevertingCount++;
-    $ActiveCount++ if ($VM->Status eq "off");
-  }
-
-  # Prepare some VMs for the next step of the current jobs
-  foreach my $VMKey (@VMsNext)
-  {
-    last if ($RevertingCount == $MaxReverts);
-    last if ($ActiveCount >= $MaxActiveVMs);
-
-    my $VM = $HostVMs->GetItem($VMKey);
-    next if ($VM->Status ne "off");
-
-    my $ErrMessage = $VM->RunRevert();
-    return $ErrMessage if (defined $ErrMessage);
-    $RevertingCount++;
-    $ActiveCount++;
+    next if (!_CanScheduleOnVM($Sched, $VM));
+    if ($VM->Status eq "off" and $Sched->{active} == $MaxActiveVMs)
+    {
+      # Find an active VM to sacrifice so we can revert more VMs in the next
+      # scheduler round
+      last if (!_SacrificeVM($Sched, $HostVMs));
+      delete $Sched->{lambvms}->{$VMKey};
+      # $Sched->{active} is unchanged: -1 for the sacrificed VM and +1 for the
+      # coming revert
+    }
+    else
+    {
+      delete $Sched->{lambvms}->{$VMKey};
+      $Sched->{busyvms}->{$VMKey} = 1;
+      my $ErrMessage = $VM->RunRevert();
+      return $ErrMessage if (defined $ErrMessage);
+      $Sched->{active}++ if ($VM->Status eq "off");
+    }
+    $Sched->{reverting}++;
   }
 
   # Finally, if we are otherwise idle, prepare some VMs for future jobs
-  if ($ActiveCount == $IdleCount && $ActiveCount < $MaxVMsWhenIdle)
+  if ($Sched->{active} == $Sched->{idle} && $Sched->{idle} < $MaxVMsWhenIdle)
   {
     # Sort from most important to least important
-    my @SortedVMs = sort { $VMPriorities{$b} <=> $VMPriorities{$a} } keys %VMPriorities;
-    foreach my $VMKey (@SortedVMs)
+    my $Priorities = $Sched->{vmpriorities};
+    my @FutureVMs = sort { $Priorities->{$b} <=> $Priorities->{$a} } keys %$Priorities;
+    foreach my $VMKey (@FutureVMs)
     {
-      last if ($RevertingCount == $MaxReverts);
-      last if ($ActiveCount >= $MaxVMsWhenIdle);
+      last if ($Sched->{reverting} >= $MaxReverts);
+      last if ($Sched->{active} >= $MaxVMsWhenIdle);
 
       my $VM = $HostVMs->GetItem($VMKey);
-      next if ($VM->Status ne "off");
+      next if ($VM->Status !~ /^(?:dirty|off)$/);
 
+      delete $Sched->{lambvms}->{$VMKey};
+      $Sched->{busyvms}->{$VMKey} = 1;
       my $ErrMessage = $VM->RunRevert();
       return $ErrMessage if (defined $ErrMessage);
-      $RevertingCount++;
-      $ActiveCount++;
+      $Sched->{reverting}++;
+      $Sched->{active}++;
     }
+  }
+
+  # Power off any still dirty VM
+  foreach my $VMKey (keys %{$Sched->{lambvms}})
+  {
+    my $VM = $HostVMs->GetItem($VMKey);
+    next if ($VM->Status ne "dirty");
+
+    my $ErrMessage = $VM->RunPowerOff();
+    return $ErrMessage if (defined $ErrMessage);
   }
 
   return undef;
