@@ -418,16 +418,66 @@ sub min(@)
 
 Checks if a task or VM operation can be performed on the specified VM.
 
+We allow multiple VM instances to refer to different snapshots of the same
+hypervisor domain (that is VM objects that have identical VirtURI and
+VirtDomain fields but different values for IdleSnapshot). This is typically
+used to test different configurations of the same base virtual machine.
+
+However a hypervisor domain cannot run two snapshots simultaneously so this
+function is used to ensure the scheduler does not simultaneously assign the
+same hypervisor domain to two VM instances.
+
 =back
 =cut
 
-sub _CanScheduleOnVM($$)
+sub _CanScheduleOnVM($$;$)
 {
-  my ($Sched, $VM) = @_;
+  my ($Sched, $VM, $Steal) = @_;
 
-  # If the VM is busy we cannot schedule a new task on it
+  my $DomainKey = $VM->VirtURI ." ". $VM->VirtDomain;
+  my $DomainVM = $Sched->{domains}->{$DomainKey};
+
+  if (!$DomainVM or $DomainVM->Status eq "off")
+  {
+    $Sched->{domains}->{$DomainKey} = $VM;
+    return 1;
+  }
+
   my $VMKey = $VM->GetKey();
-  return !$Sched->{busyvms}->{$VMKey};
+  if ($Sched->{busyvms}->{$VMKey})
+  {
+    # If the VM is busy it cannot be taken over for a new task
+    return 0;
+  }
+
+  my $DomainVMKey = $DomainVM->GetKey();
+  if ($VMKey eq $DomainVMKey and !$VM->ChildPid)
+  {
+    # Already ours and not busy
+    return 1;
+  }
+
+  # We cannot schedule anything on this VM if we cannot take the hypervisor
+  # domain from its current owner. Note that we can always take over dirty VMs
+  # if we did not start an operation on them yet (i.e. if they are in lambvms).
+  if (!$Sched->{lambvms}->{$DomainVMKey} or
+      (!$Steal and $DomainVM->Status ne "dirty"))
+  {
+    return 0;
+  }
+
+  # $DomainVM is either dirty (with no child process), idle or sleeping.
+  # Just mark it off and let the caller poweroff or revert the
+  # hypervisor domain as needed for the new VM.
+  $DomainVM->KillChild(); # For the sleeping case
+  $Sched->{$DomainVM->Status}--;
+  $Sched->{active}--;
+  $DomainVM->Status("off");
+  $DomainVM->Save();
+  # off VMs are neither in busyvms nor lambvms
+  delete $Sched->{lambvms}->{$DomainVMKey};
+  $Sched->{domains}->{$DomainKey} = $VM;
+  return 1;
 }
 
 =pod
@@ -476,13 +526,25 @@ sub _SacrificeVM($$)
   return 1;
 }
 
+sub _GetCounters($)
+{
+  my ($Sched) = @_;
+  my $Msg = "";
+  for my $counter ("active", "idle", "reverting", "sleeping", "running", "dirty")
+  {
+    $Msg .= " $counter=". $Sched->{$counter} if ($Sched->{$counter});
+  }
+  $Msg =~ s/^ //;
+  return $Msg;
+}
+
 =pod
 =over 12
 
 =item C<_CheckAndClassifyVMs()>
 
-Checks the VMs state consistency, counts the VMs in each state and classifies
-them.
+Checks the VMs state consistency, counts the VMs in each state, classifies
+them, and determines which VM owns each hypervisor domain.
 
 =over
 
@@ -513,6 +575,14 @@ Puts the VMs in one of three sets:
 - The set of powered off VMs.
   These are the VMs which are in neither the busyvms nor the lambvms set. Since
   they are powered off they are not using resources.
+
+=item *
+
+Determines which VM should have exclusive access to each hypervisor domain.
+This is normally the VM that is currently using it, but if all a given
+hypervisor domain's VMs are off, one of them is picked at random. In any case
+if a VM is not in the busyvms set, the hypervisor domain can be taken away from
+it if necessary.
 
 =item *
 
@@ -619,8 +689,11 @@ sub _CheckAndClassifyVMs($)
       {
         # Ignore the VM for this round since we cannot use it
         $Sched->{busyvms}->{$VMKey} = 1;
-        my $ErrMessage = $VM->RunMonitor();
-        return ($ErrMessage, undef) if (defined $ErrMessage);
+        if (_CanScheduleOnVM($Sched, $VM))
+        {
+          my $ErrMessage = $VM->RunMonitor();
+          return ($ErrMessage, undef) if (defined $ErrMessage);
+        }
       }
       elsif ($VM->Status eq "maintenance")
       {
@@ -637,6 +710,8 @@ sub _CheckAndClassifyVMs($)
       # Note that off VMs are neither in busyvms nor lambvms
     }
 
+    _CanScheduleOnVM($Sched, $VM);
+
     my $Priority = $VM->Type eq "build" ? 100 :
                    $VM->Role ne "base" ? 1 :
                    $VM->Type eq "win32" ? 10 :
@@ -646,6 +721,8 @@ sub _CheckAndClassifyVMs($)
 
   return (undef, $Sched);
 }
+
+my $NEXT_BASE = 1000;
 
 =pod
 =over 12
@@ -745,8 +822,12 @@ sub ScheduleOnHost($$$)
           # candidate for shutdown since it will be needed next.
           delete $Sched->{lambvms}->{$VMKey};
 
+          # Note that right after the Engine startup _CanScheduleOnVM() may
+          # fail despite this VM being idle if the other VMs sharing its
+          # domain are still going through checkidle.
           if ($Sched->{active} - $Sched->{idle} < $MaxActiveVMs and
-              ($Sched->{reverting} == 0 || $Sched->{reverting} <= $MaxRevertsWhileRunningVMs))
+              ($Sched->{reverting} == 0 || $Sched->{reverting} <= $MaxRevertsWhileRunningVMs) and
+              _CanScheduleOnVM($Sched, $VM))
           {
             $Sched->{busyvms}->{$VMKey} = 1;
             my $ErrMessage = $Task->Run($Step);
@@ -782,7 +863,7 @@ sub ScheduleOnHost($$$)
           my $VMKey = $Task->VM->GetKey();
           next if (!$HostVMs->ItemExists($VMKey));
           $RevertNiceness++;
-          $VMsToRevert{$VMKey} ||= 100 + $RevertNiceness;
+          $VMsToRevert{$VMKey} ||= $NEXT_BASE + $RevertNiceness;
           # If idle already this is not a candidate for shutdown
           delete $Sched->{lambvms}->{$VMKey};
         }
@@ -799,8 +880,10 @@ sub ScheduleOnHost($$$)
     last if ($Sched->{reverting} >= $MaxReverts);
     last if ($Sched->{active} > $MaxActiveVMs);
 
+    # Don't steal the hypervisor domain for a VM we will only need later
+    my $Steal = ($VMsToRevert{$VMKey} < $NEXT_BASE);
     my $VM = $HostVMs->GetItem($VMKey);
-    next if (!_CanScheduleOnVM($Sched, $VM));
+    next if (!_CanScheduleOnVM($Sched, $VM, $Steal));
     if ($VM->Status eq "off" and $Sched->{active} == $MaxActiveVMs)
     {
       # Find an active VM to sacrifice so we can revert more VMs in the next
@@ -834,6 +917,8 @@ sub ScheduleOnHost($$$)
 
       my $VM = $HostVMs->GetItem($VMKey);
       next if ($VM->Status !~ /^(?:dirty|off)$/);
+      # There is no point stealing idle hypervisor domains here
+      next if (!_CanScheduleOnVM($Sched, $VM));
 
       delete $Sched->{lambvms}->{$VMKey};
       $Sched->{busyvms}->{$VMKey} = 1;
@@ -849,6 +934,7 @@ sub ScheduleOnHost($$$)
   {
     my $VM = $HostVMs->GetItem($VMKey);
     next if ($VM->Status ne "dirty");
+    next if (!_CanScheduleOnVM($Sched, $VM));
 
     my $ErrMessage = $VM->RunPowerOff();
     return $ErrMessage if (defined $ErrMessage);
