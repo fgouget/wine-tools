@@ -110,6 +110,7 @@ sub Run($$)
   my $ErrMessage = $self->VM->Run("running", $Args, \&_SetupTask, $self);
   if (!$ErrMessage)
   {
+    $self->Status("running");
     $self->Started(time());
     my $_ErrProperty;
     ($_ErrProperty, $ErrMessage) = $self->Save();
