@@ -320,9 +320,12 @@ sub CheckIdle()
 
   my ($ErrMessage, $SnapshotName) = $VM->GetDomain()->GetSnapshotName();
   FatalError("$ErrMessage\n") if (defined $ErrMessage);
-  return PowerOff() if ($SnapshotName ne $VM->IdleSnapshot);
 
-  return ChangeStatus("dirty", "idle", "done");
+  # If the snapshot does not match then the virtual machine may be used by
+  # another VM instance. So don't touch it. All that counts is that this
+  # VM instance is not running.
+  my $NewStatus = ($SnapshotName eq $VM->IdleSnapshot) ? "idle" : "off";
+  return ChangeStatus("dirty", $NewStatus, "done");
 }
 
 sub Revert()

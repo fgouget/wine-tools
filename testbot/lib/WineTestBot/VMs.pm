@@ -415,9 +415,9 @@ sub _RunVMTool($$$)
 
 =item C<RunCheckIdle()>
 
-If the virtual machine state matches that of this VM instance, sets its status
-to idle. If not the VM is simply marked as off. While this is happening the
-VM status is set to dirty so the job scheduler does not try to use it.
+If the hypervisor domain state matches that of this VM instance, sets its
+status to idle. If not the VM is simply marked as off. While this is happening
+the VM status is set to dirty so the job scheduler does not try to use it.
 
 This operation can take a long time so it is performed in a separate process.
 
