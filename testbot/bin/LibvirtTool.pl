@@ -280,7 +280,7 @@ sub Monitor()
     my $IsPoweredOn = $VM->GetDomain()->IsPoweredOn();
     if ($IsPoweredOn)
     {
-      my $ErrMessage = $VM->GetDomain()->PowerOff(1);
+      my $ErrMessage = $VM->GetDomain()->PowerOff();
       if (defined $ErrMessage)
       {
         Error "$ErrMessage\n";
