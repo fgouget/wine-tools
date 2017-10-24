@@ -361,7 +361,7 @@ sub Revert()
   Debug(Elapsed($Start), " Trying the TestAgent connection\n");
   LogMsg "Waiting for ". $VM->Name ." (up to ${WaitForToolsInVM}s per attempt)\n";
   my $TA = $VM->GetAgent();
-  $TA->SetConnectTimeout($WaitForToolsInVM);
+  $TA->SetConnectTimeout($WaitForToolsInVM, undef, $WaitForToolsInVM);
   my $Success = $TA->Ping();
   $TA->Disconnect();
   if (!$Success)
