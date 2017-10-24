@@ -152,6 +152,11 @@ while (@ARGV)
     {
         $RunFlags |= $TestAgent::RUN_DNTRUNC_ERR;
     }
+    elsif ($arg =~ /^-/)
+    {
+        error("unknown option '$arg'\n");
+        $Usage = 2;
+    }
     elsif (!defined $Hostname)
     {
         $Hostname = $arg;
