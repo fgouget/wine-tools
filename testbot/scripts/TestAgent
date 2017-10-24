@@ -56,7 +56,8 @@ my ($Cmd, $Hostname, $LocalFilename, $ServerFilename, $PropName, @Rm);
 my (@Run, $RunIn, $RunOut, $RunErr, $WaitPid);
 my $SendFlags = 0;
 my $RunFlags = 0;
-my ($Port, $ConnectTimeout, $Timeout, $Keepalive, $TunnelOpt);
+my ($Port, $ConnectTimeout, $ConnectAttempts, $ConnectInterval, $Timeout);
+my ($Keepalive, $TunnelOpt);
 my $Usage;
 
 sub set_cmd($)
@@ -102,6 +103,14 @@ while (@ARGV)
     elsif ($arg eq "--connect-timeout")
     {
         $ConnectTimeout = check_opt_val($arg, $ConnectTimeout);
+    }
+    elsif ($arg eq "--connect-attempts")
+    {
+        $ConnectAttempts = check_opt_val($arg, $ConnectAttempts);
+    }
+    elsif ($arg eq "--connect-interval")
+    {
+        $ConnectInterval = check_opt_val($arg, $ConnectInterval);
     }
     elsif ($arg eq "--timeout")
     {
@@ -340,6 +349,9 @@ if (defined $Usage)
     print "  --port <port> Use the specified port number instead of the default one.\n";
     print "  --connect-timeout <timeout> Use the specified timeout (in seconds) when\n";
     print "                connecting instead of the default one.\n";
+    print "  --connect-attempts <count> How many connection attempts to perform.\n";
+    print "  --connect-interval <time> The minimum interval (in seconds) between failed\n";
+    print "                connection attempts.\n";
     print "  --timeout <timeout> Use the specified timeout (in seconds) instead of the\n";
     print "                default one for the operation.\n";
     print "  --keepalive <keepalive> How often (in seconds) the run and wait operations\n";
@@ -363,7 +375,10 @@ if ($TunnelOpt and $TunnelOpt =~ /^ssh:/)
 }
 
 my $TA = TestAgent->new($Hostname, $AgentPort, $TunnelInfo);
-$TA->SetConnectTimeout($ConnectTimeout) if (defined $ConnectTimeout);
+if (defined $ConnectTimeout or defined $ConnectAttempts or defined $ConnectInterval)
+{
+    $TA->SetConnectTimeout($ConnectTimeout, $ConnectAttempts, $ConnectInterval);
+}
 $TA->SetTimeout($Timeout) if (defined $Timeout);
 
 my $RC = 0;
