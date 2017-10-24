@@ -404,11 +404,6 @@ sub CompareJobPriority
   return $a->Priority <=> $b->Priority || $a->Id <=> $b->Id;
 }
 
-sub CompareTaskStatus
-{
-  return $b->Status cmp $a->Status || $a->No <=> $b->No;
-}
-
 sub min(@)
 {
   my $m = shift @_;
@@ -543,7 +538,7 @@ sub ScheduleOnHost($$$)
       my $PrepareNextStep;
       my $Tasks = $Step->Tasks;
       $Tasks->AddFilter("Status", ["queued"]);
-      my @SortedTasks = sort CompareTaskStatus @{$Tasks->GetItems()};
+      my @SortedTasks = sort { $a->No <=> $b->No } @{$Tasks->GetItems()};
       foreach my $Task (@SortedTasks)
       {
         my $VM = $Task->VM;
@@ -591,7 +586,7 @@ sub ScheduleOnHost($$$)
         my $Step = $SortedSteps[1];
         $Tasks = $Step->Tasks;
         $Tasks->AddFilter("Status", ["queued"]);
-        @SortedTasks = sort CompareTaskStatus @{$Tasks->GetItems()};
+        @SortedTasks = sort { $a->No <=> $b->No } @{$Tasks->GetItems()};
         foreach my $Task (@SortedTasks)
         {
           my $VM = $Task->VM;
