@@ -106,6 +106,7 @@ sub new($$$;$)
     connection => "$Hostname:$Port",
     ctimeout   => 20,
     cattempts  => 3,
+    cinterval  => 0,
     timeout    => 0,
     fd         => undef,
     deadline   => undef,
@@ -147,9 +148,9 @@ sub Disconnect($)
   $self->{agentversion} = undef;
 }
 
-sub SetConnectTimeout($$;$)
+sub SetConnectTimeout($$;$$)
 {
-  my ($self, $Timeout, $Attempts) = @_;
+  my ($self, $Timeout, $Attempts, $Interval) = @_;
   my @Ret;
   if (defined $Timeout)
   {
@@ -160,6 +161,11 @@ sub SetConnectTimeout($$;$)
   {
     push @Ret, $self->{cattempts};
     $self->{cattempts} = $Attempts;
+  }
+  if (defined $Interval)
+  {
+    push @Ret, $self->{cinterval};
+    $self->{cinterval} = $Interval;
   }
   return @Ret;
 }
@@ -891,7 +897,8 @@ sub _Connect($)
   $self->{rpc} = ($self->{rpc} ? "$self->{rpc}/" : "") ."connect";
 
   my $Step;
-  foreach my $Dummy (1..$self->{cattempts})
+  my $Start = time();
+  foreach my $Attempt (1..$self->{cattempts})
   {
     my $Step = "initializing";
     eval
@@ -1026,7 +1033,8 @@ sub _Connect($)
     }
     # Ideally we should probably check the error and not retry if it is likely
     # permanent, like a hostname that does not resolve.
-    sleep(1);
+    my $Remaining = $Attempt * $self->{cinterval} - (time() - $Start);
+    sleep($Remaining) if ($Remaining > 0);
   }
   $self->{rpc} = $OldRPC;
   return undef;
