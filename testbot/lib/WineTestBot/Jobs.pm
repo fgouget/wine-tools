@@ -399,6 +399,8 @@ sub CreateJobs(;$)
 
 sub CompareJobPriority
 {
+  # Process Jobs with a higher Priority value last (it's a niceness in fact),
+  # and older Jobs first.
   return $a->Priority <=> $b->Priority || $a->Id <=> $b->Id;
 }
 
