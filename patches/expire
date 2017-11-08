@@ -24,7 +24,6 @@
 my %status_expiry =
 (
  "nil"        => 30,
- "pending"    => 30,
  "assigned"   => 30,
  "applied"    => 30,
  "committed"  => 1,
@@ -35,12 +34,11 @@ my %status_expiry =
  "formatting" => 7,
  "other"      => 7,
  "nopatch"    => 3,
- "reply"      => 7,
+ "reply"      => 1,
  "rejected"   => 7,
  "split"      => 7,
  "depend"     => 7,
  "sequence"   => 7,
- "signoff"    => 1,
  "superseded" => 1,
  "testcase"   => 7,
  "testfail"   => 7,
@@ -49,7 +47,6 @@ my %status_expiry =
 my %status_descr =
 (
  "nil"        => "New",
- "pending"    => "Pending",
  "assigned"   => "Assigned",
  "applied"    => "Applied",
  "committed"  => "Committed",
@@ -65,7 +62,6 @@ my %status_descr =
  "split"      => "Needs splitting",
  "depend"     => "Dependency",
  "sequence"   => "Bad sequence",
- "signoff"    => "Sign-off",
  "superseded" => "Superseded",
  "testcase"   => "Needs tests",
  "testfail"   => "Test failure",
@@ -73,12 +69,6 @@ my %status_descr =
 
 my %status_explanation =
 (
- "pending"    =>
-"This means that the patch is not necessarily wrong, but its
-correctness is not obvious. You should either write a test case
-demonstrating that it is correct, try to fix the problem in a more
-straightforward way, or better explain why you are doing things this
-way.",
  "assigned"    =>
 "This means that the patch has been assigned to a reviewer. If the
 reviewer signs off on the patch, it will be committed, otherwise
@@ -142,7 +132,6 @@ to enable the Testbot to figure it out.",
 the patch is correct.",
 # No notifications are sent for the following:
 # "nil"
-# "signoff"
 # "reply"
 # "superseded"
 # "testfail"
@@ -213,7 +202,7 @@ sub get_patch_state($)
     {
         $status = <STATUS>;
         chomp $status;
-        $mtime = (stat STATUS)[9] unless ($status eq "nil" || $status eq "pending");
+        $mtime = (stat STATUS)[9] unless $status eq "nil";
         close STATUS;
     }
     $mtime ||= (stat "$dir/$file")[9];

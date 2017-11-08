@@ -153,7 +153,6 @@ tr.odd { background-color: #f8e8e8; }
 .id :hover, .sha1 :hover, .subject :hover { color: #FF6666; text-decoration: underline; }
 
 .nil,        .nil :link,        .nil :visited        { color: blue; font-weight: bold; }
-.pending,    .pending :link,    .pending :visited    { color: blue; }
 .assigned,   .assigned :link,   .assigned :visited   { color: blue; }
 .committed,  .committed :link,  .committed :visited  { color: green; }
 .depend,     .depend :link,     .depend :visited     { color: #e08000; }
@@ -161,7 +160,6 @@ tr.odd { background-color: #f8e8e8; }
 .sequence,   .sequence :link,   .sequence :visited   { color: #e08000; }
 .deferred,   .deferred :link,   .deferred :visited   { color: #e08000; }
 .testcase,   .testcase :link,   .testcase :visited   { color: #e08000; }
-.signoff,    .signoff :link,    .signoff :visited    { color: #e08000; }
 .reply,      .reply :link,      .reply :visited      { color: #e08000; }
 .other,      .other :link,      .other :visited      { color: #e08000; }
 .applyfail,  .applyfail :link,  .applyfail :visited  { color: red; }

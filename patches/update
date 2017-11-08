@@ -24,7 +24,6 @@ use CGI qw(:standard);
 my %status_descr =
 (
  "nil"        => "New",
- "pending"    => "Pending",
  "assigned"   => "Assigned",
  "applied"    => "Applied",
  "committed"  => "Committed",
@@ -42,14 +41,12 @@ my %status_descr =
  "sequence"   => "Bad sequence",
  "testcase"   => "Needs tests",
  "testfail"   => "Test failure",
- "signoff"    => "Sign-off",
  "reply"      => "Reply",
 );
 
 my @legend =
 (
  [ "nil",        "<ul><li>Patch not even looked at yet, there's still hope...</li></ul>" ],
- [ "pending",    "<ul><li>The patch is not obviously correct at first glance. Making a more convincing argument, preferably in the form of a test case, may help.</li></ul>" ],
  [ "assigned",   "<ul><li>Waiting for sign-off or feedback from the assigned reviewer. If you don't hear anything after a couple of weeks, please resend the patch.</li></ul>" ],
  [ "committed",  "<ul><li>You have done everything right; congratulations!</li>" .
                  "<li>You screwed up but AJ missed it, send a fix before someone notices ;-)</li></ul>" ],
@@ -59,8 +56,6 @@ my @legend =
                  "<li>Someone else fixed the problem already.</li></ul>" ],
  [ "testcase",   "<ul><li>You need to write some test cases demonstrating that the patch is correct.</li></ul>" ],
  [ "deferred",   "<ul><li>The patch is deferred because of code freeze for an upcoming release. Either resend after the release, make the patch less intrusive, or make a convincing argument that it needs to be included in the release.</li></ul>" ],
- [ "signoff",    "<ul><li>This is a Signed-off-by reply to another patch.</li></ul>" ],
- [ "reply",      "<ul><li>The mail is a reply to another patch.</li></ul>" ],
  [ "other",      "<ul><li>The patch belongs to another WineHQ project (website, appdb, etc.) and will be applied by the respective maintainer.</li></ul>" ],
  [ "applyfail",  "<ul><li>The patch got mangled in transit.</li>" .
                  "<li>It's not relative to the latest git.</li>" .
