@@ -91,6 +91,7 @@ my $dir = $ARGV[0] || "$ENV{HOME}/patches";
 my $dest = "/home/winehq/opt/source/patches";
 my %patches;
 my %messages;
+my %subdirs;
 
 sub format_author($)
 {
@@ -218,6 +219,7 @@ foreach my $file (readdir DIR)
         $messages{$patch{"msgid"}} = \%patch;
     }
     $patches{$file} = \%patch;
+    if ($file =~ /^([0-9]+)[0-9]{4}$/) { $subdirs{$1} = 1; }
 }
 closedir DIR;
 
@@ -449,5 +451,9 @@ print INDEX $sorter;
 print INDEX end_html;
 close INDEX;
 
-!system "rsync", "-q", "-r", "--chmod=+r", "--exclude=OLD/", "$dir/", "$dest/data" or die "rsync failed: $?";
+foreach (keys %subdirs)
+{
+    !system "rsync", "-q", "-r", "--chmod=+r", "--include=$_*", "--exclude=*", "$dir/", "$dest/data/$_" or die "rsync failed: $?";
+}
+
 rename "$dest/index.html.new", "$dest/index.html" or die "failed to update index.html";
