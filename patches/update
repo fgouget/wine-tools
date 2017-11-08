@@ -90,6 +90,7 @@ my @legend =
 my $dir = $ARGV[0] || "$ENV{HOME}/patches";
 my $dest = "/home/winehq/opt/source/patches";
 my %patches;
+my %messages;
 
 sub format_author($)
 {
@@ -126,7 +127,7 @@ print INDEX "<div id=\"logo_blurb\">Wine source repository &ndash; Patch status<
 print INDEX "<div id=\"main_content\"><div id=\"content\"><div class=\"main\">\n";
 print INDEX "<table id=\"main_table\" class=\"main\"><thead><tr><th class=\"id\">ID</th>",
     "<th class=\"status\">Status</th>",
-    "<th class=\"author\">Author</th>",
+    "<th colspan=\"2\" class=\"author\">Author</th>",
     "<th class=\"subject\">Subject</th>",
     "<th class=\"author\">Reviewer</th>",
     "<th class=\"status\">Sign</th>",
@@ -144,6 +145,8 @@ foreach my $file (readdir DIR)
         utf8::decode($_);
         if (/^Subject: (.*)$/) { $patch{"subject"} = $1; }
         elsif (/^From: (.*)$/) { $patch{"author"} = format_author($1); }
+        elsif (/^Message-Id: (.*)$/) { $patch{"msgid"} = $1; }
+        elsif (/^In-Reply-To: (.*)$/) { $patch{"reply"} = $1; }
         last if (/^$/);
     }
     while (<PATCH>)
@@ -152,8 +155,14 @@ foreach my $file (readdir DIR)
         if (/^\s*Signed-off-by: (.*)$/) { push @{$patch{"signoff"}}, format_author($1); }
         last if (/^---$/);
     }
+    while (<PATCH>)
+    {
+        utf8::decode($_);
+        if (/^diff --git a\//) { $patch{"has_patch"} = 1; last; }
+    }
     close PATCH;
 
+    $patch{"id"} = $file;
     $patch{"status"} = "nil";
     if (open STATUS, "<$dir/$file.status")
     {
@@ -208,19 +217,52 @@ foreach my $file (readdir DIR)
     {
         $patch{"testbot"} = "Failed";
     }
+    if (defined $patch{"msgid"})
+    {
+        $messages{$patch{"msgid"}} = \%patch;
+    }
     $patches{$file} = \%patch;
 }
 closedir DIR;
+
+# build mail threads
+
+foreach my $file (sort keys %patches)
+{
+    my $patch = $patches{$file};
+    next if defined $patch->{"has_patch"};
+    next unless defined $patch->{"reply"};
+    next unless defined $messages{$patch->{"reply"}};
+    my $parent = $messages{$patch->{"reply"}};
+    # find top parent
+    while (!defined($parent->{"has_patch"}) && defined($parent->{"reply"}))
+    {
+        $parent = $messages{$parent->{"reply"}};
+    }
+    next unless defined $parent;
+    # add it to the parent's children and remove it from the list
+    $patch->{"parent"} = $parent;
+    push @{$parent->{"children"}}, $patch;
+    delete $patches{$file};
+}
 
 my $row = 0;
 foreach my $file (sort { $patches{$b}->{"order"} <=> $patches{$a}->{"order"} } keys %patches)
 {
     my $patch = $patches{$file};
-    printf INDEX "<tr class=\"%s %s\"><td class=\"id\">%s</td><td class=\"status\"><a href=\"#legend\">%s</a></td><td class=\"author\">%s</td>",
-           $row & 1 ? "odd" : "even", $patch->{"status"}, $file, $status_descr{$patch->{"status"}} || $patch->{"status"},
-           escapeHTML($patch->{"author"});
-    printf INDEX "<td class=\"subject\"><a href=\"data/$file\">%s</a></td>",
-           escapeHTML($patch->{"subject"});
+
+    printf INDEX "<tr class=\"%s %s\"><td class=\"id\">%s</td><td class=\"status\"><a href=\"#legend\">%s</a></td>",
+        $row & 1 ? "odd" : "even", $patch->{"status"}, $file, $status_descr{$patch->{"status"}} || $patch->{"status"};
+    if (defined $patch->{"children"})
+    {
+        printf INDEX "<td class=\"author\">%s</td>", escapeHTML($patch->{"author"});
+        printf INDEX "<td class=\"arrow\" onclick=\"toggle_display('$file.reply')\">&#9660;</td>";
+    }
+    else
+    {
+        printf INDEX "<td colspan=\"2\" class=\"author\">%s</td>", escapeHTML($patch->{"author"});
+    }
+    printf INDEX "<td class=\"subject\"><a href=\"data/$file\">%s</a></td>", escapeHTML($patch->{"subject"});
     if ($patch->{"review"})
     {
         printf INDEX "<td class=\"author\">%s</td>", escapeHTML($patch->{"review"});
@@ -259,8 +301,16 @@ foreach my $file (sort { $patches{$b}->{"order"} <=> $patches{$a}->{"order"} } k
     if (defined($patch->{"signoff"}))
     {
         printf INDEX "<tr class=\"%s\" id=\"$file.signoff\" style=\"display: none;\" onclick=\"toggle_display('$file.signoff')\">" .
-                     "<td colspan=\"4\" /><td colspan=\"4\" class=\"signoffextra author\">%s</td></tr>\n",
+                     "<td colspan=\"5\" /><td colspan=\"4\" class=\"signoffextra author\">%s</td></tr>\n",
                $row & 1 ? "odd" : "even", join("", map { "Signed-off-by: " . escapeHTML($_) . "<br/>"; } @{$patch->{"signoff"}});
+    }
+    foreach my $child (@{$patch->{"children"}})
+    {
+        printf INDEX "<tr class=\"%s\" id=\"$file.reply\" style=\"display: none;\" onclick=\"toggle_display('$file.reply')\">" .
+                     "<td colspan=\"2\" /><td colspan=\"2\" class=\"reply author\"><span class=\"indent\" />%s</td> " .
+                     "<td class=\"reply author\"><span class=\"indent\" /><a href=\"data/%s\">%s</a></td> " .
+                     "<td colspan=\"4\" /></tr>\n",
+            $row & 1 ? "odd" : "even", escapeHTML($child->{"author"}), $child->{"id"}, escapeHTML($child->{"subject"});
     }
     $row++;
 }
@@ -284,7 +334,7 @@ my $sorter = <<END;
       tbody = table.children[1],
       ths   = thead.getElementsByTagName('th'),
       trs   = tbody.getElementsByTagName('tr'),
-      i, do_reverse, th, sort_func;
+      i, j, k, id, do_reverse, th, sort_func;
 
   for (i = 0; i < ths.length; i++)
     ths[i].onclick = sort_table;
@@ -307,13 +357,20 @@ my $sorter = <<END;
       do_reverse = 1;
     th.setAttribute('data-order', do_reverse)
 
-    for (j = 0, i = trs.length - 1; i != -1; i--)
+    for (j = 0, k = 0, i = trs.length - 1; i != -1; i--)
     {
-      tr = tbody.removeChild(trs[i])
+      tr = tbody.removeChild(trs[0])
       if (!tr.getAttribute('id'))
+      {
         clone_trs[j++] = tr;
-      else
-        sign_trs[text_content(trs[i - 1].children[0])] = tr; /* based on the patch ID */
+        id = text_content(tr.children[0]);
+        k = 0;
+      }
+      else if (id) /* based on the patch ID */
+      {
+        if (!k) sign_trs[id] = [];
+        sign_trs[id][k++] = tr;
+      }
     }
     clone_trs.sort(sorter);
 
@@ -323,7 +380,8 @@ my $sorter = <<END;
       tbody.appendChild(clone_trs[i]);
       j = text_content(clone_trs[i].children[0]);
       if (sign_trs[j])
-        tbody.appendChild(sign_trs[j]);
+        for (k = 0; k < sign_trs[j].length; k++)
+          tbody.appendChild(sign_trs[j][k]);
     }
   }
 

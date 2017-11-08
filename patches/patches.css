@@ -132,15 +132,18 @@ div.buglist {
     border: 1px solid #601919;
 }
 table.main, table.legend { width: 100%; }
+table.main { border-collapse: collapse; }
 
 table.legend ul { margin: 2px 0; }
 
 tr.even { background-color: #fff8f8; }
 tr.odd { background-color: #f8e8e8; }
+.indent { padding: 0 2em; }
 
 .id, .status, .testbot { text-align: center; }
-.id, .status, .author { white-space: nowrap; padding: 0 3px; }
+.id, .status, .author { white-space: nowrap; padding: 2px 3px; }
 .checkmark { text-align: center; color:green; }
+.arrow { text-align: center; padding: 0 0; }
 .failmark { text-align: center; color: red; }
 .signoffextra { color: #A50D0D; border: 1px solid #601919; }
 .sha1 { white-space: nowrap; font-family: monospace; padding: 2px 12px; }
