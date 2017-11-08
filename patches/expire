@@ -193,6 +193,21 @@ sub get_patch_state($)
     my $file = shift;
     my $status = "nil";
     my $mtime = 0;
+    my ($subject, $msgid, $reply);
+
+    return undef unless open PATCH, "<$dir/$file";
+    while (<PATCH>)
+    {
+        if (/^Subject: (.*)$/) { $subject = $1; }
+        elsif (/^Message-Id: (.*)$/) { $msgid = $1; }
+        elsif (/^In-Reply-To: (.*)$/) { $reply = $1; }
+        last if (/^$/);
+    }
+    while (<PATCH>)
+    {
+        if (/^diff --git a\//) { $reply = undef; last; }
+    }
+    close PATCH;
 
     if (open STATUS, "<$dir/$file.status")
     {
@@ -201,11 +216,8 @@ sub get_patch_state($)
         $mtime = (stat STATUS)[9] unless ($status eq "nil" || $status eq "pending");
         close STATUS;
     }
-    if (!$mtime && $file !~ /^OLD\//)
-    {
-        $mtime = (stat "$dir/$file")[9];
-    }
-    return ($status, $mtime);
+    $mtime ||= (stat "$dir/$file")[9];
+    return ($subject, $msgid, $reply, $status, $mtime);
 }
 
 sub get_previous_state($)
@@ -364,81 +376,49 @@ EOF
 
 # expire current patches
 
+my %patches;
+
 opendir DIR, $dir or die "cannot open '$dir': $!\n";
 foreach my $file (sort readdir DIR)
 {
     next unless $file =~ /^[0-9]+$/;
-    my ($status, $mtime) = get_patch_state( $file );
+    my ($subject, $msgid, $reply, $status, $mtime) = get_patch_state( $file );
     my $prev_status = get_previous_state( $file );
     my $limit = $status_expiry{$status} || 7;
+    my $expire = (($now - $mtime - 12*60*60) / (24*60*60) > $limit);
 
     notify_state_change( $file, $prev_status, $status );
 
-    if (($now - $mtime - 12*60*60) / (24*60*60) > $limit)
-    {
-        if ($status eq "nil" || $status eq "pending")
-        {
-            # move to OLD
-            printf "rename $file -> OLD   %s  %s\n", $status, get_patch_subject( "$file" ) unless $quiet;
-            unless ($dry_run)
-            {
-                rename "$dir/$file",        "$dir/OLD/$file";
-                rename "$dir/$file.status", "$dir/OLD/$file.status";
-                rename "$dir/$file.order",  "$dir/OLD/$file.order";
-                rename "$dir/$file.review", "$dir/OLD/$file.review";
-                rename "$dir/$file.signoff", "$dir/OLD/$file.signoff";
-                rename "$dir/$file.testbot", "$dir/OLD/$file.testbot";
-                rename "$dir/$file.testfail", "$dir/OLD/$file.testfail";
-            }
-        }
-        else
-        {
-            printf "unlink $file   %s  %s\n", $status, get_patch_subject( "$file" ) unless $quiet;
-            unless ($dry_run)
-            {
-                unlink "$dir/$file";
-                unlink "$dir/$file.status";
-                unlink "$dir/$file.order";
-                unlink "$dir/$file.signoff";
-                unlink "$dir/$file.review";
-                unlink "$dir/$file.testbot";
-                unlink "$dir/$file.testfail";
-                unlink "$dir/OLD/$file.status";
-            }
-        }
-    }
+    $patches{$msgid} = [ $file, $subject, $reply, $status, $expire ];
 }
 closedir DIR;
 
-# expire old patches whose status has changed
-
-opendir DIR, "$dir/OLD" or die "cannot open '$dir/OLD': $!\n";
-foreach my $file (sort readdir DIR)
+foreach my $p (keys %patches)
 {
-    next unless $file =~ /^[0-9]+$/;
-    my ($status, $mtime) = get_patch_state( "OLD/$file" );
+    my ($file, $subject, $reply, $status, $expire) = @{$patches{$p}};
+    my $orig_status = $status;
 
-    if ($status eq "pending")
+    # for replies, inherit expire flag from top parent
+    while ($reply && $status eq "reply")
     {
-        # remove status file
-        printf "unlink OLD/$file.status\n" unless $quiet;
-        unlink "$dir/OLD/$file.status" unless $dry_run;
+        last unless defined $patches{$reply};
+        (undef, undef, $reply, $status, $expire) = @{$patches{$reply}};
     }
-    elsif ($status ne "nil")
+
+    if ($expire)
     {
-        printf "unlink OLD/$file   %s  %s\n", $status, get_patch_subject( "OLD/$file" ) unless $quiet;
+        printf "unlink $file   %s  %s\n", $orig_status, $subject unless $quiet;
         unless ($dry_run)
         {
-            unlink "$dir/OLD/$file";
+            unlink "$dir/$file";
+            unlink "$dir/$file.status";
+            unlink "$dir/$file.order";
+            unlink "$dir/$file.review";
+            unlink "$dir/$file.testbot";
+            unlink "$dir/$file.testfail";
             unlink "$dir/OLD/$file.status";
-            unlink "$dir/OLD/$file.order";
-            unlink "$dir/OLD/$file.review";
-            unlink "$dir/OLD/$file.signoff";
-            unlink "$dir/OLD/$file.testbot";
-            unlink "$dir/OLD/$file.testfail";
         }
     }
 }
-closedir DIR;
 
 notify_reviewers();
