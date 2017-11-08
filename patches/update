@@ -99,6 +99,12 @@ sub format_author($)
     return $str;
 }
 
+sub uniq
+{
+    my %seen;
+    return grep { !$seen{$_}++ } @_;
+}
+
 my $js = <<END;
 function toggle_display(id)
 {
@@ -185,16 +191,6 @@ foreach my $file (readdir DIR)
         $patch{"review"} = format_author($_);
         close REVIEW;
     }
-    if (open SIGNOFF, "<:raw", "$dir/$file.signoff")
-    {
-        while (<SIGNOFF>)
-        {
-            chomp;
-            utf8::decode($_);
-            push @{$patch{"signoff"}}, format_author($_);
-        }
-        close SIGNOFF;
-    }
     $patch{"testbot"} = "";
     $patch{"testjob"} = "";
     $patch{"testurl"} = "";
@@ -243,6 +239,7 @@ foreach my $file (sort keys %patches)
     # add it to the parent's children and remove it from the list
     $patch->{"parent"} = $parent;
     push @{$parent->{"children"}}, $patch;
+    push @{$parent->{"signoff"}}, @{$patch->{"signoff"}} if $patch->{"signoff"};
     delete $patches{$file};
 }
 
@@ -271,9 +268,10 @@ foreach my $file (sort { $patches{$b}->{"order"} <=> $patches{$a}->{"order"} } k
     {
         printf INDEX "<td></td>";
     }
-    if (defined($patch->{"signoff"}))
+    my @signoff = defined($patch->{"signoff"}) ? uniq( @{$patch->{"signoff"}} ) : ();
+    if (@signoff)
     {
-        printf INDEX "<td class=\"checkmark\" onclick=\"toggle_display('$file.signoff')\">%s</td>", "&#10003;" x @{$patch->{"signoff"}};
+        printf INDEX "<td class=\"checkmark\" onclick=\"toggle_display('$file.signoff')\">%s</td>", "&#10003;" x @signoff;
     }
     else
     {
@@ -298,11 +296,11 @@ foreach my $file (sort { $patches{$b}->{"order"} <=> $patches{$a}->{"order"} } k
         print INDEX "<td></td>";
     }
     print INDEX "</tr>\n";
-    if (defined($patch->{"signoff"}))
+    if (@signoff)
     {
         printf INDEX "<tr class=\"%s\" id=\"$file.signoff\" style=\"display: none;\" onclick=\"toggle_display('$file.signoff')\">" .
                      "<td colspan=\"5\" /><td colspan=\"4\" class=\"signoffextra author\">%s</td></tr>\n",
-               $row & 1 ? "odd" : "even", join("", map { "Signed-off-by: " . escapeHTML($_) . "<br/>"; } @{$patch->{"signoff"}});
+               $row & 1 ? "odd" : "even", join("", map { "Signed-off-by: " . escapeHTML($_) . "<br/>"; } @signoff );
     }
     foreach my $child (@{$patch->{"children"}})
     {
