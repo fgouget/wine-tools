@@ -154,6 +154,7 @@ foreach my $file (readdir DIR)
         elsif (/^From: (.*)$/) { $patch{"author"} = format_author($1); }
         elsif (/^Message-Id: (.*)$/) { $patch{"msgid"} = $1; }
         elsif (/^In-Reply-To: (.*)$/) { $patch{"reply"} = $1; }
+        elsif (/^References: (.*)$/) { @{$patch{"refs"}} = split /\s+/, $1; }
         last if (/^$/);
     }
     while (<PATCH>)
@@ -225,30 +226,47 @@ closedir DIR;
 
 # build mail threads
 
+sub assign_parent($);
+sub assign_parent($)
+{
+    my $patch = shift;
+
+    if (defined($patch->{"parent"})) { return $patch->{"parent"}; }
+
+    return $patch if defined $patch->{"has_patch"};
+    return $patch unless defined $patch->{"reply"};
+
+    foreach ($patch->{"reply"}, @{$patch->{"refs"}})
+    {
+        next unless defined $messages{$_};
+        my $parent = assign_parent( $messages{$_} );
+        next unless $parent;
+        # add it to the parent's children
+        $patch->{"parent"} = $parent;
+        push @{$parent->{"children"}}, $patch;
+        push @{$parent->{"signoff"}}, @{$patch->{"signoff"}} if $patch->{"signoff"};
+        return $parent;
+    }
+    return undef;
+}
+
 foreach my $file (sort keys %patches)
 {
-    my $patch = $patches{$file};
-    next if defined $patch->{"has_patch"};
-    next unless defined $patch->{"reply"};
-    next unless defined $messages{$patch->{"reply"}};
-    my $parent = $messages{$patch->{"reply"}};
-    # find top parent
-    while (!defined($parent->{"has_patch"}) && defined($parent->{"reply"}))
-    {
-        $parent = $messages{$parent->{"reply"}};
-    }
-    next unless defined $parent;
-    # add it to the parent's children and remove it from the list
-    $patch->{"parent"} = $parent;
-    push @{$parent->{"children"}}, $patch;
-    push @{$parent->{"signoff"}}, @{$patch->{"signoff"}} if $patch->{"signoff"};
-    delete $patches{$file};
+    assign_parent( $patches{$file} );
+    # remove patches that have a parent
+    delete $patches{$file} if $patches{$file}->{"parent"};
 }
 
 my $row = 0;
 foreach my $file (sort { $patches{$b}->{"order"} <=> $patches{$a}->{"order"} } keys %patches)
 {
     my $patch = $patches{$file};
+
+    if (!defined $patch->{"has_patch"}) # skip non-patches
+    {
+        next if $patch->{"status"} eq "reply";
+        next unless $patch->{"subject"} =~ /\[.*PATCH.*\]/;
+    }
 
     printf INDEX "<tr class=\"%s %s\"><td class=\"id\">%s</td><td class=\"status\"><a href=\"#legend\">%s</a></td>",
         $row & 1 ? "odd" : "even", $patch->{"status"}, $file, $status_descr{$patch->{"status"}} || $patch->{"status"};
