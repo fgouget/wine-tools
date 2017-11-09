@@ -104,9 +104,12 @@ sub uniq
 my $js = <<END;
 function toggle_display(id)
 {
-    var e = document.getElementById(id);
-    var display = e.style.display;
-    e.style.display = display == "none" ? "" : "none";
+    var elems = document.getElementById('main_table').getElementsByClassName(id);
+    for (i = 0; i < elems.length; i++)
+    {
+        var display = elems[i].style.display;
+        elems[i].style.display = display == "none" ? "" : "none";
+    }
 }
 END
 
@@ -313,17 +316,17 @@ foreach my $file (sort { $patches{$b}->{"order"} <=> $patches{$a}->{"order"} } k
     print INDEX "</tr>\n";
     if (@signoff)
     {
-        printf INDEX "<tr class=\"%s\" id=\"$file.signoff\" style=\"display: none;\" onclick=\"toggle_display('$file.signoff')\">" .
+        printf INDEX "<tr class=\"%s $file.signoff\" id=\"$file.signoff\" style=\"display: none;\" onclick=\"toggle_display('$file.signoff')\">" .
                      "<td colspan=\"5\" /><td colspan=\"4\" class=\"signoffextra author\">%s</td></tr>\n",
                $row & 1 ? "odd" : "even", join("", map { "Signed-off-by: " . escapeHTML($_) . "<br/>"; } @signoff );
     }
     foreach my $child (@{$patch->{"children"}})
     {
-        printf INDEX "<tr class=\"%s\" id=\"$file.reply\" style=\"display: none;\" onclick=\"toggle_display('$file.reply')\">" .
+        printf INDEX "<tr class=\"%s\ $file.reply\" id=\"%s\" style=\"display: none;\" onclick=\"toggle_display('$file.reply')\">" .
                      "<td colspan=\"2\" /><td colspan=\"2\" class=\"reply author\"><span class=\"indent\" />%s</td> " .
                      "<td class=\"reply author\"><span class=\"indent\" /><a href=\"data/%s\">%s</a></td> " .
                      "<td colspan=\"4\" /></tr>\n",
-            $row & 1 ? "odd" : "even", escapeHTML($child->{"author"}), $child->{"id"}, escapeHTML($child->{"subject"});
+            $row & 1 ? "odd" : "even", $child->{"id"}, escapeHTML($child->{"author"}), $child->{"id"}, escapeHTML($child->{"subject"});
     }
     $row++;
 }
