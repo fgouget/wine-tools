@@ -345,7 +345,7 @@ asked to review the following Wine $patch_str:
     $patch_urls
 
 If you think that a patch is correct and can be committed, please send
-a mail to wine-patches with your Signed-off-by header, as a reply to
+a mail to wine-devel with your Signed-off-by header, as a reply to
 the original patch email.
 
 If you find some issues in a patch, please send a mail to the patch

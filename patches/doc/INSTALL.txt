@@ -37,14 +37,13 @@ Apache setup:
 - Create the $HOME/opt/source/patches directory and copy patches.css there:
     mkdir $HOME/opt/source/patches
     cp patches.css $HOME/opt/source/patches
-- Create the $HOME/patches and $HOME/patches/OLD directories where the patch
-  data will live:
-    mkdir -p $HOME/patches/OLD
-- Arrange for the filter script to be fed the wine-patches emails. One way to
-  do so would be to subscribe the winehq user to the wine-patches mailing list
+- Create the $HOME/patches directory where the patch data will live:
+    mkdir -p $HOME/patches
+- Arrange for the filter script to be fed the wine-devel emails. One way to
+  do so would be to subscribe the winehq user to the wine-devel mailing list
   and to then add the following lines to the .procmailrc file:
     :0
-    * ^List-Id: Wine Patch Submissions
+    * ^List-Id:.*wine-devel\.winehq\.org
     {
       :0 hbfw
       | $HOME/tools/patches/filter
@@ -55,8 +54,6 @@ Apache setup:
   formail -ds procmail <mbox-file
 - Run update regularly to update the website:
     */5 * * * * $HOME/tools/patches/update
-- Run expire regularly to delete old patches:
-    0 0 * * * $HOME/tools/patches/expire -v $HOME/patches
 
 For integration with the WineTestBot, see the corresponding section in the
 WineTestBot documentation.
