@@ -89,17 +89,16 @@ Setup for Winetest updates:
     */10 * * * * $HOME/tools/testbot/bin/CheckForWinetestUpdate.pl 32
     */10 * * * * $HOME/tools/testbot/bin/CheckForWinetestUpdate.pl 64
 
-Setup for wine-patches:
+Setup for wine-devel:
 - A proper WineTestBot system should integrate with Wine's patches site.
-  An alternative is to interface directly with wine-patches as described in
+  An alternative is to interface directly with wine-devel as described in
   this section.
 - Arrange for the WinePatchesMLSubmit.pl script to be fed the
-  wine-patches emails. One way to do so would be to subscribe the
-  winehq user to the wine-patches mailing list and to then add the
+  wine-devel emails. One way to do so would be to subscribe the
+  winehq user to the wine-devel mailing list and to then add the
   following lines to the .procmailrc file:
     :0c:
-    * ^List-Id: Wine Patch Submissions
-    * ^TO wine-patches
+    * ^List-Id:.*wine-devel\.winehq\.org
     | $HOME/tools/testbot/bin/WinePatchesMLSubmit.pl
 - Or if you have a set of patches to test in the mbox format you can
   test with:

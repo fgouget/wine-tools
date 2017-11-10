@@ -21,7 +21,7 @@ Windows machines. There are three ways this can happen:
 * Registered users can submit patches and binaries using the web site
   and have them run on the set of Windows machines of their choosing.
 
-* Conformance test patches sent to the wine-patches mailing list are
+* Conformance test patches sent to the wine-devel mailing list are
   run on the default set of Windows machines. Any failure is reported
   to the patch author and to the wine-devel mailing list.
 

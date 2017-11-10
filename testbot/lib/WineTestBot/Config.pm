@@ -96,7 +96,7 @@ $BuildTimeout = 5 * 60;
 $ReconfigTimeout = 45 * 60;
 
 $ProjectName = "Wine";
-$PatchesMailingList = "wine-patches";
+$PatchesMailingList = "wine-devel";
 
 $LDAPServer = undef;
 $LDAPBindDN = undef;
