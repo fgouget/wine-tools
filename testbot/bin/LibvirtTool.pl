@@ -285,7 +285,12 @@ sub Monitor()
     else
     {
       my $IsPoweredOn;
-      if (!defined $SnapshotName or $SnapshotName ne $VM->IdleSnapshot)
+      if (!defined $SnapshotName)
+      {
+        Debug("$VMKey has no snapshot (reverting?)\n");
+        $IsPoweredOn = undef;
+      }
+      elsif (!defined $SnapshotName or $SnapshotName ne $VM->IdleSnapshot)
       {
         $IsPoweredOn = 0;
       }
@@ -298,8 +303,16 @@ sub Monitor()
           if (defined $ErrMessage)
           {
             Error "$ErrMessage\n";
-            $IsPoweredOn = undef;
           }
+          else
+          {
+            # Another process might have been trying to connect to the VM's
+            # TestAgent server. Wait for it to time out so it does not set the
+            # VM offline right after we have put it back online.
+            LogMsg "Powered off $VMKey. Sleep until all other processes accessing it are gone.\n";
+            sleep(3 * $WaitForToolsInVM);
+          }
+          $IsPoweredOn = undef;
         }
       }
       if (defined $IsPoweredOn)
