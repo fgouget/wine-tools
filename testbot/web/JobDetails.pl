@@ -322,17 +322,6 @@ sub GenerateBody($)
               "'>Show full log</a></div>\n";
       }
     }
-    my $TestFilesName = "$TaskDir/TestFiles.zip";
-    if (-r $TestFilesName)
-    {
-      my $URI = "/GetFile.pl?JobKey=" . uri_escape($self->{JobId}) .
-                  "&StepKey=" . uri_escape($Item->StepNo) .
-                  "&TaskKey=" . uri_escape($Item->TaskNo);
-      print "<div class='TaskMoreInfoLink'><a href='" .
-            $self->CGI->escapeHTML($URI) .
-            "'>Retrieve test files</a></div>\n";
-    }
-
     print "</div>\n";
     if (open LOGFILE, "<$LogName")
     {

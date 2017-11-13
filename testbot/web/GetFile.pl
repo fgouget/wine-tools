@@ -28,7 +28,7 @@ use WineTestBot::Steps;
 
 sub GetFile($$$$)
 {
-  my ($Request, $JobKey, $StepKey, $TaskKey) = @_;
+  my ($Request, $JobKey, $StepKey) = @_;
 
   # Validate and untaint
   if (! ($JobKey =~ m/^(\d+)$/))
@@ -41,18 +41,6 @@ sub GetFile($$$$)
     return !1;
   }
   $StepKey = $1;
-  if (! defined($TaskKey))
-  {
-    $TaskKey = undef;
-  }
-  elsif ($TaskKey =~ m/^(\d+)$/)
-  {
-    $TaskKey = $1;
-  }
-  else
-  {
-    return !1;
-  }
 
   my $Job = CreateJobs()->GetItem($JobKey);
   if (! defined($Job))
@@ -65,9 +53,7 @@ sub GetFile($$$$)
     return !1;
   }
 
-  my $FileName = "$DataDir/jobs/$JobKey/$StepKey/" . 
-                 (defined($TaskKey) ? "$TaskKey/TestFiles.zip" :
-                  $Step->FileName);
+  my $FileName = "$DataDir/jobs/$JobKey/$StepKey/" . $Step->FileName;
   if (! sysopen(FILE, $FileName, O_RDONLY))
   {
     return !1;
@@ -100,21 +86,10 @@ sub GetFile($$$$)
   # HTTP/1.0
   $Request->headers_out->add("Pragma", "no-cache");
   
-  if (defined($TaskKey))
-  {
-    # Zip file
-    $Request->content_type("application/zip");
-    $Request->headers_out->add("Content-Disposition",
-                               'attachment; filename="TestFiles.zip"');
-  }
-  else
-  {
-    # Binary file
-    $Request->content_type("application/octet-stream");
-    $Request->headers_out->add("Content-Disposition",
-                               'attachment; filename="' . $Step->FileName .
-                               '"');
-  }
+  # Binary file
+  $Request->content_type("application/octet-stream");
+  $Request->headers_out->add("Content-Disposition",
+                             'attachment; filename="' . $Step->FileName . '"');
 
   print $ImageBytes;
 
@@ -126,8 +101,7 @@ my $Request = shift;
 my $CGIObj = CGI->new($Request);
 my $JobKey = $CGIObj->param("JobKey");
 my $StepKey = $CGIObj->param("StepKey");
-my $TaskKey = $CGIObj->param("TaskKey");
-if (! GetFile($Request, $JobKey, $StepKey, $TaskKey))
+if (! GetFile($Request, $JobKey, $StepKey))
 {
   $Request->headers_out->set("Location", "/");
   $Request->status(Apache2::Const::REDIRECT);
