@@ -159,9 +159,7 @@ if (!defined $Task)
   exit 1;
 }
 
-my $OldUMask = umask(002);
 my $TaskDir = $Task->CreateDir();
-umask($OldUMask);
 
 my $VM = $Task->VM;
 my $FullLogFileName = "$TaskDir/log";
@@ -180,7 +178,6 @@ sub LogTaskError($)
   my ($ErrMessage) = @_;
   Debug("$Name0:error: ", $ErrMessage);
 
-  my $OldUMask = umask(002);
   if (open(my $ErrFile, ">>", $FullErrFileName))
   {
     print $ErrFile $ErrMessage;
@@ -190,7 +187,6 @@ sub LogTaskError($)
   {
     Error "Unable to open '$FullErrFileName' for writing: $!\n";
   }
-  umask($OldUMask);
 }
 
 sub WrapUpAndExit($;$$)

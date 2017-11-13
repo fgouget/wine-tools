@@ -69,7 +69,6 @@ sub TakeScreenshot($$)
   my ($ErrMessage, $ImageSize, $ImageBytes) = $Domain->CaptureScreenImage();
   if (!defined $ErrMessage)
   {
-    my $OldUMask = umask(002);
     if (open(my $Screenshot, ">", $FullScreenshotFileName))
     {
       print $Screenshot $ImageBytes;
@@ -79,7 +78,6 @@ sub TakeScreenshot($$)
     {
       Error "Could not open the screenshot file for writing: $!\n";
     }
-    umask($OldUMask);
   }
   elsif ($Domain->IsPoweredOn())
   {
@@ -184,9 +182,7 @@ if (!defined $Task)
   exit 1;
 }
 
-my $OldUMask = umask(002);
 my $TaskDir = $Task->CreateDir();
-umask($OldUMask);
 my $FullLogFileName = "$TaskDir/log";
 my $FullErrFileName = "$TaskDir/err";
 my $FullScreenshotFileName = "$TaskDir/screenshot.png";
@@ -207,7 +203,6 @@ sub LogTaskError($)
   my ($ErrMessage) = @_;
   Debug("$Name0:error: ", $ErrMessage);
 
-  my $OldUMask = umask(002);
   if (open(my $ErrFile, ">>", $FullErrFileName))
   {
     print $ErrFile $ErrMessage;
@@ -217,7 +212,6 @@ sub LogTaskError($)
   {
     Error "Unable to open '$FullErrFileName' for writing: $!\n";
   }
-  umask($OldUMask);
 }
 
 sub WrapUpAndExit($;$$$)

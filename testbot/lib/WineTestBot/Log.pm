@@ -42,13 +42,11 @@ sub LogMsg(@)
     require File::Basename;
     $logprefix = File::Basename::basename($0);
     $logprefix =~ s/\.[^.]*$//;
-    my $oldumask = umask(002);
     if (!open($logfile, ">>", "$LogDir/log"))
     {
       print STDERR "$logprefix:warning: could not open '$LogDir/log' for writing: $!\n";
       open($logfile, ">>&=", 2);
     }
-    umask($oldumask);
 
     # Flush after each print
     my $tmp=select($logfile);
