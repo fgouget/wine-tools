@@ -44,7 +44,7 @@ sub _initialize($$$)
   $self->{Job} = CreateJobs()->GetItem($JobId);
   if (!defined $self->{Job})
   {
-    $self->Redirect("/index.pl");
+    $self->Redirect("/index.pl"); # does not return
   }
   $self->{JobId} = $JobId;
 
@@ -168,7 +168,7 @@ sub OnCancel($)
     return !1;
   }
 
-  $self->Redirect("/JobDetails.pl?Key=" . $self->{JobId});
+  $self->Redirect("/JobDetails.pl?Key=" . $self->{JobId}); # does not return
   exit;
 }
 
@@ -190,7 +190,7 @@ sub OnRestart($)
     return !1;
   }
 
-  $self->Redirect("/JobDetails.pl?Key=" . $self->{JobId});
+  $self->Redirect("/JobDetails.pl?Key=" . $self->{JobId}); # does not return
   exit;
 }
 

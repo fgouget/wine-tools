@@ -73,7 +73,7 @@ sub OnApprove($)
   return !1 if (!$self->Save());
   $self->{ErrMessage} = $self->{Item}->Approve();
   return !1 if (defined $self->{ErrMessage});
-  $self->RedirectToList();
+  $self->RedirectToList(); # does not return
   exit;
 }
 
@@ -86,7 +86,7 @@ sub OnReject($)
   return !1 if (defined $self->{ErrMessage});
   # Forcefully log out that user by deleting his web sessions
   DeleteSessions($self->{Item});
-  $self->RedirectToList();
+  $self->RedirectToList(); # does not return
   exit;
 }
 
@@ -100,7 +100,7 @@ sub OnOK($)
     # Forcefully log out that user by deleting his web sessions
     DeleteSessions($self->{Item});
   }
-  $self->RedirectToList();
+  $self->RedirectToList(); # does not return
   exit;
 }
 

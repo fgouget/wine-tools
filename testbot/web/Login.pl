@@ -138,7 +138,7 @@ sub OnLogIn($)
   {
     $Target = "/index.pl";
   }
-  $self->Redirect(MakeSecureURL($Target));
+  $self->Redirect(MakeSecureURL($Target)); # does not return
   exit;
 }
 

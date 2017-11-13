@@ -921,7 +921,7 @@ sub OnSubmit($)
     return !1;
   }
 
-  $self->Redirect("/JobDetails.pl?Key=$JobKey");
+  $self->Redirect("/JobDetails.pl?Key=$JobKey"); # does not return
   exit;
 }
 
@@ -949,11 +949,11 @@ sub OnOK($)
 
   if (defined($self->GetParam("JobKey")))
   {
-    $self->Redirect("/JobDetails.pl?Key=" . $self->GetParam("JobKey"));
+    $self->Redirect("/JobDetails.pl?Key=" . $self->GetParam("JobKey")); # does not return
   }
   else
   {
-    $self->Redirect("/index.pl");
+    $self->Redirect("/index.pl"); # does not return
   }
 }
 
