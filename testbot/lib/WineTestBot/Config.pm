@@ -125,6 +125,7 @@ if (!$::BuildEnv)
                                          { RaiseError => 1 });
 }
 
+# Set the desired umask here
 umask 002;
 
 1;

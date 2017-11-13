@@ -159,14 +159,12 @@ sub UpdateStatus($$)
       ($VM->Status ne "running" or !$VM->HasRunningChild()))
   {
     my ($JobId, $StepNo, $TaskNo) = @{$self->GetMasterKey()};
-    my $OldUMask = umask(002);
     my $TaskDir = $self->CreateDir();
     if (open TASKLOG, ">>$TaskDir/err")
     {
       print TASKLOG "Child process died unexpectedly\n";
       close TASKLOG;
     }
-    umask($OldUMask);
     # This probably indicates a bug in the task script.
     # Don't requeue the task to avoid an infinite loop.
     require WineTestBot::Log;

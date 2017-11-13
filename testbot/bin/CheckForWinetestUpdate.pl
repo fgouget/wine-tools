@@ -221,7 +221,6 @@ if ($Response->code != RC_OK)
 #   verify that it truly is new.
 # - Because we don't know the relevant Job and Step IDs yet and thus cannot
 #   put it in the jobs directory tree.
-umask 002;
 mkdir "$DataDir/staging";
 my ($fh, $StagingFileName) = OpenNewFile("$DataDir/staging", "_$LatestBaseName");
 if (!$fh)
