@@ -150,6 +150,7 @@ my $now = time();
 my $email_from = "Marvin <testbot\@winehq.org>";
 my $base_url = "https://source.winehq.org/patches/data";
 my %reviews;
+my %patches;
 
 foreach my $arg (@ARGV)
 {
@@ -159,54 +160,37 @@ foreach my $arg (@ARGV)
     else { $dir = $arg; }
 }
 
-sub get_patch_subject($)
-{
-    my $file = shift;
-    my $ret;
-
-    return undef unless open PATCH, "<$dir/$file";
-    while (<PATCH>)
-    {
-        if (/^Subject: (.*)$/)
-        {
-            $ret = $1;
-            last;
-        }
-    }
-    close PATCH;
-    return $ret;
-}
-
 sub get_patch_state($)
 {
     my $file = shift;
-    my $status = "nil";
-    my $mtime = 0;
-    my ($subject, $msgid, $reply);
+    my %patch;
 
     return undef unless open PATCH, "<$dir/$file";
     while (<PATCH>)
     {
-        if (/^Subject: (.*)$/) { $subject = $1; }
-        elsif (/^Message-Id: (.*)$/) { $msgid = $1; }
-        elsif (/^In-Reply-To: (.*)$/) { $reply = $1; }
+        if (/^Subject: (.*)$/) { $patch{subject} = $1; }
+        elsif (/^Message-Id: (.*)$/) { $patch{msgid} = $1; }
+        elsif (/^In-Reply-To: (.*)$/) { push @{$patch{reply}}, $1; }
+        elsif (/^References: (.*)$/) { push @{$patch{reply}}, split(/\s+/, $1); }
         last if (/^$/);
     }
     while (<PATCH>)
     {
-        if (/^diff --git a\//) { $reply = undef; last; }
+        if (/^diff --git a\//) { delete $patch{reply}; last; }
     }
     close PATCH;
 
     if (open STATUS, "<$dir/$file.status")
     {
-        $status = <STATUS>;
-        chomp $status;
-        $mtime = (stat STATUS)[9] unless $status eq "nil";
+        $patch{status} = <STATUS>;
+        chomp $patch{status};
+        $patch{mtime} = (stat STATUS)[9] unless $patch{status} eq "nil";
         close STATUS;
     }
-    $mtime ||= (stat "$dir/$file")[9];
-    return ($subject, $msgid, $reply, $status, $mtime);
+    $patch{file} = $file;
+    $patch{status} ||= "nil";
+    $patch{mtime} ||= (stat "$dir/$file")[9];
+    return %patch;
 }
 
 sub get_previous_state($)
@@ -363,40 +347,49 @@ EOF
     }
 }
 
-# expire current patches
+sub assign_expire($);
+sub assign_expire($)
+{
+    my $patch = shift;
 
-my %patches;
+    return $patch->{expire} if defined $patch->{expire};
+
+    foreach my $p (@{$patch->{reply}})
+    {
+        next unless defined $patches{$p};
+        $patch->{expire} = assign_expire( $patches{$p} );
+        return $patch->{expire} if defined $patch->{expire};
+    }
+
+    my $limit = $status_expiry{$patch->{status}} || 7;
+    $patch->{expire} = (($now - $patch->{mtime} - 12*60*60) / (24*60*60) > $limit);
+    return $patch->{expire};
+}
+
+# expire current patches
 
 opendir DIR, $dir or die "cannot open '$dir': $!\n";
 foreach my $file (sort readdir DIR)
 {
     next unless $file =~ /^[0-9]+$/;
-    my ($subject, $msgid, $reply, $status, $mtime) = get_patch_state( $file );
+    my %patch = get_patch_state( $file );
     my $prev_status = get_previous_state( $file );
-    my $limit = $status_expiry{$status} || 7;
-    my $expire = (($now - $mtime - 12*60*60) / (24*60*60) > $limit);
 
-    notify_state_change( $file, $prev_status, $status );
+    notify_state_change( $file, $prev_status, $patch{status} );
 
-    $patches{$msgid} = [ $file, $subject, $reply, $status, $expire ];
+    $patches{$patch{msgid}} = \%patch;
 }
 closedir DIR;
 
 foreach my $p (keys %patches)
 {
-    my ($file, $subject, $reply, $status, $expire) = @{$patches{$p}};
-    my $orig_status = $status;
+    my $patch = $patches{$p};
+    my $orig_status = $patch->{status};
+    my $file = $patch->{file};
 
-    # for replies, inherit expire flag from top parent
-    while ($reply && $status eq "reply")
+    if (assign_expire( $patch ))
     {
-        last unless defined $patches{$reply};
-        (undef, undef, $reply, $status, $expire) = @{$patches{$reply}};
-    }
-
-    if ($expire)
-    {
-        printf "unlink $file   %s  %s\n", $orig_status, $subject unless $quiet;
+        printf "unlink $file   %s  %s\n", $orig_status, $patch->{subject} unless $quiet;
         unless ($dry_run)
         {
             unlink "$dir/$file";
