@@ -105,5 +105,9 @@ $WineTestBot::Config::Tunnel = undef;
 # - local_username
 $WineTestBot::Config::TunnelDefaults = undef;
 
+# If set this remaps the hostnames returned by $VM->GetHost() into more
+# user friendly hostnames. For instance:
+#    "gateway:port1" => "vm1"
+$WineTestBot::Config::PrettyHostNames = undef;
 
 1;
