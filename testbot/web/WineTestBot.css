@@ -330,3 +330,34 @@ pre
 .testfail  { color: red; }
 .boterror  { color: #e55600; }
 .canceled  { color: black; }
+
+a.title { color:white; text-decoration: none; }
+
+th.Record { text-align: center; }
+td.Record { text-align: center; }
+.RecordHost { font-size: smaller; }
+.RecordJob { font-size: smaller; }
+.RecordDuration { }
+
+.Record-start { background-color: white; }
+.Record-off { color: #c0c0c0; }
+.Record-unknown { background-color: #c0c0c0; }
+.Record-offline { background-color: red; }
+
+/* Greens for preparing VMs */
+.Record-reverting { background-color: #70ff54; }
+.Record-sleeping { background-color: #a3ff7a; }
+.Record-idle { background-color: #ccff99; }
+
+/* Yellows for running VMs */
+.Record-running { background-color: #ffcc00; }
+.Record-dirty { background-color: #ffe633; }
+
+/* Blues for disabled VMs */
+.Record-maintenance { background-color: #adccef; }
+.Record-retired { background-color: #72a7e4; }
+.Record-deleted { background-color: #246bbc; }
+
+/* Special borders */
+.Record.Record-left { border-left: thin solid #601919; }
+.Record.Record-right { border-right: thin solid #601919; }
