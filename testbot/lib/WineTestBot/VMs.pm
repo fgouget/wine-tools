@@ -148,6 +148,7 @@ use ObjectModel::BackEnd;
 use WineTestBot::Config;
 use WineTestBot::Engine::Notify;
 use WineTestBot::LibvirtDomain;
+use WineTestBot::RecordGroups;
 use WineTestBot::TestAgent;
 use WineTestBot::WineTestBotObjects;
 
@@ -173,6 +174,13 @@ sub InitializeNew($$)
   $self->IdleSnapshot("wtb");
 
   $self->SUPER::InitializeNew($Collection);
+}
+
+sub HasEnabledRole($)
+{
+  my ($self) = @_;
+  # Filter out the disabled VMs, that is the retired and deleted ones
+  return $self->Role ne "retired" && $self->Role ne "deleted";
 }
 
 sub GetHost($)
@@ -497,6 +505,58 @@ sub RunRevert($)
 {
   my ($self) = @_;
   return $self->_RunVMTool("reverting", ["--log-only", "revert", $self->GetKey()]);
+}
+
+=pod
+=over 12
+
+=item C<GetRecordName()>
+
+Provides the name to use for history records related to this VM.
+
+=back
+=cut
+
+sub GetRecordName($)
+{
+  my ($self) = @_;
+  return $self->Name ." ". $self->GetHost();
+}
+
+my %_VMStatuses;
+
+=pod
+=over 12
+
+=item C<RecordStatus()>
+
+Adds a Record if the status of the VM changed since the last recorded status.
+
+=back
+=cut
+
+sub RecordStatus($$;$)
+{
+  my ($self, $Records, $RecordStatus) = @_;
+
+  $RecordStatus ||= $self->HasEnabledRole() ? $self->Status : $self->Role;
+  my $NewStatus = $self->GetHost() ." $RecordStatus";
+
+  my $LastStatus = $_VMStatuses{$self->Name} || "";
+  # Don't add a record if nothing changed
+  return if ($LastStatus eq $NewStatus);
+  # Or if the new status is less complete
+  return if ($LastStatus =~ /^\Q$NewStatus \E/);
+
+  $_VMStatuses{$self->Name} = $NewStatus;
+  if ($Records)
+  {
+    $Records->AddRecord('vmstatus', $self->GetRecordName(), $RecordStatus);
+  }
+  else
+  {
+    SaveRecord('vmstatus', $self->GetRecordName(), $RecordStatus);
+  }
 }
 
 
