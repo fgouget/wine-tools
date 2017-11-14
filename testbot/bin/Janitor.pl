@@ -5,6 +5,7 @@
 # archives old jobs and purges older jobs and patches.
 #
 # Copyright 2009 Ge van Geldorp
+# Copyright 2017 Francois Gouget
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -45,6 +46,7 @@ use WineTestBot::Log;
 use WineTestBot::Patches;
 use WineTestBot::PendingPatchSets;
 use WineTestBot::CGI::Sessions;
+use WineTestBot::RecordGroups;
 use WineTestBot::Users;
 use WineTestBot::VMs;
 
@@ -266,4 +268,23 @@ if (opendir(my $dh, "$DataDir/staging"))
 else
 {
   LogMsg "0Unable to open '$DataDir/staging': $!";
+}
+
+# Delete obsolete record groups
+if ($JobPurgeDays != 0)
+{
+  $DeleteBefore = time() - $JobPurgeDays * 86400;
+  my $RecordGroups = CreateRecordGroups();
+  foreach my $RecordGroup (@{$RecordGroups->GetItems()})
+  {
+    if ($RecordGroup->Timestamp < $DeleteBefore)
+    {
+      my $ErrMessage = $RecordGroups->DeleteItem($RecordGroup);
+      if (defined($ErrMessage))
+      {
+        LogMsg $ErrMessage, "\n";
+      }
+    }
+  }
+  $RecordGroups = undef;
 }

@@ -377,6 +377,7 @@ use WineTestBot::WineTestBotObjects;
 use WineTestBot::Branches;
 use WineTestBot::Config;
 use WineTestBot::Patches;
+use WineTestBot::RecordGroups;
 use WineTestBot::Steps;
 use WineTestBot::Users;
 use WineTestBot::VMs;
@@ -488,10 +489,9 @@ kept on standby so they are ready when their turn comes.
 =back
 =cut
 
-sub ScheduleOnHost($$$)
+sub ScheduleOnHost($$$$)
 {
-  my ($ScopeObject, $SortedJobs, $Hypervisors) = @_;
-
+  my ($ScopeObject, $SortedJobs, $Hypervisors, $Records) = @_;
 
   my $HostVMs = CreateVMs($ScopeObject);
   $HostVMs->FilterEnabledRole();
@@ -580,7 +580,7 @@ sub ScheduleOnHost($$$)
           {
             my $ErrMessage = $Task->Run($Step);
             return $ErrMessage if (defined $ErrMessage);
-
+            $VM->RecordStatus($Records, join(" ", "running", $Job->Id, $Step->No, $Task->No));
             $Job->UpdateStatus();
             $IdleCount--;
             $RunningCount++;
@@ -655,6 +655,7 @@ sub ScheduleOnHost($$$)
 
     my $ErrMessage = $VM->RunPowerOff();
     return $ErrMessage if (defined $ErrMessage);
+    $VM->RecordStatus($Records, "dirty poweroff");
   }
 
   # Power off some idle VMs we don't need immediately so we can revert more
@@ -672,6 +673,7 @@ sub ScheduleOnHost($$$)
 
       my $ErrMessage = $VM->RunPowerOff();
       return $ErrMessage if (defined $ErrMessage);
+      $VM->RecordStatus($Records, "dirty poweroff");
       $PlannedActiveCount--;
       last if ($PlannedActiveCount <= $MaxActiveVMs);
     }
@@ -746,11 +748,37 @@ them using WineTestBot::Jobs::ScheduleOnHost().
 
 sub ScheduleJobs()
 {
+  my $RecordGroups = CreateRecordGroups();
+  my $Records = $RecordGroups->Add()->Records;
+
   my $Jobs = CreateJobs();
   $Jobs->AddFilter("Status", ["queued", "running"]);
   my @SortedJobs = sort CompareJobPriority @{$Jobs->GetItems()};
   # Note that even if there are no jobs to schedule
   # we should check if there are VMs to revert
+
+  # Count the runnable and queued tasks for the record
+  my ($RunnableTasks, $QueuedTasks) = (0, 0);
+  foreach my $Job (@SortedJobs)
+  {
+    my $Steps = $Job->Steps;
+    $Steps->AddFilter("Status", ["queued", "running"]);
+    my @SortedSteps = sort { $a->No <=> $b->No } @{$Steps->GetItems()};
+    next if (!@SortedSteps);
+
+    my $Tasks = $SortedSteps[0]->Tasks;
+    $Tasks->AddFilter("Status", ["queued"]);
+    $RunnableTasks += @{$Tasks->GetItems()};
+
+    foreach my $Step (@SortedSteps)
+    {
+      my $Tasks = $Step->Tasks;
+      $Tasks->AddFilter("Status", ["queued"]);
+      $QueuedTasks += scalar(@{$Tasks->GetItems()});
+    }
+  }
+  $Records->AddRecord('tasks', 'runnable', $RunnableTasks) if ($RunnableTasks);
+  $Records->AddRecord('tasks', 'queued', $QueuedTasks) if ($QueuedTasks);
 
   my %Hosts;
   my $VMs = CreateVMs($Jobs);
@@ -765,9 +793,16 @@ sub ScheduleJobs()
   foreach my $Host (keys %Hosts)
   {
     my @HostHypervisors = keys %{$Hosts{$Host}};
-    my $HostErrMessage = ScheduleOnHost($Jobs, \@SortedJobs, \@HostHypervisors);
+    my $HostErrMessage = ScheduleOnHost($Jobs, \@SortedJobs, \@HostHypervisors, $Records);
     push @ErrMessages, $HostErrMessage if (defined $HostErrMessage);
   }
+
+  # Note that any VM Status or Role change will trigger ScheduleJobs() so this
+  # records all VM state changes.
+  $VMs = CreateVMs();
+  map { $_->RecordStatus($Records) } (@{$VMs->GetItems()});
+  $RecordGroups->Save();
+
   return @ErrMessages ? join("\n", @ErrMessages) : undef;
 }
 
