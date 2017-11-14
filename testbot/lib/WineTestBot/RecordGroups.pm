@@ -67,7 +67,7 @@ use vars qw (@ISA @EXPORT @PropertyDescriptors);
 
 require Exporter;
 @ISA = qw(WineTestBot::WineTestBotCollection Exporter);
-@EXPORT = qw(&CreateRecordGroups &SaveRecord);
+@EXPORT = qw(&CreateRecordGroups &CompareRecordGroups &SaveRecord);
 
 
 BEGIN
@@ -91,6 +91,16 @@ sub CreateRecordGroups(;$)
   my ($ScopeObject) = @_;
   return WineTestBot::RecordGroups->new("RecordGroups", "RecordGroups", "RecordGroup",
                                         \@PropertyDescriptors, $ScopeObject);
+}
+
+sub CompareRecordGroups($$)
+{
+  my ($a, $b) = @_;
+
+  # The Id will wrap eventually so sort by timestamp
+  # and only use the id to break ties.
+  return ((defined $a and defined $b) ? $a->Timestamp <=> $b->Timestamp : 0) ||
+         $a->Id <=> $b->Id;
 }
 
 =pod
