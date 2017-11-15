@@ -149,6 +149,7 @@ foreach my $file (readdir DIR)
     {
         utf8::decode($_);
         if (/^Subject: (.*)$/) { $patch{"subject"} = $1; }
+        elsif (/^From: Marvin <testbot\@winehq.org>$/) { $patch{"from_marvin"} = 1; }
         elsif (/^From: (.*)$/) { $patch{"author"} = format_author($1); }
         elsif (/^Message-Id: (.*)$/) { $patch{"msgid"} = $1; }
         elsif (/^In-Reply-To: (.*)$/) { $patch{"reply"} = $1; }
@@ -169,7 +170,9 @@ foreach my $file (readdir DIR)
     close PATCH;
 
     $patch{"id"} = $file;
+    $patch{"author"} = "Marvin (Testbot)" if $patch{"from_marvin"};
     $patch{"status"} = "nil";
+
     if (open STATUS, "<$dir/$file.status")
     {
         my $status = <STATUS>;
@@ -192,6 +195,7 @@ foreach my $file (readdir DIR)
         close REVIEW;
     }
     $patch{"testbot"} = "";
+    $patch{"testclass"} = "testbot";
     $patch{"testjob"} = "";
     $patch{"testurl"} = "";
     if (-f "$dir/$file.testbot")
@@ -211,7 +215,8 @@ foreach my $file (readdir DIR)
     }
     if (-f "$dir/$file.testfail")
     {
-        $patch{"testbot"} = "Failed";
+        $patch{"testbot"} = "<a href=\"data/$file.testfail\">Failed</a>";
+        $patch{"testclass"} = "testbot botfail";
     }
     if (defined $patch{"msgid"})
     {
@@ -243,6 +248,11 @@ sub assign_parent($)
         $patch->{"parent"} = $parent;
         push @{$parent->{"children"}}, $patch;
         push @{$parent->{"signoff"}}, @{$patch->{"signoff"}} if $patch->{"signoff"};
+        if ($patch->{"from_marvin"})
+        {
+            $parent->{"testbot"} = "<a href=\"data/$patch->{id}\">Failed</a>";
+            $parent->{"testclass"} = "testbot botfail";
+        }
         return $parent;
     }
     return undef;
@@ -263,6 +273,7 @@ foreach my $file (sort { $patches{$b}->{"order"} <=> $patches{$a}->{"order"} } k
     if (!defined $patch->{"has_patch"}) # skip non-patches
     {
         next if $patch->{"status"} eq "reply";
+        next if $patch->{"from_marvin"};
         next unless $patch->{"subject"} =~ /\[.*PATCH.*\]/;
     }
 
@@ -295,19 +306,11 @@ foreach my $file (sort { $patches{$b}->{"order"} <=> $patches{$a}->{"order"} } k
     {
         printf INDEX "<td class=\"failmark\">X</td>";
     }
-    if ($patch->{"testbot"} eq "Failed")
-    {
-        print INDEX "<td class=\"testbot botfail\"><a href=\"data/$file.testfail\">Failed</a></td>";
-    }
-    else
-    {
-        printf INDEX "<td class=\"testbot\">%s</td>", $patch->{"testbot"};
-    }
+    printf INDEX "<td class=\"%s\">%s</td>", $patch->{"testclass"}, $patch->{"testbot"};
     if ($patch->{"testjob"} && $patch->{"testurl"})
     {
         printf INDEX "<td class=\"%s\"><a href=\"%s\">%s</a></td>",
-                     ($patch->{"testbot"} eq "Failed") ? " testbot botfail" : "testbot",
-                     $patch->{"testurl"}, $patch->{"testjob"};
+                     $patch->{"testclass"}, $patch->{"testurl"}, $patch->{"testjob"};
     }
     else
     {
