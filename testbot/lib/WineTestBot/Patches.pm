@@ -100,6 +100,11 @@ sub FromSubmission($$)
   my $PropertyDescriptor = $self->GetPropertyDescriptorByName("Subject");
   $self->Subject(substr($Subject, 0, $PropertyDescriptor->GetMaxLength()));
 
+  my $MessageId = $Head->get("Message-Id");
+  $MessageId =~ s/\s*\n\s*/ /gs;
+  $PropertyDescriptor = $self->GetPropertyDescriptorByName("MessageId");
+  $self->MessageId(substr($MessageId, 0, $PropertyDescriptor->GetMaxLength()));
+
   $self->Disposition("Processing");
 }
 
@@ -371,6 +376,7 @@ BEGIN
     CreateBasicPropertyDescriptor("FromName", "Author", !1, !1, "A", 40),
     CreateBasicPropertyDescriptor("FromEMail", "Author's email address", !1, !1, "A", 40),
     CreateBasicPropertyDescriptor("Subject", "Subject", !1, !1, "A", 120),
+    CreateBasicPropertyDescriptor("MessageId", "Message id", !1, !1, "A", 256),
     CreateBasicPropertyDescriptor("Disposition", "Disposition", !1, 1, "A", 40),
   );
 }

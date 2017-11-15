@@ -70,6 +70,7 @@ CREATE TABLE Patches
   FromName    VARCHAR(40)     NULL,
   FromEMail   VARCHAR(40)     NULL,
   Subject     VARCHAR(120)    NULL,
+  MessageId   VARCHAR(256)    NULL,
   PRIMARY KEY (Id),
   INDEX PatchesWebPatchId (WebPatchId)
 )

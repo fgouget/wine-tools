@@ -189,6 +189,11 @@ sub SendLog($)
     $Subject .= ": " . $Description;
   }
   print SENDMAIL "Subject: $Subject\n";
+  if ($Job->Patch->MessageId)
+  {
+    print SENDMAIL "In-Reply-To: ", $Job->Patch->MessageId, "\n";
+    print SENDMAIL "References: ", $Job->Patch->MessageId, "\n";
+  }
   print SENDMAIL <<"EOF";
 MIME-Version: 1.0
 Content-Type: multipart/mixed; boundary="==13F70BD1-BA1B-449A-9CCB-B6A8E90CED47=="
@@ -424,6 +429,11 @@ EOF
     print SENDMAIL "To: $To\n";
     print SENDMAIL "Cc: $WinePatchCc\n";
     print SENDMAIL "Subject: Re: ", $Job->Patch->Subject, "\n";
+    if ($Job->Patch->MessageId)
+    {
+      print SENDMAIL "In-Reply-To: ", $Job->Patch->MessageId, "\n";
+      print SENDMAIL "References: ", $Job->Patch->MessageId, "\n";
+    }
     print SENDMAIL <<"EOF";
 
 Hi,
