@@ -455,18 +455,6 @@ EOF
   if (defined $Patch->WebPatchId and -d "$DataDir/webpatches")
   {
     my $BaseName = "$DataDir/webpatches/" . $Patch->WebPatchId;
-    if ($Messages)
-    {
-      if (open(my $testfail, ">", "$BaseName.testfail"))
-      {
-        print $testfail $Messages;
-        close($testfail);
-      }
-      else
-      {
-        LogMsg "Job " . $Job->Id . ": Unable to open '$BaseName.testfail' for writing: $!";
-      }
-    }
     if (open (my $result, ">", "$BaseName.testbot"))
     {
       print $result "Status: " . ($Messages ? "Failed" : "OK") . "\n";
