@@ -255,7 +255,7 @@ sub assign_parent($)
         }
         return $parent;
     }
-    return undef;
+    return $patch;
 }
 
 foreach my $file (sort keys %patches)
@@ -274,7 +274,7 @@ foreach my $file (sort { $patches{$b}->{"order"} <=> $patches{$a}->{"order"} } k
     {
         next if $patch->{"status"} eq "reply";
         next if $patch->{"from_marvin"};
-        next unless $patch->{"subject"} =~ /\[.*PATCH.*\]/;
+        next unless $patch->{"subject"} =~ /^\[.*PATCH.*\]/;
     }
 
     printf INDEX "<tr class=\"%s %s\"><td class=\"id\">%s</td><td class=\"status\"><a href=\"#legend\">%s</a></td>",
