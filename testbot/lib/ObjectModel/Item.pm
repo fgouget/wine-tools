@@ -173,7 +173,7 @@ then invoke KeyChanged() so the object can be retrieved from the Collection
 using the new key value.
 
 Further note that KeyChanged() should only be called once all of the
-primary key??s columns have reached their final values: in a two column
+primary key's columns have reached their final values: in a two column
 primary key, calling KeyChanged() with the (new1, old2) values may collide with
 another Item which would cause a spurious error even though the final
 (new1, new2) key is unique.
