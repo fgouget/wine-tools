@@ -189,7 +189,7 @@ sub SendLog($)
     $Subject .= ": " . $Description;
   }
   print SENDMAIL "Subject: $Subject\n";
-  if ($Job->Patch->MessageId)
+  if ($Job->Patch and $Job->Patch->MessageId)
   {
     print SENDMAIL "In-Reply-To: ", $Job->Patch->MessageId, "\n";
     print SENDMAIL "References: ", $Job->Patch->MessageId, "\n";
