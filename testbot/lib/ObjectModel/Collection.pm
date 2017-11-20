@@ -161,6 +161,19 @@ sub Load($)
   $self->{Loaded} = 1;
 }
 
+=pod
+=over 12
+
+=item C<Add()>
+
+Instantiates a new Item and adds it to the Collection.
+
+See Item->new() for details on the Item's default column values and for
+important information regarding its primary key.
+
+=back
+=cut
+
 sub Add($)
 {
   my ($self) = @_;

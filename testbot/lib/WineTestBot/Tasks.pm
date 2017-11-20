@@ -50,9 +50,12 @@ sub InitializeNew($$)
 {
   my ($self, $Collection) = @_;
 
-  $self->Status("queued");
+  # Make up an initial, likely unique, key so the Task can be added to the
+  # Collection
   my $Keys = $Collection->GetKeys();
   $self->No(scalar @$Keys + 1);
+
+  $self->Status("queued");
 
   $self->SUPER::InitializeNew($Collection);
 }

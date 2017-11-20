@@ -36,6 +36,29 @@ require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(&new);
 
+
+=pod
+=over 12
+
+=item C<new()>
+
+Instantiates a new Item and calls _initialize() to set up default values for
+its columns, including the primary key.
+
+Note that it is strongly recommended that _initialize() set up the primary key
+such that the new Item can be inserted into a Collection without colliding with
+existing items.
+
+Ideally repeated calls to new() should also each generate unique initial keys
+so it is possible to add multiple new Items to a Collection before knowing
+their final key value.
+
+In all cases, it is the responsibility of the caller to adjust the initial
+primary key if needed and to call KeyChanged(). See PutColValue() for details.
+
+=back
+=cut
+
 sub new($$@)
 {
   my $class = shift;
@@ -137,6 +160,26 @@ sub GetColValue($$)
 
   return $self->{ColValues}{$ColName};
 }
+
+=pod
+=over 12
+
+=item C<PutColValue()>
+
+Sets the specified column value.
+
+Note that if the column is part of the primary key it is up to the caller to
+then invoke KeyChanged() so the object can be retrieved from the Collection
+using the new key value.
+
+Further note that KeyChanged() should only be called once all of the
+primary key??s columns have reached their final values: in a two column
+primary key, calling KeyChanged() with the (new1, old2) values may collide with
+another Item which would cause a spurious error even though the final
+(new1, new2) key is unique.
+
+=back
+=cut
 
 sub PutColValue($$$)
 {

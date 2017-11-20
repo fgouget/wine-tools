@@ -47,9 +47,12 @@ sub InitializeNew($$)
 {
   my ($self, $Collection) = @_;
 
-  $self->Status("queued");
+  # Make up an initial, likely unique, key so the Step can be added to the
+  # Collection
   my $Keys = $Collection->GetKeys();
   $self->No(scalar @$Keys + 1);
+
+  $self->Status("queued");
   $self->Type("single");
   $self->InStaging(1);
   $self->DebugLevel(1);
