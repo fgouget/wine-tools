@@ -28,7 +28,6 @@ use WineTestBot::Config;
 use WineTestBot::Jobs;
 use WineTestBot::StepsTasks;
 use WineTestBot::Engine::Notify;
-use WineTestBot::Log;
 
 @JobDetailsPage::ISA = qw(ObjectModel::CGI::CollectionPage);
 
