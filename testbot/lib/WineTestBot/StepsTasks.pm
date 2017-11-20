@@ -39,6 +39,19 @@ use vars qw(@ISA @EXPORT);
 require Exporter;
 @ISA = qw(WineTestBot::WineTestBotItem Exporter);
 
+sub GetStepDir($)
+{
+  my ($self) = @_;
+  my ($JobId, $_StepTaskId) = @{$self->GetMasterKey()};
+  return "$DataDir/jobs/$JobId/". $self->StepNo;
+}
+
+sub GetTaskDir($)
+{
+  my ($self) = @_;
+  return $self->GetStepDir() ."/". $self->TaskNo;
+}
+
 sub GetTitle($)
 {
   my ($self) = @_;

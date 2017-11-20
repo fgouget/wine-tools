@@ -159,16 +159,12 @@ if (!defined $Task)
 }
 
 my $OldUMask = umask(002);
-mkdir "$DataDir/jobs/$JobId";
-mkdir "$DataDir/jobs/$JobId/$StepNo";
-mkdir "$DataDir/jobs/$JobId/$StepNo/$TaskNo";
+my $TaskDir = $Task->CreateDir();
 umask($OldUMask);
-
-my $VM = $Task->VM;
-my $StepDir = "$DataDir/jobs/$JobId/$StepNo";
-my $TaskDir = "$StepDir/$TaskNo";
 my $FullLogFileName = "$TaskDir/log";
 my $FullErrFileName = "$TaskDir/err";
+
+my $VM = $Task->VM;
 
 my $Start = Time();
 LogMsg "Task $JobId/$StepNo/$TaskNo started\n";
@@ -344,6 +340,7 @@ if (!defined $BaseName)
 # Run the build
 #
 
+my $StepDir = $Step->GetDir();
 my $FileName = $Step->FileName;
 my $TA = $VM->GetAgent();
 Debug(Elapsed($Start), " Sending '$StepDir/$FileName'\n");
@@ -456,9 +453,6 @@ if ($NewStatus eq "completed")
     my $OtherFileName = $OtherStep->FileName;
     next if ($OtherFileName !~ /^[\w_.]+_test(?:64)?\.exe$/);
 
-    my $OtherStepDir = "$DataDir/jobs/$JobId/" . $OtherStep->No;
-    mkdir $OtherStepDir;
-
     my $Bits = $OtherStep->FileType eq "exe64" ? "64" : "32";
     my $TestExecutable;
     if ($Step->FileType ne "patchprograms")
@@ -469,7 +463,9 @@ if ($NewStatus eq "completed")
     {
       $TestExecutable = "build-mingw$Bits/programs/$BaseName/tests/${BaseName}.exe_test.exe";
     }
+
     Debug(Elapsed($Start), " Retrieving '$OtherFileName'\n");
+    my $OtherStepDir = $OtherStep->CreateDir();
     if (!$TA->GetFile($TestExecutable, "$OtherStepDir/$OtherFileName"))
     {
       FatalTAError($TA, "Could not retrieve '$OtherFileName'");

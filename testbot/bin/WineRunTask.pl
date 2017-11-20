@@ -184,18 +184,14 @@ if (!defined $Task)
 }
 
 my $OldUMask = umask(002);
-mkdir "$DataDir/jobs/$JobId";
-mkdir "$DataDir/jobs/$JobId/$StepNo";
-mkdir "$DataDir/jobs/$JobId/$StepNo/$TaskNo";
+my $TaskDir = $Task->CreateDir();
 umask($OldUMask);
-
-my $VM = $Task->VM;
-my $RptFileName = $VM->Name . ".rpt";
-my $StepDir = "$DataDir/jobs/$JobId/$StepNo";
-my $TaskDir = "$StepDir/$TaskNo";
 my $FullLogFileName = "$TaskDir/log";
 my $FullErrFileName = "$TaskDir/err";
 my $FullScreenshotFileName = "$TaskDir/screenshot.png";
+
+my $VM = $Task->VM;
+my $RptFileName = $VM->Name . ".rpt";
 
 my $Start = Time();
 LogMsg "Task $JobId/$StepNo/$TaskNo started\n";
@@ -375,6 +371,7 @@ if ($FileType ne "exe32" && $FileType ne "exe64")
 {
   FatalError("Unexpected file type $FileType found\n");
 }
+my $StepDir = $Step->GetDir();
 my $FileName = $Step->FileName;
 Debug(Elapsed($Start), " Sending '$StepDir/$FileName'\n");
 if (!$TA->SendFile("$StepDir/$FileName", $FileName, 0))

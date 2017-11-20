@@ -26,7 +26,7 @@ use WineTestBot::Config;
 use WineTestBot::Jobs;
 use WineTestBot::Steps;
 
-sub GetFile($$$$)
+sub GetFile($$$)
 {
   my ($Request, $JobKey, $StepKey) = @_;
 
@@ -53,7 +53,7 @@ sub GetFile($$$$)
     return !1;
   }
 
-  my $FileName = "$DataDir/jobs/$JobKey/$StepKey/" . $Step->FileName;
+  my $FileName = $Step->GetDir() ."/". $Step->FileName;
   if (! sysopen(FILE, $FileName, O_RDONLY))
   {
     return !1;

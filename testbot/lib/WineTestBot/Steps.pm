@@ -33,6 +33,8 @@ a WineTestBot::Task object for each VM it should be run on.
 =cut
 
 use File::Copy;
+use File::Path;
+
 use WineTestBot::Config;
 use WineTestBot::WineTestBotObjects;
 
@@ -56,9 +58,31 @@ sub InitializeNew($$)
   $self->SUPER::InitializeNew($Collection);
 }
 
+sub GetDir($)
+{
+  my ($self) = @_;
+  my ($JobId, $StepNo) = @{$self->GetMasterKey()};
+  return "$DataDir/jobs/$JobId/$StepNo";
+}
+
+sub CreateDir($)
+{
+  my ($self) = @_;
+  my $Dir = $self->GetDir();
+  File::Path::make_path($Dir, mode => 0775);
+  return $Dir;
+}
+
+sub RmTree($)
+{
+  my ($self) = @_;
+  my $Dir = $self->GetDir();
+  File::Path::remove_tree($Dir);
+}
+
 sub HandleStaging($$)
 {
-  my ($self, $JobKey) = @_;
+  my ($self) = @_;
 
   if (! $self->InStaging)
   {
@@ -72,10 +96,8 @@ sub HandleStaging($$)
   }
   my $BaseName = $1;
   my $StagingFileName = "$DataDir/staging/$FileName";
-  my $FinalFileName = "$DataDir/jobs/$JobKey/" . $self->GetKey() .
-                      "/$BaseName";
-  mkdir "$DataDir/jobs/$JobKey";
-  mkdir "$DataDir/jobs/$JobKey/" . $self->GetKey();
+  my $StepDir = $self->CreateDir();
+  my $FinalFileName = "$StepDir/$BaseName";
   if (!move($StagingFileName, $FinalFileName))
   {
     return "Could not move the staging file: $!";

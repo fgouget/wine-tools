@@ -159,14 +159,10 @@ if (!defined $Task)
 }
 
 my $OldUMask = umask(002);
-mkdir "$DataDir/jobs/$JobId";
-mkdir "$DataDir/jobs/$JobId/$StepNo";
-mkdir "$DataDir/jobs/$JobId/$StepNo/$TaskNo";
+my $TaskDir = $Task->CreateDir();
 umask($OldUMask);
 
 my $VM = $Task->VM;
-my $StepDir = "$DataDir/jobs/$JobId/$StepNo";
-my $TaskDir = "$StepDir/$TaskNo";
 my $FullLogFileName = "$TaskDir/log";
 my $FullErrFileName = "$TaskDir/err";
 

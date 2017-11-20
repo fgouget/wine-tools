@@ -244,8 +244,7 @@ sub GenerateBody($)
   foreach my $Key (@$Keys)
   {
     my $Item = $self->{Collection}->GetItem($Key);
-    my $TaskDir = "$DataDir/jobs/" . $self->{JobId} . "/" . $Item->StepNo .
-                  "/" . $Item->TaskNo;
+    my $TaskDir = $Item->GetTaskDir();
     my $VM = $Item->VM;
     print "<h2><a name='k", $self->escapeHTML($Key), "'></a>" ,
           $self->escapeHTML($Item->GetTitle()), "</h2>\n";
@@ -465,8 +464,7 @@ sub GenerateDataCell($$$$$)
   }
   elsif ($PropertyName eq "FileName")
   {
-    my $FileName = "$DataDir/jobs/" . $self->{JobId} . "/" . $Item->StepNo .
-                   "/" . $Item->FileName;
+    my $FileName = $Item->GetStepDir() ."/". $Item->FileName;
     if (-r $FileName)
     {
       my $URI = "/GetFile.pl?JobKey=" . uri_escape($self->{JobId}) .

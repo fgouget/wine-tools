@@ -225,8 +225,7 @@ EOF
 
     print SENDMAIL "\n=== ", $StepTask->GetTitle(), " ===\n";
 
-    my $TaskDir = "$DataDir/jobs/" . $Job->Id . "/" . $StepTask->StepNo .
-                  "/" . $StepTask->TaskNo;
+    my $TaskDir = $StepTask->GetTaskDir();
     if (open LOGFILE, "<$TaskDir/log")
     {
       my $HasLogEntries = !1;
@@ -336,10 +335,8 @@ EOF
     print SENDMAIL "Content-Disposition: attachment; filename=",
                    $StepTask->VM->Name, ".log\n\n";
 
-    my $TaskDir = "$DataDir/jobs/" . $Job->Id . "/" . $StepTask->StepNo .
-                  "/" . $StepTask->TaskNo;
-
     my $PrintSeparator = !1;
+    my $TaskDir = $StepTask->GetTaskDir();
     if (open LOGFILE, "<$TaskDir/log")
     {
       my $Line;
@@ -382,9 +379,7 @@ EOF
   {
     my $StepTask = $StepsTasks->GetItem($Key);
 
-    my $TaskDir = "$DataDir/jobs/" . $Job->Id . "/" . $StepTask->StepNo .
-                  "/" . $StepTask->TaskNo;
-
+    my $TaskDir = $StepTask->GetTaskDir();
     my ($BotFailure, $MessagesFromErr) = CheckErrLog("$TaskDir/err");
     if (! $BotFailure)
     {
@@ -466,10 +461,8 @@ EOF
         my $StepTask = $StepsTasks->GetItem($Key);
         print $result "\n=== ", $StepTask->GetTitle(), " ===\n";
 
-        my $TaskDir = "$DataDir/jobs/" . $Job->Id . "/" . $StepTask->StepNo .
-                      "/" . $StepTask->TaskNo;
-
         my $PrintSeparator = !1;
+        my $TaskDir = $StepTask->GetTaskDir();
         if (open(my $logfile, "<", "$TaskDir/log"))
         {
           my $Line;

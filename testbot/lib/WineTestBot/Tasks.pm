@@ -57,16 +57,37 @@ sub InitializeNew($$)
   $self->SUPER::InitializeNew($Collection);
 }
 
+sub GetDir($)
+{
+  my ($self) = @_;
+  my ($JobId, $StepNo, $TaskNo) = @{$self->GetMasterKey()};
+  return "$DataDir/jobs/$JobId/$StepNo/$TaskNo";
+}
+
+sub CreateDir($)
+{
+  my ($self) = @_;
+  my $Dir = $self->GetDir();
+  File::Path::make_path($Dir, mode => 0775);
+  return $Dir;
+}
+
+sub RmTree($)
+{
+  my ($self) = @_;
+  my $Dir = $self->GetDir();
+  File::Path::remove_tree($Dir);
+}
+
 sub _SetupTask($$)
 {
-  my ($VM, $Task) = @_;
+  my ($VM, $self) = @_;
+
+  # Remove the previous run's files if any
+  $self->RmTree();
 
   # Capture Perl errors in the task's generic error log
-  my ($JobId, $StepNo, $TaskNo) = @{$Task->GetMasterKey()};
-  my $TaskDir = "$DataDir/jobs/$JobId/$StepNo/$TaskNo";
-  # Remove the previous run's files if any
-  rmtree $TaskDir;
-  mkdir $TaskDir;
+  my $TaskDir = $self->CreateDir();
   if (open(STDERR, ">>", "$TaskDir/err"))
   {
     # Make sure stderr still flushes after each print
@@ -136,8 +157,7 @@ sub UpdateStatus($$)
   {
     my ($JobId, $StepNo, $TaskNo) = @{$self->GetMasterKey()};
     my $OldUMask = umask(002);
-    my $TaskDir = "$DataDir/jobs/$JobId/$StepNo/$TaskNo";
-    mkdir $TaskDir;
+    my $TaskDir = $self->CreateDir();
     if (open TASKLOG, ">>$TaskDir/err")
     {
       print TASKLOG "Child process died unexpectedly\n";

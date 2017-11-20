@@ -60,7 +60,7 @@ if ($JobPurgeDays != 0)
     if (defined($Job->Ended) && $Job->Ended < $DeleteBefore)
     {
       LogMsg "Deleting job ", $Job->Id, "\n";
-      system "rm", "-rf", "$DataDir/jobs/" . $Job->Id;
+      $Job->RmTree();
       my $ErrMessage = $Jobs->DeleteItem($Job);
       if (defined($ErrMessage))
       {
@@ -135,8 +135,7 @@ if ($JobArchiveDays != 0)
       LogMsg "Archiving job ", $Job->Id, "\n";
       foreach my $Step (@{$Job->Steps->GetItems()})
       {
-        unlink "$DataDir/jobs/" . $Job->Id . "/" . $Step->No . "/" .
-               $Step->FileName;
+        unlink $Step->GetDir() . "/" . $Step->FileName;
       }
 
       $Job->Archived(1);
