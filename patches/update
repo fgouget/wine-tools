@@ -213,11 +213,6 @@ foreach my $file (readdir DIR)
             close LOG;
         }
     }
-    if (-f "$dir/$file.testfail")
-    {
-        $patch{"testbot"} = "<a href=\"data/$file.testfail\">Failed</a>";
-        $patch{"testclass"} = "testbot botfail";
-    }
     if (defined $patch{"msgid"})
     {
         $messages{$patch{"msgid"}} = \%patch;

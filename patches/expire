@@ -397,7 +397,6 @@ foreach my $p (keys %patches)
             unlink "$dir/$file.order";
             unlink "$dir/$file.review";
             unlink "$dir/$file.testbot";
-            unlink "$dir/$file.testfail";
             unlink "$dir/OLD/$file.status";
         }
     }
