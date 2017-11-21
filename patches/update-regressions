@@ -86,7 +86,7 @@ sub read_bugs()
 sub print_bugs($@)
 {
     my $row = shift;
-    printf OUTPUT "<table class=\"main\">\n";
+    printf OUTPUT "<table class=\"regressions\">\n";
     foreach my $id (sort {$b <=> $a} @_)
     {
         my $regression = $regressions{$id};
@@ -135,7 +135,7 @@ printf OUTPUT "<div id=\"logo_blurb\">Wine source repository &ndash; Regressions
 print OUTPUT "<div id=\"main_content\"><div id=\"content\"><div class=\"main\">\n";
 printf OUTPUT "<h2>%u bisected regressions</h2>\n", $count;
 
-print OUTPUT "<table class=\"main\"><tr><th class=\"count\">Count</th>",
+print OUTPUT "<table class=\"regressions\"><tr><th class=\"count\">Count</th>",
              "<th style=\"width: 100%;\" class=\"author\">Author</th></tr>\n";
 
 my $row = 0;
@@ -155,7 +155,7 @@ print OUTPUT "</table></div>\n";
 
 print OUTPUT "<div class=\"main\">\n";
 printf OUTPUT "<h2>%u regressions without commit id</h2>\n", scalar @unknown;
-print OUTPUT "<table class=\"main\"><tr><th class=\"id\">Id</th>",
+print OUTPUT "<table class=\"regressions\"><tr><th class=\"id\">Id</th>",
              "<th style=\"width: 100%;\" class=\"subject\">Description</th></tr>\n";
 
 $row = 0;

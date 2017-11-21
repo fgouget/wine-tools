@@ -131,7 +131,7 @@ div.buglist {
     width: 100%;
     border: 1px solid #601919;
 }
-table.main, table.legend { width: 100%; }
+table.main, table.legend, table.regressions { width: 100%; }
 table.main { border-collapse: collapse; }
 
 table.legend ul { margin: 2px 0; }
