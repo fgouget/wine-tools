@@ -71,7 +71,7 @@ sub CreateDir($)
 {
   my ($self) = @_;
   my $Dir = $self->GetDir();
-  File::Path::make_path($Dir, mode => 0775);
+  mkpath($Dir, 0, 0775);
   return $Dir;
 }
 
@@ -79,7 +79,7 @@ sub RmTree($)
 {
   my ($self) = @_;
   my $Dir = $self->GetDir();
-  File::Path::remove_tree($Dir);
+  rmtree($Dir);
 }
 
 sub _SetupTask($$)
