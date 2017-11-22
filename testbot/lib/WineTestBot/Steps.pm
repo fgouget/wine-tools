@@ -87,10 +87,9 @@ sub HandleStaging($$)
 {
   my ($self) = @_;
 
-  if (! $self->InStaging)
-  {
-    return undef;
-  }
+  # Always at least create the step's directory
+  my $StepDir = $self->CreateDir();
+  return undef if (! $self->InStaging);
 
   my $FileName = $self->FileName;
   if ($FileName !~ m/^[0-9a-z-]+_(.*)$/)
@@ -99,9 +98,7 @@ sub HandleStaging($$)
   }
   my $BaseName = $1;
   my $StagingFileName = "$DataDir/staging/$FileName";
-  my $StepDir = $self->CreateDir();
-  my $FinalFileName = "$StepDir/$BaseName";
-  if (!move($StagingFileName, $FinalFileName))
+  if (!move($StagingFileName, "$StepDir/$BaseName"))
   {
     return "Could not move the staging file: $!";
   }
