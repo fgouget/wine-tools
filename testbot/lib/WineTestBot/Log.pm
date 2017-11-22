@@ -31,7 +31,7 @@ use vars qw (@ISA @EXPORT);
 
 require Exporter;
 @ISA = qw(Exporter);
-@EXPORT = qw(&LogMsg &Time &Elapsed);
+@EXPORT = qw(&LogMsg &OpenLog &Time &Elapsed);
 
 my $logfile;
 my $logprefix;
@@ -56,6 +56,12 @@ sub LogMsg(@)
     select($tmp);
   }
   print $logfile scalar localtime, " ", $logprefix, "[$$]: ", @_ if ($logfile);
+}
+
+sub OpenLog()
+{
+  my $Handle;
+  return open($Handle, "<", "$LogDir/log") ? $Handle : undef;
 }
 
 =pod
