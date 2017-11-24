@@ -96,9 +96,9 @@ In all other cases the VM is powered off and marked as such.
 =back
 =cut
 
-sub Cleanup(;$$)
+sub Cleanup($;$$)
 {
-  my ($KillTasks, $KillVMs) = @_;
+  my ($Starting, $KillTasks, $KillVMs) = @_;
 
   # Verify that the running tasks are still alive and requeue them if not.
   # Ignore the Job and Step status fields because they may be a bit out of date.
@@ -128,7 +128,7 @@ sub Cleanup(;$$)
         }
         elsif ($KillTasks)
         {
-          # We will kill the Task's process so requeue the Task.
+          # We will kill the child process so requeue the Task.
           $Requeue = 1;
         }
         else
@@ -193,7 +193,7 @@ sub Cleanup(;$$)
       }
       # else let the process finish its work
     }
-    else
+    elsif ($Starting)
     {
       if ($VM->Status eq "idle")
       {
@@ -241,7 +241,7 @@ sub HandleShutdown($$)
     return "0Invalid KillVMs shutdown parameter\n";
   }
 
-  Cleanup($KillTasks, $KillVMs);
+  Cleanup(0, $KillTasks, $KillVMs);
   $RunEngine = 0;
 
   LogMsg "Waiting for the last clients to disconnect...\n";
@@ -715,7 +715,7 @@ sub main()
     LogMsg "Capping MaxRevertsWhileRunningVMs to MaxRevertingVMs ($MaxRevertsWhileRunningVMs)\n";
   }
   $MaxVMsWhenIdle ||= $MaxActiveVMs;
-  Cleanup();
+  Cleanup(1);
 
   # Check for patches that arrived while the server was off.
   HandleWinePatchMLSubmission();
