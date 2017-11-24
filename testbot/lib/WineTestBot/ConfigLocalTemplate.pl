@@ -90,7 +90,7 @@ $WineTestBot::Config::AgentPort = undef;
 # - If set to an SSH URI, then tunneling is performed using these parameters.
 # - Any other setting disables SSH tunneling. In particular to disable
 #   tunneling for SSH VirtURIs it is recommended to set this to 'never'.
-$Tunnel = undef;
+$WineTestBot::Config::Tunnel = undef;
 
 # If set this specifies the SSH tunnel parameters to be used for the
 # TestAgent connection. This is mostly useful for parameters that cannot be
