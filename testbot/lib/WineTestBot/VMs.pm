@@ -179,7 +179,9 @@ sub GetHost($)
 {
   my ($self) = @_;
 
-  # The URI is of the form protocol://user@hostname/hypervisor-specific-data
+  # VirtURI is of the form proto://user@hostname:port/hypervisor-specific-data
+  # This returns the 'hostname:port' part. Note that the port can be used to
+  # tunnel connections to different VM hosts and thus must be included.
   return $1 if ($self->VirtURI =~ m%^[^:]+://(?:[^/@]*@)?([^/]+)/%);
   return "localhost";
 }
