@@ -284,7 +284,7 @@ EOF
       {
         if (! $HasLogEntries)
         {
-          print SENDMAIL "Empty log\n";
+          print SENDMAIL "Empty test log and no error message\n";
         }
         elsif ($StepTask->Type eq "build")
         {
@@ -313,7 +313,7 @@ EOF
       close ERRFILE;
       if (! $HasErrEntries)
       {
-        print "Empty log";
+        print SENDMAIL "No test log and no error message";
       }
       else
       {
