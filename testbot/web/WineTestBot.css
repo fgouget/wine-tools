@@ -339,6 +339,7 @@ td.Record { text-align: center; }
 .RecordHost { font-size: smaller; }
 .RecordJob { font-size: smaller; }
 .RecordDuration { }
+.RecordResult { font-size: smaller; font-style: italic; }
 
 .Record-start { background-color: white; }
 .Record-off { color: #c0c0c0; }
@@ -362,4 +363,7 @@ td.Record { text-align: center; }
 /* Special borders */
 .Record.Record-left { border-left: thin solid #601919; }
 .Record.Record-right { border-right: thin solid #601919; }
+.Record.Record-boterror { border-left: thick solid red; border-right: thick solid red; }
+.Record.Record-error { border-left: thick solid #990000; border-right: thick solid #990000; }
+.Record.Record-timeout { border-left: thick solid blue; border-right: thick solid blue; }
 .Record.Record-miss { border-top: thick dashed #ff6600; }

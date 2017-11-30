@@ -64,6 +64,18 @@ describing the TestBot activity. The structure is as follows:
           ...
         },
       },
+      resultvms => {
+        <VMName1> => {
+          vm       => <VMObject>,
+          result   => <VMResult>,
+          tries    => <Tries>,
+          maxtries => <MaxTries>,
+          details  => <ResultDetails>,
+        },
+        <VMName2> => {
+          ...
+        },
+      },
     },
     <GroupNo2> => {
       ...
@@ -126,11 +138,24 @@ sub GetActivity($)
         $VMStatus->{value} = $Record->Value;
         $VMStatus->{rows} = 1;
 
+        $VMStatus->{result} = "";
         if ($Status eq "running")
         {
           $VMStatus->{job} = $Jobs->GetItem($Extra[0]);
           $VMStatus->{step} = $VMStatus->{job}->Steps->GetItem($Extra[1]) if ($VMStatus->{job});
           $VMStatus->{task} = $VMStatus->{step}->Tasks->GetItem($Extra[2]) if ($VMStatus->{step});
+          if ($VMStatus->{task})
+          {
+            if ($VMStatus->{task}->Status =~ /^(?:badpatch|badbuild|boterror)$/)
+            {
+              $VMStatus->{result} = $VMStatus->{task}->Status;
+            }
+            elsif ($VMStatus->{task}->Status eq "completed" and
+                   $VMStatus->{task}->TestFailures)
+            {
+              $VMStatus->{result} = "failed";
+            }
+          }
         }
         elsif (@Extra)
         {
@@ -139,6 +164,28 @@ sub GetActivity($)
           # in the first place.
           $VMStatus->{details} = join(" ", @Extra);
         }
+      }
+      elsif ($Record->Type eq "vmresult")
+      {
+        my ($RecordName, $RecordHost) = split / /, $Record->Name;
+        # Use ItemExists() to not bypass the collection's filter
+        next if (!$VMs->ItemExists($RecordName));
+        my $VM = $VMs->GetItem($RecordName);
+
+        my $ResultVMs = ( $Group->{resultvms} ||= {} );
+        my $VMResult = ( $ResultVMs->{$RecordName} ||= {} );
+
+        $VMResult->{host} = $RecordHost;
+        $VMResult->{vm} = $VM;
+
+        my ($Result, @Extras) = split / /, $Record->Value;
+        $VMResult->{result} = $Result;
+        if (@Extras and $Extras[0] =~ /^\d+$/)
+        {
+          $VMResult->{tries} = shift @Extras;
+          $VMResult->{maxtries} = shift @Extras;
+        }
+        $VMResult->{details} = join(" ", @Extras);
       }
     }
   }
@@ -150,13 +197,25 @@ sub GetActivity($)
   {
     my $Group = $Activity->{$GroupNo};
     my $StatusVMs = $Group->{statusvms};
-    next if (!$StatusVMs);
+    my $ResultVMs = $Group->{resultvms};
+    next if (!$StatusVMs and !$ResultVMs);
     $LastGroup->{end} = $Group->{start} if ($LastGroup);
     $LastGroup = $Group;
 
     foreach my $VM (@{$VMs->GetItems()})
     {
       my $LastVMStatus = $LastStatusVMs{$VM->Name} ? $LastStatusVMs{$VM->Name}->{$VM->Name} : undef;
+
+      my $VMResult = $ResultVMs->{$VM->Name};
+      if ($VMResult and $LastVMStatus and $LastVMStatus->{status} ne "engine")
+      {
+        # Transfer the result to the relevant status object
+        $LastVMStatus->{result} = $VMResult->{result};
+        $LastVMStatus->{details} = $VMResult->{details};
+        $LastVMStatus->{tries} = $VMResult->{tries};
+        $LastVMStatus->{maxtries} = $VMResult->{maxtries};
+      }
+      next if (!$StatusVMs);
 
       my $VMStatus = $StatusVMs->{$VM->Name};
       if ($VMStatus)
