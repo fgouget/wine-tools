@@ -45,6 +45,7 @@ use WineTestBot::Config;
 use WineTestBot::Jobs;
 use WineTestBot::VMs;
 use WineTestBot::Log;
+use WineTestBot::RecordGroups;
 use WineTestBot::Engine::Notify;
 
 
@@ -192,10 +193,13 @@ sub LogTaskError($)
   umask($OldUMask);
 }
 
-sub WrapUpAndExit($;$)
+sub WrapUpAndExit($;$$)
 {
-  my ($Status, $Retry) = @_;
+  my ($Status, $Retry, $Timeout) = @_;
   my $NewVMStatus = $Status eq 'queued' ? 'offline' : 'dirty';
+  my $VMResult = $Status eq "boterror" ? "boterror" :
+                 $Status eq "queued" ? "error" :
+                 $Timeout ? "timeout" : "";
 
   my $TestFailures;
   my $Tries = $Task->TestFailures || 0;
@@ -217,6 +221,13 @@ sub WrapUpAndExit($;$)
   elsif ($Tries >= 1)
   {
     LogTaskError("The previous $Tries run(s) terminated abnormally\n");
+  }
+
+  # Record result details that may be lost or overwritten by a later run
+  if ($VMResult)
+  {
+    $VMResult .= " $Tries $MaxTaskTries" if ($Retry);
+    $VM->RecordResult(undef, $VMResult);
   }
 
   # Update the Task and Job
@@ -373,7 +384,7 @@ if (!$Pid)
 # log before giving up
 #
 
-my ($NewStatus, $ErrMessage, $TAError);
+my ($NewStatus, $ErrMessage, $TAError, $TaskTimedOut);
 Debug(Elapsed($Start), " Waiting for the script (", $Task->Timeout, "s timeout)\n");
 if (!defined $TA->Wait($Pid, $Task->Timeout, 60))
 {
@@ -382,6 +393,7 @@ if (!defined $TA->Wait($Pid, $Task->Timeout, 60))
   {
     $ErrMessage = "The build timed out\n";
     $NewStatus = "badbuild";
+    $TaskTimedOut = 1;
   }
   else
   {
@@ -480,4 +492,4 @@ $TA->Disconnect();
 # Wrap up
 #
 
-WrapUpAndExit($NewStatus);
+WrapUpAndExit($NewStatus, undef, $TaskTimedOut);

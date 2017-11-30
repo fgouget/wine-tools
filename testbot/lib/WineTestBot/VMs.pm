@@ -566,6 +566,35 @@ sub RecordStatus($$;$)
   }
 }
 
+=pod
+=over 12
+
+=item C<RecordStatus()>
+
+Adds a Record of the specified VM process result.
+
+Also resets the last known VM status so a new one will be recorded even if
+it matches the current one, for instance if a new revert is started after the
+first one failed.
+
+=back
+=cut
+
+sub RecordResult($$$)
+{
+  my ($self, $Records, $Result) = @_;
+
+  if ($Records)
+  {
+    $Records->AddRecord("vmresult", $self->GetRecordName(), $Result);
+  }
+  else
+  {
+    SaveRecord("vmresult", $self->GetRecordName(), $Result);
+  }
+  delete $_VMStatuses{$self->Name};
+}
+
 
 package WineTestBot::VMs;
 
