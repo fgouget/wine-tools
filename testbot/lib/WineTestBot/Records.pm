@@ -77,7 +77,7 @@ require Exporter;
 BEGIN
 {
   @PropertyDescriptors = (
-    CreateEnumPropertyDescriptor("Type",   "Type",   1,  1, ['engine', 'tasks', 'vmstatus']),
+    CreateEnumPropertyDescriptor("Type",   "Type",   1,  1, ['engine', 'tasks', 'vmresult', 'vmstatus']),
     CreateBasicPropertyDescriptor("Name",  "Name",   1,  1, "A", 96),
     CreateBasicPropertyDescriptor("Value", "Value", !1, !1, "A", 64),
   );

@@ -170,7 +170,7 @@ ENGINE=InnoDB DEFAULT CHARSET=utf8;
 CREATE TABLE Records
 (
   RecordGroupId INT(5) NOT NULL,
-  Type         ENUM('engine', 'tasks', 'vmstatus') NOT NULL,
+  Type         ENUM('engine', 'tasks', 'vmresult', 'vmstatus') NOT NULL,
   Name         VARCHAR(96) NOT NULL,
   Value        VARCHAR(64) NULL,
   PRIMARY KEY (RecordGroupId, Type, Name),
