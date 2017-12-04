@@ -37,6 +37,8 @@ sub BEGIN
   }
 }
 
+use File::Path;
+
 use WineTestBot::Config;
 use WineTestBot::Jobs;
 use WineTestBot::Log;
