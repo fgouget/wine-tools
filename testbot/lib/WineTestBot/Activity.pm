@@ -33,7 +33,7 @@ use vars qw (@ISA @EXPORT);
 
 require Exporter;
 @ISA = qw(Exporter);
-@EXPORT = qw(&GetActivity);
+@EXPORT = qw(&GetActivity &GetStatistics);
 
 
 =pod
@@ -267,6 +267,143 @@ sub GetActivity($)
   }
 
   return $Activity;
+}
+
+sub _AddFullStat($$$;$)
+{
+  my ($Stats, $StatKey, $Value, $Source) = @_;
+
+  $Stats->{"$StatKey.count"}++;
+  $Stats->{$StatKey} += $Value;
+  my $MaxKey = "$StatKey.max";
+  if (!exists $Stats->{$MaxKey} or $Stats->{$MaxKey} < $Value)
+  {
+    $Stats->{$MaxKey} = $Value;
+    $Stats->{"$MaxKey.source"} = $Source if ($Source);
+  }
+}
+
+sub GetStatistics($)
+{
+  my ($VMs) = @_;
+
+  my ($GlobalStats, $HostsStats, $VMsStats) = ({}, {}, {});
+
+  my $Jobs = CreateJobs();
+  foreach my $Job (@{$Jobs->GetItems()})
+  {
+    $GlobalStats->{"jobs.count"}++;
+
+    my $IsSpecialJob;
+    my $Steps = $Job->Steps;
+    foreach my $Step (@{$Steps->GetItems()})
+    {
+      my $StepType = $Step->Type;
+      $IsSpecialJob = 1 if ($StepType =~ /^(?:reconfig|suite)$/);
+
+      my $Tasks = $Step->Tasks;
+      foreach my $Task (@{$Tasks->GetItems()})
+      {
+        $GlobalStats->{"tasks.count"}++;
+        if ($Task->Started and $Task->Ended and
+            $Task->Status !~ /^(?:queued|running|canceled)$/)
+        {
+          my $Time = $Task->Ended - $Task->Started;
+          _AddFullStat($GlobalStats, "$StepType.time", $Time, $Task);
+        }
+      }
+    }
+
+    if (!$IsSpecialJob and$Job->Ended and
+        $Job->Status !~ /^(?:queued|running|canceled)$/)
+    {
+      my $Time = $Job->Ended - $Job->Submitted;
+      _AddFullStat($GlobalStats, "jobs.time", $Time, $Job);
+
+      if (!exists $GlobalStats->{start} or $GlobalStats->{start} > $Job->Submitted)
+      {
+        $GlobalStats->{start} = $Job->Submitted;
+      }
+      if (!exists $GlobalStats->{end} or $GlobalStats->{end} < $Job->Ended)
+      {
+        $GlobalStats->{end} = $Job->Ended;
+      }
+    }
+  }
+
+  my $Activity = GetActivity($VMs);
+  foreach my $Group (values %$Activity)
+  {
+    if (!$VMsStats->{start} or $VMsStats->{start} > $Group->{start})
+    {
+      $VMsStats->{start} = $Group->{start};
+    }
+    if (!$VMsStats->{end} or $VMsStats->{end} < $Group->{end})
+    {
+      $VMsStats->{end} = $Group->{end};
+    }
+    next if (!$Group->{statusvms});
+
+    my ($IsGroupBusy, %IsHostBusy);
+    foreach my $VM (@{$VMs->GetItems()})
+    {
+      my $VMStatus = $Group->{statusvms}->{$VM->Name};
+      my $Host = $VMStatus->{vmstatus}->{host} || $VM->GetHost();
+      my $HostStats = ($HostsStats->{items}->{$Host} ||= {});
+
+      if (!$VMStatus->{merged})
+      {
+        my $VMStats = ($VMsStats->{items}->{$VM->Name} ||= {});
+
+        my $Status = $VMStatus->{status};
+        my $Time = $VMStatus->{end} - $VMStatus->{start};
+        _AddFullStat($VMStats, "$Status.time", $Time);
+        _AddFullStat($HostStats, "$Status.time", $Time);
+
+        if ($VMStatus->{result} =~ /^(?:boterror|error|timeout)$/)
+        {
+          $VMStats->{"$VMStatus->{result}.count"}++;
+          $HostStats->{"$VMStatus->{result}.count"}++;
+          $GlobalStats->{"$VMStatus->{result}.count"}++;
+        }
+        elsif ($VMStatus->{task} and
+               ($VMStatus->{result} eq "completed" or
+                $VMStatus->{result} eq "failed"))
+        {
+          my $StepType = $VMStatus->{step}->Type;
+          _AddFullStat($VMStats, "$StepType.time", $Time, $VMStatus->{task});
+          _AddFullStat($HostStats, "$StepType.time", $Time, $VMStatus->{task});
+        }
+
+        # Unlike the other statistics this one cannot simply be summed to
+        # obtain the per-VM-host statistic because multiple VMs may be busy
+        # at the same time
+        if ($Status =~ /^(?:reverting|sleeping|running|dirty)$/)
+        {
+          $VMStats->{"busy.elapsed"} += $VMStatus->{end} - $VMStatus->{start};
+        }
+      }
+
+      $VMStatus = $VMStatus->{vmstatus};
+      if (!$IsHostBusy{$Host} and
+          $VMStatus->{status} =~ /^(?:reverting|sleeping|running|dirty)$/)
+      {
+        # See the per-VM-host busy.elapsed comment
+        $HostStats->{"busy.elapsed"} += $Group->{end} - $Group->{start};
+        $IsHostBusy{$Host} = 1;
+        $IsGroupBusy = 1;
+      }
+    }
+    if ($IsGroupBusy)
+    {
+      $GlobalStats->{"busy.elapsed"} += $Group->{end} - $Group->{start};
+    }
+  }
+  $GlobalStats->{elapsed} = $GlobalStats->{end} - $GlobalStats->{start};
+  $HostsStats->{elapsed} =
+      $VMsStats->{elapsed} = $VMsStats->{end} - $VMsStats->{start};
+
+  return { global => $GlobalStats, hosts => $HostsStats, vms => $VMsStats };
 }
 
 1;
