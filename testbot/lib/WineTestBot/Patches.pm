@@ -101,9 +101,12 @@ sub FromSubmission($$)
   $self->Subject(substr($Subject, 0, $PropertyDescriptor->GetMaxLength()));
 
   my $MessageId = $Head->get("Message-Id");
-  $MessageId =~ s/\s*\n\s*/ /gs;
-  $PropertyDescriptor = $self->GetPropertyDescriptorByName("MessageId");
-  $self->MessageId(substr($MessageId, 0, $PropertyDescriptor->GetMaxLength()));
+  if ($MessageId)
+  {
+    $MessageId =~ s/\s*\n\s*/ /gs;
+    $PropertyDescriptor = $self->GetPropertyDescriptorByName("MessageId");
+    $self->MessageId(substr($MessageId, 0, $PropertyDescriptor->GetMaxLength()));
+  }
 
   $self->Disposition("Processing");
 }
