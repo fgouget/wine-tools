@@ -52,6 +52,7 @@ use WineTestBot::Jobs;
 use WineTestBot::Log;
 use WineTestBot::Patches;
 use WineTestBot::PendingPatchSets;
+use WineTestBot::RecordGroups;
 use WineTestBot::Utils;
 use WineTestBot::VMs;
 
@@ -102,7 +103,7 @@ sub Cleanup($;$$)
 
   # Verify that the running tasks are still alive and requeue them if not.
   # Ignore the Job and Step status fields because they may be a bit out of date.
-  my %BusyVMs;
+  my %RunningVMs;
   foreach my $Job (@{CreateJobs()->GetItems()})
   {
     my $CallUpdateStatus;
@@ -135,7 +136,7 @@ sub Cleanup($;$$)
         {
           # This task is still running!
           LogMsg "$TaskKey is still running\n";
-          $BusyVMs{$Task->VM->GetKey()} = 1;
+          $RunningVMs{$Task->VM->GetKey()} = join(" ", "running", $Job->Id, $Step->No, $Task->No);
           next;
         }
         if ($Requeue)
@@ -158,16 +159,23 @@ sub Cleanup($;$$)
   }
 
   # Get the VMs in order now
+  my $RecordGroups = CreateRecordGroups();
+  my $Records = $RecordGroups->Add()->Records;
   my $VMs = CreateVMs();
-  $VMs->FilterEnabledRole();
-  $VMs->FilterEnabledStatus();
   foreach my $VM (@{$VMs->GetItems()})
   {
     my $VMKey = $VM->GetKey();
-    if ($BusyVMs{$VMKey})
+    if (!$VM->HasEnabledRole() or !$VM->HasEnabledStatus())
+    {
+      $VM->RecordStatus($Records);
+      next;
+    }
+
+    if ($RunningVMs{$VMKey})
     {
       # This VM is still running a task. Let it.
       LogMsg "$VMKey is used by a task\n";
+      $VM->RecordStatus($Records, $RunningVMs{$VMKey});
       next;
     }
 
@@ -177,19 +185,25 @@ sub Cleanup($;$$)
       {
         $VM->KillChild();
         $VM->RunPowerOff();
+        $VM->RecordStatus($Records, "dirty poweroff (kill tasks)");
       }
       elsif ($KillVMs and $VM->Status ne "running")
       {
         $VM->KillChild();
         # $KillVMs is normally used on shutdown so don't start a process that
         # will get stuck 'forever' waiting for an offline VM.
-        $VM->RunPowerOff() if ($VM->Status ne "offline");
+        if ($VM->Status ne "offline")
+        {
+          $VM->RunPowerOff();
+          $VM->RecordStatus($Records, "dirty poweroff (kill vms)");
+        }
       }
       elsif (!$VM->CanHaveChild())
       {
         # The VM should not have a process.
         $VM->KillChild();
         $VM->RunPowerOff();
+        $VM->RecordStatus($Records, "dirty poweroff (unexpected process)");
       }
       # else let the process finish its work
     }
@@ -198,6 +212,7 @@ sub Cleanup($;$$)
       if ($VM->Status eq "idle")
       {
         $VM->RunCheckIdle();
+        $VM->RecordStatus($Records, "dirty idle check");
       }
       else
       {
@@ -205,9 +220,11 @@ sub Cleanup($;$$)
         # This is the simplest way to resync the VM status field.
         # Also powering off a powered off VM will detect offline VMs.
         $VM->RunPowerOff();
+        $VM->RecordStatus($Records, "dirty poweroff");
       }
     }
   }
+  $RecordGroups->Save();
 }
 
 
