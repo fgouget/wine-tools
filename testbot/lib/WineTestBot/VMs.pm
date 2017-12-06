@@ -183,6 +183,13 @@ sub HasEnabledRole($)
   return $self->Role ne "retired" && $self->Role ne "deleted";
 }
 
+sub HasEnabledStatus($)
+{
+  my ($self) = @_;
+  # Filter out the maintenance VMs
+  return $self->Status ne "maintenance";
+}
+
 sub GetHost($)
 {
   my ($self) = @_;
