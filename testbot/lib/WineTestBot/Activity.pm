@@ -176,6 +176,16 @@ sub GetActivity($)
           status => "unknown",
           rows => 1};
       }
+      if ($LastVMStatus and $LastVMStatus->{status} ne $VMStatus->{status} and
+          # Ignore acts of administrator
+          $VMStatus->{status} !~ /^(?:maintenance|engine)$/ and
+          # And flag forbidden transitions
+          (($LastVMStatus->{status} eq "reverting" and $VMStatus->{status} ne "sleeping") or
+           ($LastVMStatus->{status} eq "sleeping" and $VMStatus->{status} !~ /^(?:idle|running)$/) or
+           ($LastVMStatus->{status} eq "idle" and $VMStatus->{status} ne "running")))
+      {
+        $LastVMStatus->{mispredict} = 1;
+      }
       $LastStatusVMs{$VM->Name} = $StatusVMs;
     }
   }
