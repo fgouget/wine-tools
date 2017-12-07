@@ -553,8 +553,8 @@ sub CreateItem($)
 sub CreateVMs(;$)
 {
   my ($ScopeObject) = @_;
-  return WineTestBot::VMs::->new("VMs", "VMs", "VM",
-                                 \@PropertyDescriptors, $ScopeObject);
+  return WineTestBot::VMs->new("VMs", "VMs", "VM",
+                               \@PropertyDescriptors, $ScopeObject);
 }
 
 sub SortKeysBySortOrder($$)

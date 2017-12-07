@@ -333,8 +333,8 @@ sub CreateItem($)
 sub CreateUsers(;$)
 {
   my ($ScopeObject) = @_;
-  return WineTestBot::Users::->new("Users", "Users", "User",
-                                   \@PropertyDescriptors, $ScopeObject);
+  return WineTestBot::Users->new("Users", "Users", "User",
+                                 \@PropertyDescriptors, $ScopeObject);
 }
 
 sub AuthenticateLDAP($$$)

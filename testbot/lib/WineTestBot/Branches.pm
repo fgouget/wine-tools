@@ -97,8 +97,8 @@ sub CreateItem($)
 sub CreateBranches(;$)
 {
   my ($ScopeObject) = @_;
-  return WineTestBot::Branches::->new("Branches", "Branches", "Branch",
-                                      \@PropertyDescriptors, $ScopeObject);
+  return WineTestBot::Branches->new("Branches", "Branches", "Branch",
+                                    \@PropertyDescriptors, $ScopeObject);
 }
 
 1;
