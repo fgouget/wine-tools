@@ -335,6 +335,7 @@ a.title { color:white; text-decoration: none; }
 
 th.Record { text-align: center; }
 td.Record { text-align: center; }
+.RecordEngine { font-style: italic; color: #601919; }
 .RecordHost { font-size: smaller; }
 .RecordJob { font-size: smaller; }
 .RecordDuration { }
