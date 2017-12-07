@@ -749,6 +749,7 @@ sub main()
     LogMsg "Capping MaxRevertsWhileRunningVMs to MaxRevertingVMs ($MaxRevertsWhileRunningVMs)\n";
   }
   $MaxVMsWhenIdle = $MaxActiveVMs if (!defined $MaxVMsWhenIdle);
+  SaveRecord('engine', 'start');
   Cleanup(1);
 
   # Check for patches that arrived while the server was off.
@@ -871,6 +872,7 @@ sub main()
       }
     }
   }
+  SaveRecord('engine', 'stop');
 
   LogMsg "Normal WineTestBot Engine shutdown\n";
   return 0;
