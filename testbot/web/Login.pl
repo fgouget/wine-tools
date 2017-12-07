@@ -21,7 +21,6 @@ use strict;
 
 package LoginPage;
 
-use CGI qw(:standard escapeHTML);
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::CGI::FreeFormPage;
 use WineTestBot::Config;
@@ -79,7 +78,7 @@ sub GenerateFields($)
   if (defined($self->GetParam("Target")))
   {
     print "<div><input type='hidden' name='Target' value='",
-          escapeHTML($self->GetParam("Target")), "'></div>\n";
+          $self->escapeHTML($self->GetParam("Target")), "'></div>\n";
   }
 
   $self->SUPER::GenerateFields();
