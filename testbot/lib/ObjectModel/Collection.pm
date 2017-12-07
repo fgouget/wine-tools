@@ -168,6 +168,11 @@ sub Load($)
 
 Instantiates a new Item and adds it to the Collection.
 
+Note that not only does calling Add() not force loading from the database,
+it marks the Collection as loaded. So if Add() is the first call on a
+Collection, calling GetKeys() or GetItems() later on will only return the new
+Item.
+
 See Item->new() for details on the Item's default column values and for
 important information regarding its primary key.
 
