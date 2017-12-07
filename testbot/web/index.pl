@@ -87,7 +87,8 @@ sub GenerateDataCell($$$$)
   my $PropertyName = $PropertyDescriptor->GetName();
   if ($PropertyName eq "Status")
   {
-    print "<td><a href='/JobDetails.pl?Key=", uri_escape($Item->GetKey()), "'>";
+    my $EscapedKey = uri_escape($Item->GetKey());
+    print "<td id='job$EscapedKey'><a href='/JobDetails.pl?Key=$EscapedKey'>";
 
     my %HTMLChunks = ("queued" => "<span class='queued'>queued</span>",
                       "running" => "<span class='running'>running</span>",
