@@ -160,11 +160,12 @@ EOF
       my $VMStatus = $Group->{statusvms}->{$VM->Name};
       next if ($VMStatus->{merged});
 
-      # Add borders to separate VM hosts
+      # Add borders to separate VM hosts and indicate anomalies.
       print "<td class='Record Record-$VMStatus->{status}";
       my $Host = $VM->GetHost();
       print " Record-left" if ($Col > 0 and $SortedVMs[$Col-1]->GetHost() ne $Host);
       print " Record-right" if ($Col+1 < @SortedVMs and $SortedVMs[$Col+1]->GetHost() ne $Host);
+      print " Record-miss" if ($VMStatus->{mispredict});
       print "'";
       print " rowspan='$VMStatus->{rows}'" if ($VMStatus->{rows} > 1);
       print ">";
@@ -235,7 +236,8 @@ sub GenerateFooter($)
   print "<span class='Record-running'>running</span> a task (in which case it links to it),<br>\n";
   print "<span class='Record-dirty'>dirty</span> while the server is powering off the VM after a task or while it assesses its state on startup.</p>\n";
 
-  print "<p>If no time is indicated then the VM remained in that state for less than 2 seconds. The tasks column indicates the number of runnable / queued tasks before that scheduling round. A long horizontal bar indicates the TestBot server was restarted. </p>\n";
+  print "<p>If no time is indicated then the VM remained in that state for less than 2 seconds. The tasks column indicates the number of runnable / queued tasks before that scheduling round. A long horizontal bar indicates the TestBot server was restarted.</p>\n";
+  print "<p>This <span class='Record Record-idle Record-miss'>border</span> indicates that the server threw away the VM's current state without using it.</p>\n";
 
   print "<p>The VM could also be <span class='Record-offline'>offline</span> due to a temporary issue,<br>\n";
   print "or until the administrator can look at it for <span class='Record-maintenance'>maintenance</span>,<br>\n";
