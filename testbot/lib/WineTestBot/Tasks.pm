@@ -179,6 +179,7 @@ sub UpdateStatus($$)
       $VM->Status('dirty');
       $VM->ChildPid(undef);
       $VM->Save();
+      $VM->RecordResult(undef, "boterror process died");
     }
     # else it looks like this is not our VM anymore
 
