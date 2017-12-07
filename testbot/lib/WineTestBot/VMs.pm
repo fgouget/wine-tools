@@ -221,7 +221,7 @@ sub Status($;$)
   my $CurrentStatus = $self->SUPER::Status;
   return $CurrentStatus if (!defined $NewStatus);
 
-  if ($NewStatus ne $CurrentStatus)
+  if (!defined $CurrentStatus or $NewStatus ne $CurrentStatus)
   {
     $self->SUPER::Status($NewStatus);
     $self->{OldStatus} = $CurrentStatus;
