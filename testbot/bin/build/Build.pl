@@ -74,6 +74,7 @@ sub ApplyPatch($$$)
 {
   my ($PatchFile, $PatchType, $BaseName) = @_;
 
+  my $NeedMakeMakefiles = !1;
   my $NeedMakefile = 0;
   my $NeedMakeInclude = !1;
   my $NeedBuildDeps = !1;
@@ -84,7 +85,7 @@ sub ApplyPatch($$$)
   {
     my $Line;
     while (defined($Line = <FH>) &&
-           ($NeedMakefile == 0 || ! $NeedMakeInclude || ! $NeedBuildDeps ||
+           (! $NeedMakeMakefiles || $NeedMakefile == 0 || ! $NeedMakeInclude || ! $NeedBuildDeps ||
             ! $NeedImplib || ! $NeedAutoconf || ! $NeedConfigure))
     {
       if ($Line =~ m=^diff.*(?:tests/Makefile\.in|Make\.vars\.in|Make\.rules\.in|Maketest\.rules\.in)$=)
@@ -111,18 +112,37 @@ sub ApplyPatch($$$)
       {
         $NeedConfigure = 1;
       }
+      elsif ($Line =~ m=^new file= || $Line =~ m=^deleted file= || $Line =~ m=^rename= ||
+             $Line =~ m=diff.*tools/make_makefiles=)
+      {
+        $NeedMakeMakefiles = $NeedConfigure = 1;
+      }
     }
     close FH;
   }
 
   InfoMsg "Applying patch\n";
   system("( cd $DataDir/wine && set -x && " .
-         "  git apply --verbose $PatchFile " .
+         "  git apply --verbose $PatchFile && " .
+         "  git add -A " .
          ") >> $LogDir/Build.log 2>&1");
   if ($? != 0)
   {
     LogMsg "Patch failed to apply\n";
     return (-1, $NeedMakeInclude, $NeedBuildDeps, $NeedImplib, $NeedConfigure);
+  }
+
+  if ($NeedMakeMakefiles)
+  {
+    InfoMsg "Running make_makefiles\n";
+    system("( cd $DataDir/wine && set -x && " .
+           " ./tools/make_makefiles " .
+           ") >> $LogDir/Build.log 2>&1");
+    if ($? != 0)
+    {
+      LogMsg "make_makefiles failed\n";
+      return (-1, $NeedMakeInclude, $NeedBuildDeps, $NeedImplib, $NeedConfigure);
+    }
   }
 
   if ($NeedAutoconf && ! $NeedConfigure)
