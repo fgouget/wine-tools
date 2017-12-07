@@ -21,7 +21,6 @@ use strict;
 
 package ResetPasswordPage;
 
-use CGI qw(:standard escapeHTML);
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::CGI::FreeFormPage;
 use WineTestBot::Users;

@@ -21,7 +21,6 @@ use strict;
 
 package FeedbackPage;
 
-use CGI qw(:standard escapeHTML);
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::CGI::FreeFormPage;
 use WineTestBot::Config;
