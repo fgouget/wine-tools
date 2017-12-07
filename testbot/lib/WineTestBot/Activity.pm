@@ -49,6 +49,7 @@ describing the TestBot activity. The structure is as follows:
       end      => <EndTimestamp>,
       runnable => <RunnableTasksCount>,
       queued   => <QueuedTasksCount>,
+      engine   => <StartOrStop>,
       statusvms => {
         <VMName1> => {
           vm     => <VMObject>,
@@ -89,7 +90,19 @@ sub GetActivity($)
                 );
     foreach my $Record (@{$RecordGroup->Records->GetItems()})
     {
-      if ($Record->Type eq "tasks")
+      if ($Record->Type eq "engine" and $Record->Name =~ /^(?:start|stop)$/)
+      {
+        $Group->{engine} = $Record->Name;
+        foreach my $VM (@{$VMs->GetItems()})
+        {
+          my $StatusVMs = ( $Group->{statusvms} ||= {} );
+          my $VMStatus = ( $StatusVMs->{$VM->Name} ||= {} );
+          $VMStatus->{start} = $RecordGroup->Timestamp;
+          $VMStatus->{status} = "engine";
+          $VMStatus->{rows} = 1;
+        }
+      }
+      elsif ($Record->Type eq "tasks")
       {
         $Group->{$Record->Name} = $Record->Value;
       }
@@ -150,7 +163,7 @@ sub GetActivity($)
       {
         $LastVMStatus->{end} = $VMStatus->{start} if ($LastVMStatus);
       }
-      elsif ($LastVMStatus)
+      elsif ($LastVMStatus and $LastVMStatus->{status} ne "engine")
       {
         $VMStatus = $StatusVMs->{$VM->Name} = $LastStatusVMs{$VM->Name}->{$VM->Name};
         $LastStatusVMs{$VM->Name}->{$VM->Name} = {merged => 1, vmstatus => $VMStatus};
