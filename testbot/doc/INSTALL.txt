@@ -42,7 +42,7 @@ General setup for the web site:
     cd var
     touch log
     mkdir jobs latest patches socket staging
-    sudo chown WWWRUN:winehq staging
+    sudo chown wwwrun:winehq staging
     chmod g+w *
 - Install scripts/initd in /etc/init.d/winetestbot and adjust the paths and
   user name if necessary. Then activate it.
@@ -120,7 +120,7 @@ Dependencies:
 - Create a Linux VM and set it up so it can generate PE executables
   with MinGW. For instance on Debian you should install autoconf,
   bison, flex, gcc, gcc-mingw-w64, git and make. If you are going to
-  have 64bit VMs then make sure MinGW can generate 64bit PE executables.
+  have 64 bit VMs then make sure MinGW can generate 64 bit PE executables.
 - You may also want to install ccache.
 - You will also need genisoimage.
 - Create a new user, 'testbot' for instance, and log in as that user.
