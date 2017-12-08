@@ -190,7 +190,7 @@ From: $RobotEMail
 To: $Recipient
 Subject: winetestbot account request
 
-password reset request for your account $UserName was received via the website.
+A password reset request for your account $UserName was received via the website.
 You can pick a new password by going to:
 $URL
 EOF
