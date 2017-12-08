@@ -450,6 +450,11 @@ void ta_freeaddrinfo(struct addrinfo *addresses)
     }
 }
 
+void platform_detach_console(void)
+{
+    FreeConsole();
+}
+
 int platform_init(void)
 {
     HMODULE hdll;
