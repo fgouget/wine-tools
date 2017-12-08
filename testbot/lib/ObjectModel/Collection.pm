@@ -550,6 +550,20 @@ sub GetMasterCols($)
   return ($self->{MasterColNames}, $self->{MasterColValues});
 }
 
+=pod
+=over 12
+
+=item C<DeleteItem()>
+
+Deletes the specified Item from the Collection and the database backing it.
+
+Note that if there are other tables with a foreign key referencing this item
+the corresponding rows will be deleted too. So for instance deleting a Job
+will also delete the Steps and Tasks it is composed of.
+
+=back
+=cut
+
 sub DeleteItem($$)
 {
   my ($self, $Item) = @_;
