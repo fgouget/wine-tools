@@ -828,6 +828,7 @@ sub OnSubmit($)
   my $Steps = $NewJob->Steps;
 
   my $FileType = $self->GetParam("FileType");
+  my $BuildStepNo;
   if ($FileType eq "patchdlls" || $FileType eq "patchprograms")
   {
     # This is a patch so add a build step...
@@ -846,6 +847,15 @@ sub OnSubmit($)
     my $Task = $BuildStep->Tasks->Add();
     $Task->VM($BuildVM);
     $Task->Timeout($BuildTimeout);
+
+    # Save this step (&job+task) so the others can reference it
+    my ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
+    if (defined($ErrMessage))
+    {
+      $self->{ErrMessage} = $ErrMessage;
+      return !1;
+    }
+    $BuildStepNo = 1;
   }
 
   # Add steps and tasks for the 32 and 64-bit tests
@@ -869,6 +879,7 @@ sub OnSubmit($)
       {
         # First create the test step
         my $TestStep = $Steps->Add();
+        $TestStep->PreviousNo($BuildStepNo);
         if ($FileType eq "patchdlls" || $FileType eq "patchprograms")
         {
           my $FileName=$self->GetParam("TestExecutable");
@@ -899,7 +910,7 @@ sub OnSubmit($)
     }
   }
 
-  # Now save the whole thing
+  # Now save the whole thing (or whatever's left to save)
   my ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
   if (defined($ErrMessage))
   {

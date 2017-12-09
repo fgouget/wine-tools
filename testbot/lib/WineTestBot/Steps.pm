@@ -61,6 +61,30 @@ sub InitializeNew($$)
   $self->SUPER::InitializeNew($Collection);
 }
 
+=pod
+=over 12
+
+=item C<Validate()>
+
+Enforces strict ordering to avoid loops.
+
+Note that a side effect is that processing steps in increasing step number
+order is sufficient to ensure the dependencies are processed first.
+
+=back
+=cut
+
+sub Validate($)
+{
+  my ($self) = @_;
+
+  if ($self->PreviousNo and $self->PreviousNo >= $self->No)
+  {
+    return ("PreviousNo", "The previous step number must be less than this one's.");
+  }
+  return $self->SUPER::Validate();
+}
+
 sub GetDir($)
 {
   my ($self) = @_;
@@ -178,6 +202,7 @@ BEGIN
 {
   @PropertyDescriptors = (
     CreateBasicPropertyDescriptor("No", "Step no",  1,  1, "N", 2),
+    CreateBasicPropertyDescriptor("PreviousNo", "Previous step", !1, !1, "N", 2),
     CreateEnumPropertyDescriptor("Status", "Status",  !1,  1, ['queued', 'running', 'completed', 'badpatch', 'badbuild', 'boterror', 'canceled', 'skipped']),
     CreateEnumPropertyDescriptor("Type", "Step type",  !1,  1, ['suite', 'single', 'build', 'reconfig']),
     CreateBasicPropertyDescriptor("FileName", "File name",  !1,  1, "A", 100),

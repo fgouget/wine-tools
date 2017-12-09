@@ -843,20 +843,43 @@ sub _ScheduleTasks($)
   {
     $JobRank++;
 
-    # The list of VMs that should be getting ready to run
+    # The per-step lists of VMs that should be getting ready to run
     # before we prepare the next step
-    my $PreviousVMs = [];
+    my %StepVMs = ("" => []); # no dependency for the first step
 
-    my $StepRank = 0;
+    # Process the steps in increasing $Step->No order for the inter-step
+    # dependencies
     my $Steps = $Job->Steps;
     $Steps->AddFilter("Status", ["queued", "running"]);
     foreach my $Step (sort { $a->No <=> $b->No } @{$Steps->GetItems()})
     {
-      # StepRank 0 contains the runnable tasks, 1 the 'may soon be runnable'
-      # ones, and 2 and greater tasks we don't care about yet
-      $Step->HandleStaging() if ($StepRank == 0 and $Step->Status eq "queued");
-
-      my $StepVMs = [];
+      my $StepRank;
+      my $Previous = "";  # Avoid undefined values for hash indices
+      if (!$Step->PreviousNo)
+      {
+        # The first step may need to get files from the staging area
+        $Step->HandleStaging() if ($Step->Status eq "queued");
+        $StepRank = 0;
+      }
+      else
+      {
+        $Previous = $Steps->GetItem($Step->PreviousNo);
+        if ($Previous->Status eq "completed")
+        {
+          # The previous step was successful so we can now run this one
+          $StepRank = 0;
+        }
+        elsif ($StepVMs{$Previous})
+        {
+          # The previous step is almost done. Prepare this one.
+          $StepRank = 1;
+        }
+        else
+        {
+          # The previous step is nowhere near done
+          $StepRank = 2;
+        }
+      }
 
       my $Tasks = $Step->Tasks;
       $Tasks->AddFilter("Status", ["queued"]);
@@ -872,17 +895,18 @@ sub _ScheduleTasks($)
         $Host->{queued}++;
         $Sched->{queued}++;
 
-        if ($StepRank >= 2 or !$PreviousVMs)
+        if ($StepRank >= 2)
         {
           # The previous step is nowhere near done so skip this one for now
           next;
         }
         if ($StepRank == 1)
         {
-          # Passing $PreviousVMs ensures this VM will be reverted if and only
-          # if all of the previous step's tasks are about to run.
+          # Passing $StepVMs{$Previous} ensures this VM will be reverted
+          # if and only if all of the previous step's tasks are about to run.
           # See _HasMissingDependencies().
-          _AddNeededVM($NeededVMs, $VM, $NEXT_BASE + $JobRank, $PreviousVMs);
+          _AddNeededVM($NeededVMs, $VM, $NEXT_BASE + $JobRank,
+                       $StepVMs{$Previous});
           next;
         }
         $Sched->{runnable}++; # $StepRank == 0
@@ -893,12 +917,12 @@ sub _ScheduleTasks($)
           # scheduled to be reverted for a task with a higher priority.
           # So this task won't be run before a while and thus there is
           # no point in preparing the next step.
-          $StepVMs = undef;
+          $StepVMs{$Step} = undef;
           next;
         }
 
         # It's not worth preparing the next step for tasks that take so long
-        $StepVMs = undef if ($Task->Timeout > $BuildTimeout);
+        $StepVMs{$Step} = undef if ($Task->Timeout > $BuildTimeout);
 
         my $VMKey = $VM->GetKey();
         if ($VM->Status eq "idle")
@@ -938,12 +962,10 @@ sub _ScheduleTasks($)
         {
           # We cannot use the VM because it is busy (running another task,
           # offline, etc.). So it is too early to prepare the next step.
-          $StepVMs = undef;
+          $StepVMs{$Step} = undef;
         }
-        push @$StepVMs, $VM if ($StepVMs);
+        push @{$StepVMs{$Step}}, $VM if ($StepVMs{$Step});
       }
-      $PreviousVMs = $StepVMs;
-      $StepRank++;
     }
   }
 

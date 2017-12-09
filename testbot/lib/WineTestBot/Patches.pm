@@ -281,7 +281,15 @@ sub Submit($$$)
     my $Task = $NewStep->Tasks->Add();
     $Task->VM($BuildVM);
     $Task->Timeout($BuildTimeout);
-  
+
+    # Save this step (&job+task) so the others can reference it
+    my ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
+    if (defined($ErrMessage))
+    {
+      $self->Disposition("Failed to submit build step");
+      return $ErrMessage;
+    }
+
     foreach my $Unit (keys %{$Modules{$Module}})
     {
       # Add 32 and 64-bit tasks
@@ -294,6 +302,7 @@ sub Submit($$$)
         {
           # Create the corresponding Step
           $NewStep = $Steps->Add();
+          $NewStep->PreviousNo(1);
           my $FileName = $Module;
           $FileName .= ".exe" if ($Modules{$Module}{$Unit} eq "patchprograms");
           $FileName .= "_test";
@@ -317,7 +326,7 @@ sub Submit($$$)
       }
     }
 
-    my ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
+    ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
     if (defined($ErrMessage))
     {
       $self->Disposition("Failed to submit job");

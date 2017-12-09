@@ -129,6 +129,7 @@ CREATE TABLE Steps
 (
   JobId                 INT(5) NOT NULL,
   No                    INT(2) NOT NULL,
+  PreviousNo            INT(2) NULL,
   Type                  ENUM('suite', 'single', 'build', 'reconfig') NOT NULL,
   Status                ENUM('queued', 'running', 'completed', 'badpatch', 'badbuild', 'boterror', 'canceled', 'skipped') NOT NULL,
   FileName              VARCHAR(100) NOT NULL,
@@ -137,7 +138,8 @@ CREATE TABLE Steps
   DebugLevel            INT(2) NOT NULL,
   ReportSuccessfulTests ENUM('Y', 'N') NOT NULL,
   PRIMARY KEY (JobId, No),
-  FOREIGN KEY (JobId) REFERENCES Jobs(Id)
+  FOREIGN KEY (JobId) REFERENCES Jobs(Id),
+  FOREIGN KEY (JobId, PreviousNo) REFERENCES Steps(JobId, No)
 )
 ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
