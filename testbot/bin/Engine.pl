@@ -207,6 +207,12 @@ sub Cleanup($;$$)
         $VM->RunPowerOff();
       }
     }
+    # $KillVMs is normally used on shutdown so don't start a process that
+    # will get stuck 'forever' waiting for an offline VM.
+    elsif ($KillVMs and $VM->Status !~ /^(?:off|offline)$/)
+    {
+      $VM->RunPowerOff();
+    }
   }
 }
 
