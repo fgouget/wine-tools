@@ -171,7 +171,7 @@ sub RedirectToList($)
                  "=" . url_escape($MasterColValues->[$ColIndex]);
     }
   }
-  $self->Redirect($Target);
+  $self->Redirect($Target); # does not return
 }
 
 1;
