@@ -820,7 +820,7 @@ sub _ScheduleTasks($$)
   # Build a prioritized list of VMs we need for the queued Tasks
   my $NeededVMs = {};
   my $JobRank;
-  my ($RunnableTasks, $QueuedTasks) = (0, 0);
+  my ($RunnableTasks, $QueuedTasks, $BlockedTasks) = (0, 0);
   foreach my $Job (@SortedJobs)
   {
     my $Steps = $Job->Steps;
@@ -835,27 +835,25 @@ sub _ScheduleTasks($$)
       my $Tasks = $Step->Tasks;
       $Tasks->AddFilter("Status", ["queued"]);
       my @SortedTasks = sort { $a->No <=> $b->No } @{$Tasks->GetItems()};
-      $QueuedTasks += @SortedTasks;
 
       # StepRank 0 contains the runnable tasks, 1 the 'may soon be runnable'
       # ones, and 2 and greater tasks we don't care about yet
-      next if ($StepRank >= 2);
       if ($StepRank == 0)
       {
         $Step->HandleStaging() if ($Step->Status eq "queued");
         $RunnableTasks += @SortedTasks;
-      }
-      elsif (!$PreviousVMs)
-      {
-        # The previous step is nowhere near done so skip this one for now
-        next;
       }
 
       my $StepVMs = [];
       foreach my $Task (@SortedTasks)
       {
         my $VM = $Task->VM;
-        next if (!$VM->HasEnabledRole() or !$VM->HasEnabledStatus());
+        if (!$VM->HasEnabledRole() or !$VM->HasEnabledStatus())
+        {
+          $BlockedTasks++;
+          next;
+        }
+        $QueuedTasks ++;
 
         if ($StepRank == 1)
         {
@@ -863,6 +861,11 @@ sub _ScheduleTasks($$)
           # if, all of the previous step's Tasks are about to run.
           # See _HasMissingDependencies().
           _AddNeededVM($NeededVMs, $VM, $NEXT_BASE + $JobRank, $PreviousVMs);
+          next;
+        }
+        elsif ($StepRank >= 2 or !$PreviousVMs)
+        {
+          # The previous step is nowhere near done so skip this one for now
           next;
         }
 
@@ -939,6 +942,7 @@ sub _ScheduleTasks($$)
 
   $Sched->{records}->AddRecord('tasks', 'runnable', $RunnableTasks) if ($RunnableTasks);
   $Sched->{records}->AddRecord('tasks', 'queued', $QueuedTasks) if ($QueuedTasks);
+  $Sched->{records}->AddRecord('tasks', 'blocked', $BlockedTasks) if ($BlockedTasks);
   $Sched->{queued} = $QueuedTasks;
 
   return (undef, $NeededVMs);
@@ -1027,9 +1031,6 @@ sub _RevertVMs($$)
         #   preparing future VMs.
         # - Checking there are no queued tasks on that host would be better
         #   but this information is not available on a per-host basis.
-        # - Also the number of queued tasks includes tasks scheduled to run
-        #   on maintenance and retired/deleted VMs. Any such task would prevent
-        #   preparing future VMs for no good reason.
         # - It forces the host to go through an extra poweroff during which we
         #   lose track of which VM is 'hot'.
         # - However on startup this helps ensure that we are not prevented
