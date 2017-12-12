@@ -714,7 +714,7 @@ sub main()
     $MaxRevertsWhileRunningVMs = $MaxRevertingVMs;
     LogMsg "Capping MaxRevertsWhileRunningVMs to MaxRevertingVMs ($MaxRevertsWhileRunningVMs)\n";
   }
-  $MaxVMsWhenIdle ||= $MaxActiveVMs;
+  $MaxVMsWhenIdle = $MaxActiveVMs if (!defined $MaxVMsWhenIdle);
   Cleanup(1);
 
   # Check for patches that arrived while the server was off.
