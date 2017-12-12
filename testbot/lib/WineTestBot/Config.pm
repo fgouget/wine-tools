@@ -67,7 +67,7 @@ $BinDir = "$::RootDir/bin";
 
 # See the ScheduleOnHost() documentation in lib/WineTestBot/Jobs.pm
 $MaxRevertingVMs = 1;
-$MaxRevertsWhileRunningVMs = 1;
+$MaxRevertsWhileRunningVMs = 0;
 $MaxActiveVMs = 2;
 $MaxVMsWhenIdle = undef;
 
