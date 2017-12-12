@@ -453,6 +453,7 @@ sub _GetSchedHost($$)
       MaxRevertingVMs => $MaxRevertingVMs,
       MaxRevertsWhileRunningVMs => $MaxRevertsWhileRunningVMs,
       MaxActiveVMs => $MaxActiveVMs,
+      MaxRunningVMs => $MaxRunningVMs,
       MaxVMsWhenIdle => $MaxVMsWhenIdle,
     };
   }
@@ -890,7 +891,10 @@ sub _ScheduleTasks($$)
           delete $Sched->{lambvms}->{$VMKey};
 
           my $Host = _GetSchedHost($Sched, $VM);
-          if ($Host->{active} - $Host->{idle} < $Host->{MaxActiveVMs} and
+          # dirty VMs are VMs that were running and have still not be stopped.
+          # sleeping VMs may be VMs that are booting. So in both cases count
+          # them against the running VM limit.
+          if ($Host->{sleeping} + $Host->{running} + $Host->{dirty} < $Host->{MaxRunningVMs} and
               ($Host->{reverting} == 0 or
                $Host->{reverting} <= $Host->{MaxRevertsWhileRunningVMs}))
           {

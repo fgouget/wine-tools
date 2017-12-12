@@ -27,7 +27,8 @@ WineTestBot::Config - Site-independent configuration settings
 
 use vars qw (@ISA @EXPORT @EXPORT_OK $UseSSL $LogDir $DataDir $BinDir
              $DbDataSource $DbUsername $DbPassword $MaxRevertingVMs
-             $MaxRevertsWhileRunningVMs $MaxActiveVMs $MaxVMsWhenIdle
+             $MaxRevertsWhileRunningVMs $MaxActiveVMs $MaxRunningVMs
+             $MaxVMsWhenIdle
              $SleepAfterRevert $WaitForToolsInVM $MaxTaskTries $AdminEMail
              $RobotEMail
              $WinePatchToOverride $WinePatchCc $SuiteTimeout $SingleTimeout
@@ -42,7 +43,7 @@ require Exporter;
 @ISA = qw(Exporter);
 @EXPORT = qw($UseSSL $LogDir $DataDir $BinDir
              $MaxRevertingVMs $MaxRevertsWhileRunningVMs $MaxActiveVMs
-             $MaxVMsWhenIdle $SleepAfterRevert $WaitForToolsInVM
+             $MaxRunningVMs $MaxVMsWhenIdle $SleepAfterRevert $WaitForToolsInVM
              $MaxTaskTries $AdminEMail
              $RobotEMail $WinePatchToOverride $WinePatchCc $SuiteTimeout
              $SingleTimeout $BuildTimeout $ReconfigTimeout
@@ -69,6 +70,7 @@ $BinDir = "$::RootDir/bin";
 $MaxRevertingVMs = 1;
 $MaxRevertsWhileRunningVMs = 0;
 $MaxActiveVMs = 2;
+$MaxRunningVMs = 1;
 $MaxVMsWhenIdle = undef;
 
 # How long to wait for each of the 3 connection attempts to the VM's TestAgent
