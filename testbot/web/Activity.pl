@@ -145,9 +145,11 @@ EOF
       print "<td colspan='", scalar(@SortedVMs), "'><hr></td>\n";
       next;
     }
-    if ($Group->{runnable} or $Group->{queued})
+    if ($Group->{runnable} or $Group->{queued} or $Group->{blocked})
     {
-      print "<td class='Record'>", ($Group->{runnable} || 0), " / ", ($Group->{queued} || 0), "</td>";
+      print "<td class='Record'>", ($Group->{runnable} || 0), " / ",
+            ($Group->{queued} || 0),
+            ($Group->{blocked} ? "+$Group->{blocked}" : ""), "</td>";
     }
     else
     {
@@ -262,7 +264,7 @@ sub GenerateFooter($)
   print "<span class='Record-running'>running</span> a task (in which case it links to it),<br>\n";
   print "<span class='Record-dirty'>dirty</span> while the server is powering off the VM after a task or while it assesses its state on startup.</p>\n";
 
-  print "<p>If no time is indicated then the VM remained in that state for less than 2 seconds. The tasks column indicates the number of runnable / queued tasks before that scheduling round. A long horizontal bar indicates the TestBot server was restarted. </p>\n";
+  print "<p>If no time is indicated then the VM remained in that state for less than 2 seconds. The tasks column indicates the number of runnable / queued tasks before that scheduling round. If any task needs to run on a maintenance, retired or deleted VM is is shown as +N. A long horizontal bar indicates the TestBot server was restarted. </p>\n";
   print "<p>This <span class='Record Record-running Record-timeout'>border</span> indicates that the task timed out,<br>\n";
   print "this <span class='Record Record-running Record-error'>border</span> denotes a transient (network?) error so the task will be re-run,<br>\n";
   print "and this <span class='Record Record-running Record-boterror'>border</span> indicates a TestBot error.<br>\n";

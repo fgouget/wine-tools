@@ -50,6 +50,7 @@ describing the TestBot activity. The structure is as follows:
       end      => <EndTimestamp>,
       runnable => <RunnableTasksCount>,
       queued   => <QueuedTasksCount>,
+      blocked  => <TasksOnMaintenanceOrDisabledVMsCount>,
       engine   => <StartOrStop>,
       statusvms => {
         <VMName1> => {
@@ -112,7 +113,7 @@ sub GetActivity($)
     my $Group = $Activity->{$Record->RecordGroupId};
     if ($Record->Type eq "tasks" and $Record->Name eq "counters")
     {
-      ($Group->{runnable}, $Group->{queued}) = split / /, $Record->Value;
+      ($Group->{runnable}, $Group->{queued}, $Group->{blocked}) = split / /, $Record->Value;
     }
     elsif ($Record->Type eq "engine" and $Record->Name =~ /^(?:start|stop)$/)
     {
@@ -202,7 +203,7 @@ sub GetActivity($)
     if ($LastGroup)
     {
       $LastGroup->{end} = $Group->{start};
-      foreach my $Counter ('runnable', 'queued')
+      foreach my $Counter ('runnable', 'queued', 'blocked')
       {
         if (!exists $Group->{$Counter} and exists $LastGroup->{$Counter})
         {
