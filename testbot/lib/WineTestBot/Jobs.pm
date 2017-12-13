@@ -464,7 +464,8 @@ sub _GetSchedHost($$)
   if (!$Sched->{hosts}->{$HostKey})
   {
     $Sched->{hosts}->{$HostKey} = {
-      active => 0,
+      queued => 0,  # Tasks
+      active => 0,  # VMs...
       idle => 0,
       reverting => 0,
       sleeping => 0,
@@ -865,6 +866,8 @@ sub _ScheduleTasks($)
           $Sched->{blocked}++;
           next;
         }
+        my $Host = _GetSchedHost($Sched, $VM);
+        $Host->{queued}++;
         $Sched->{queued}++;
 
         if ($StepRank >= 2 or !$PreviousVMs)
@@ -906,7 +909,6 @@ sub _ScheduleTasks($)
           # candidate for shutdown since it will be needed next.
           delete $Sched->{lambvms}->{$VMKey};
 
-          my $Host = _GetSchedHost($Sched, $VM);
           # Dirty VMs are VMs that were running and have still not been
           # powered off. Sleeping VMs may be VMs that are booting.
           # So in both cases count them against the running VM limit.
@@ -1098,24 +1100,15 @@ sub _RevertVMs($$)
     my $NeedsSacrifice;
     if (_GetNiceness($NeededVMs, $VMKey) >= $FUTURE_BASE)
     {
-      if (!exists $Host->{isidle})
-      {
-        # Only start preparing VMs for future jobs on a host which is idle.
-        # FIXME As a proxy we currently check that the host only has idle VMs.
-        # This is a bad proxy because:
-        # - The host could still have pending tasks for a 'next step'. Once
-        #   those get closer to running, preparing those would be better than
-        #   preparing future VMs.
-        # - Checking there are no queued tasks on that host would be better
-        #   but this information is not available on a per-host basis.
-        # - It forces the host to go through an extra poweroff during which we
-        #   lose track of which VM is 'hot'.
-        # - However on startup this helps ensure that we are not prevented
-        #   from preparing the best VM (e.g. build) just because it is still
-        #   being checked (i.e. marked dirty).
-        $Host->{isidle} = ($Host->{active} == $Host->{idle});
-      }
-      if (!$Host->{isidle} or $Host->{MaxVMsWhenIdle} == 0)
+      # Only start preparing VMs for future jobs on a host which is idle, i.e.
+      # which no longer has queued tasks (ignoring blocked ones).
+      # Note that we could also check that the host only has idle VMs. This
+      # would help ensure that we are not prevented from preparing the best VM
+      # (e.g. build) on startup just because it is still being checked (i.e.
+      # marked dirty). But during regular operation this would force the host
+      # to go through an extra poweroff during which we lose track of which
+      # VM is 'hot'
+      if ($Host->{queued} != 0 or $Host->{MaxVMsWhenIdle} == 0)
       {
         # The TestBot is busy or does not prepare VMs when idle
         next;
