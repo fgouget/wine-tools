@@ -74,6 +74,7 @@ sub ApplyPatch($$$)
 {
   my ($PatchFile, $PatchType, $BaseName) = @_;
 
+  my $NeedBuildNative = !1;
   my $NeedMakeMakefiles = !1;
   my $NeedMakefile = 0;
   my $NeedMakeInclude = !1;
@@ -85,8 +86,8 @@ sub ApplyPatch($$$)
   {
     my $Line;
     while (defined($Line = <FH>) &&
-           (! $NeedMakeMakefiles || $NeedMakefile == 0 || ! $NeedMakeInclude || ! $NeedBuildDeps ||
-            ! $NeedImplib || ! $NeedAutoconf || ! $NeedConfigure))
+           (! $NeedBuildNative || ! $NeedMakeMakefiles || $NeedMakefile == 0 || ! $NeedMakeInclude ||
+            ! $NeedBuildDeps || ! $NeedImplib || ! $NeedAutoconf || ! $NeedConfigure))
     {
       if ($Line =~ m=^diff.*(?:tests/Makefile\.in|Make\.vars\.in|Make\.rules\.in|Maketest\.rules\.in)$=)
       {
@@ -117,6 +118,14 @@ sub ApplyPatch($$$)
       {
         $NeedMakeMakefiles = $NeedConfigure = 1;
       }
+      elsif ($Line =~ m=^diff.*tools/makedep.c=)
+      {
+        $NeedBuildNative = $NeedMakeMakefiles = $NeedConfigure = 1;
+      }
+      elsif ($Line =~ m=^diff.*tools/(?:winebuild|wrc)=)
+      {
+        $NeedBuildNative = 1;
+      }
     }
     close FH;
   }
@@ -130,6 +139,15 @@ sub ApplyPatch($$$)
   {
     LogMsg "Patch failed to apply\n";
     return (-1, $NeedMakeInclude, $NeedBuildDeps, $NeedImplib, $NeedConfigure);
+  }
+
+  if ($NeedBuildNative)
+  {
+    InfoMsg "Building tools\n";
+    if (!BuildNative())
+    {
+      return (-1, $NeedMakeInclude, $NeedBuildDeps, $NeedImplib, $NeedConfigure);
+    }
   }
 
   if ($NeedMakeMakefiles)
@@ -188,6 +206,25 @@ sub CountCPUs()
         close($fh);
     }
     $ncpus ||= 1;
+}
+
+sub BuildNative()
+{
+  mkdir "$DataDir/build-native" if (! -d "$DataDir/build-native");
+  system("( cd $DataDir/build-native && set -x && " .
+         "  rm -rf * && " .
+         "  time ../wine/configure --enable-win64 --without-x --without-freetype && " .
+         "  time make -j$ncpus depend && " .
+         "  time make -j$ncpus __tooldeps__ " .
+         ") >>$LogDir/Build.log 2>&1");
+
+  if ($? != 0)
+  {
+    LogMsg "Build native failed\n";
+    return !1;
+  }
+
+  return 1;
 }
 
 sub BuildTestExecutable($$$$$$$$)
