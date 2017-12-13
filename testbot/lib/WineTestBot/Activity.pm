@@ -49,6 +49,7 @@ describing the TestBot activity. The structure is as follows:
       end      => <EndTimestamp>,
       runnable => <RunnableTasksCount>,
       queued   => <QueuedTasksCount>,
+      blocked  => <TasksOnMaintenanceOrDisabledVMsCount>,
       engine   => <StartOrStop>,
       statusvms => {
         <VMName1> => {
