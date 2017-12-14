@@ -189,6 +189,7 @@ use ObjectModel::CGI::Page;
 use WineTestBot::Config;
 use WineTestBot::Engine::Notify;
 use WineTestBot::Jobs;
+use WineTestBot::Log;
 use WineTestBot::VMs;
 
 @StatusPage::ISA = qw(ObjectModel::CGI::Page);
@@ -197,6 +198,7 @@ sub _initialize($$$)
 {
   my ($self, $Request, $RequiredRole) = @_;
 
+  $self->{start} = Time();
   $self->SUPER::_initialize($Request, $RequiredRole);
 }
 
@@ -297,6 +299,8 @@ EOF
   my $VMsCollectionBlock = new VMStatusBlock(CreateVMs(), $self);
   $VMsCollectionBlock->GenerateList();
   print "</div>\n";
+
+  print "<p class='GeneralFooterText'>Generated in ", Elapsed($self->{start}), " s</p>\n";
 }
 
 package main;
