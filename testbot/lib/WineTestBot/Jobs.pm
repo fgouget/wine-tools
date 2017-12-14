@@ -1012,6 +1012,63 @@ sub _SacrificeVM($$$)
   return 1;
 }
 
+sub _DumpHostCounters($$)
+{
+  my ($Sched, $VM) = @_;
+  my $Host = _GetSchedHost($Sched, $VM);
+  return if ($Host->{dumpedcounters});
+
+  my $Counters = "";
+  if ($Host->{active})
+  {
+    $Counters .= " active=$Host->{active}/$Host->{MaxActiveVMs}";
+  }
+  if ($Host->{idle})
+  {
+    $Counters .= " idle=$Host->{idle}". ($Host->{queued} ? "" : "/$Host->{MaxVMsWhenIdle}");
+  }
+  if ($Host->{reverting})
+  {
+    $Counters .= " reverting=$Host->{reverting}/". _GetMaxReverts($Host);
+  }
+  for my $Counter ("sleeping", "running", "dirty", "queued")
+  {
+    $Counters .= " $Counter=$Host->{$Counter}" if ($Host->{$Counter});
+  }
+  my $HostKey = $VM->GetHost();
+  my $PrettyHost = ($PrettyHostNames ? $PrettyHostNames->{$HostKey} : "") ||
+                   $HostKey;
+  require WineTestBot::Log;
+  WineTestBot::Log::LogMsg("$PrettyHost:$Counters\n") if ($Counters);
+
+  $Host->{dumpedcounters} = 1;
+}
+
+sub _DumpHostVMs($$$$)
+{
+  my ($Sched, $VM, $SortedNeededVMs, $NeededVMs) = @_;
+  my $Host = _GetSchedHost($Sched, $VM);
+  return if ($Host->{dumpedvms});
+
+  _DumpHostCounters($Sched, $VM);
+
+  my @VMInfo;
+  my $HostKey = $VM->GetHost();
+  foreach my $VMKey (@$SortedNeededVMs)
+  {
+    $VM = $Sched->{VMs}->GetItem($VMKey);
+    next if ($VM->GetHost() ne $HostKey);
+
+    push @VMInfo, join(":", "$VMKey(". $VM->Status .")", $NeededVMs->{$VMKey}->[0], $NeededVMs->{$VMKey}->[1], $NeededVMs->{$VMKey}->[2]);
+  }
+  my $PrettyHost = ($PrettyHostNames ? $PrettyHostNames->{$HostKey} : "") ||
+                   $HostKey;
+  require WineTestBot::Log;
+  WineTestBot::Log::LogMsg("$PrettyHost: @VMInfo\n");
+
+  $Host->{dumpedvms} = 1;
+}
+
 sub _RevertVMs($$)
 {
   my ($Sched, $NeededVMs) = @_;
@@ -1027,6 +1084,7 @@ sub _RevertVMs($$)
     # Check if the host has reached its reverting VMs limit
     my $Host = _GetSchedHost($Sched, $VM);
     next if ($Host->{reverting} >= _GetMaxReverts($Host));
+    _DumpHostCounters($Sched, $VM);
 
     # Skip this VM if the previous step's tasks are not about to run yet
     next if (_HasMissingDependencies($Sched, $NeededVMs, $VMKey));
@@ -1071,6 +1129,7 @@ sub _RevertVMs($$)
       $NeedsSacrifice = ($FutureActive > $Host->{MaxActiveVMs});
     }
 
+    _DumpHostVMs($Sched, $VM, \@SortedNeededVMs, $NeededVMs);
     if ($NeedsSacrifice)
     {
       # Find an active VM to sacrifice so we can revert this VM in the next
