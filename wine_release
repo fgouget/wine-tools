@@ -32,14 +32,11 @@ if [ "$branch" = "master" ]
 then
   # nuke old attempt (if any)
   rm -rf wine-$version
-  git clone -l -s -n git/wine.git wine-$version
+  git clone -b wine-$version git/wine.git wine-$version
   cd wine-$version
-  git checkout wine-$version
 
   # update man page and documentation
-  echo "==== UPDATING DOCUMENTATION ===="
   ./configure --quiet --without-x --without-freetype
-  make -s depend
 
   manpages="\
     loader/wine.man \
@@ -73,10 +70,6 @@ then
   done
 
   make -s htmlpages && rm -rf ../WineAPI && mv documentation/html ../WineAPI
-
-  # Wine API Stats
-  echo "==== UPDATING WINE API STATS PAGE ===="
-  $tools_dir/winapi_stats > winapi_stats.template && mv -f winapi_stats.template $templates_dir/en/winapi_stats.template
 
   cd ..
   rm -rf wine-$version
