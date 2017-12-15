@@ -471,6 +471,7 @@ sub _GetSchedHost($$)
       sleeping => 0,
       running => 0,
       dirty => 0,
+      dirtychild => 0,
       MaxRevertingVMs => $MaxRevertingVMs,
       MaxRevertsWhileRunningVMs => $MaxRevertsWhileRunningVMs,
       MaxActiveVMs => $MaxActiveVMs,
@@ -604,6 +605,7 @@ sub _CheckAndClassifyVMs()
         $Sched->{busyvms}->{$VMKey} = 1;
         $Host->{$VM->Status}++;
         $Host->{active}++;
+        $Host->{dirtychild}++ if ($VM->Status eq "dirty");
       }
       elsif ($VM->Status eq "sleeping")
       {
@@ -1102,13 +1104,16 @@ sub _RevertVMs($$)
     {
       # Only start preparing VMs for future jobs on a host which is idle, i.e.
       # which no longer has queued tasks (ignoring blocked ones).
-      # Note that we could also check that the host only has idle VMs. This
-      # would help ensure that we are not prevented from preparing the best VM
-      # (e.g. build) on startup just because it is still being checked (i.e.
-      # marked dirty). But during regular operation this would force the host
-      # to go through an extra poweroff during which we lose track of which
-      # VM is 'hot'
-      if ($Host->{queued} != 0 or $Host->{MaxVMsWhenIdle} == 0)
+      # Note that during regular operation we get dirty VMs before they are
+      # assigned a process to shut them down. This makes it possible to pick
+      # the best future VM while we still know which VM is hot.
+      # In constrast on startup the dirty VMs all have processes checking their
+      # status, hence the dirtychild check to ensure we are not prevented from
+      # preparing the best VM (e.g. build): it delays preparing the future VMs
+      # until either there are no dirty VM or a VM got prepared for a task
+      # which means the host is not idle.
+      if ($Host->{queued} != 0 or $Host->{MaxVMsWhenIdle} == 0 or
+          ($Host->{active} and $Host->{active} == $Host->{dirtychild}))
       {
         # The TestBot is busy or does not prepare VMs when idle
         next;
