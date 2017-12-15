@@ -277,7 +277,7 @@ sub GenerateBody($)
   my $JobsCollectionBlock = new JobStatusBlock($Jobs, $self);
   $JobsCollectionBlock->GenerateList();
 
-  if ($WineTestBot::Config::JobArchiveDays != 0)
+  if ($JobArchiveDays != 0)
   {
     my $PropertyDescriptor = $Jobs->GetPropertyDescriptorByName('Id');
     my $MaxIdLength = $PropertyDescriptor->GetMaxLength();
