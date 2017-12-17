@@ -373,6 +373,28 @@ sub GetItems($)
 =pod
 =over 12
 
+=item C<GetItemsCount()>
+
+Returns how many Items are present in the Collection.
+
+=back
+=cut
+
+sub GetItemsCount($)
+{
+  my ($self) = @_;
+
+  if (! $self->{Loaded})
+  {
+    $self->Load();
+  }
+
+  return scalar(keys %{$self->{Items}});
+}
+
+=pod
+=over 12
+
 =item C<IsEmpty()>
 
 Returns true if the Collection contains no Item.
