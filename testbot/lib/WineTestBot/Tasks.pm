@@ -223,8 +223,6 @@ BEGIN
     CreateItemrefPropertyDescriptor("VM", "VM", !1,  1, \&CreateVMs, ["VMName"]),
     CreateBasicPropertyDescriptor("Timeout", "Timeout", !1, 1, "N", 4),
     CreateBasicPropertyDescriptor("CmdLineArg", "Command line args", !1, !1, "A", 256),
-    # Note: ChildPid is not used anymore.
-    CreateBasicPropertyDescriptor("ChildPid", "Child process id", !1, !1, "N", 5),
     CreateBasicPropertyDescriptor("Started", "Execution started", !1, !1, "DT", 19),
     CreateBasicPropertyDescriptor("Ended", "Execution ended", !1, !1, "DT", 19),
     CreateBasicPropertyDescriptor("TestFailures", "Number of test failures", !1, !1, "N", 6),

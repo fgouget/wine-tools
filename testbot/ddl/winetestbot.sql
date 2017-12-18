@@ -150,7 +150,6 @@ CREATE TABLE Tasks
   VMName       VARCHAR(20) NOT NULL,
   Timeout      INT(4) NOT NULL,
   CmdLineArg   VARCHAR(256) NULL,
-  ChildPid     INT(5) NULL,
   Started      DATETIME NULL,
   Ended        DATETIME NULL,
   TestFailures INT(6) NULL,
