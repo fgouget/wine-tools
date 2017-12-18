@@ -265,6 +265,7 @@ EOF
     print "        <li class='divider'>&nbsp;</li>\n";
     print "        <li><p><a href='", MakeSecureURL("/Submit.pl"),
           "'>Submit job</a></p></li>\n";
+    print "        <li><p><a href='/Activity.pl'>Activity</a></p></li>\n";
     print "        <li class='divider'>&nbsp;</li>\n";
     print "        <li><p><a href='", MakeSecureURL("/Logout.pl"), "'>Log out";
     if (defined($Session))
