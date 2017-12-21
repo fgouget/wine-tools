@@ -26,6 +26,7 @@ ObjectModel::Item - Base class for items
 
 =cut
 
+use Scalar::Util qw(weaken);
 use ObjectModel::BackEnd;
 use ObjectModel::Collection;
 use ObjectModel::PropertyDescriptor;
@@ -68,6 +69,9 @@ sub new($$@)
   $self->{TableName} = $Collection->{TableName};
   $self->{ScopeItems} = $Collection->{AllScopeItems}->{ref($Collection)};
   $self->{AllScopeItems} = $Collection->{AllScopeItems};
+  # Avoid memory cycles
+  weaken($self->{ScopeItems});
+  weaken($self->{AllScopeItems});
   $self->{PropertyDescriptors} = $Collection->{PropertyDescriptors};
   $self->{MasterColNames} = $Collection->{MasterColNames};
   $self->{MasterColValues} = $Collection->{MasterColValues};
@@ -509,14 +513,21 @@ sub MasterKeyChanged($$)
 {
   my ($self, $MasterColValues) = @_;
 
-  my $Key = $self->GetKey();
-  my $FullKey = $self->GetFullKey($Key);
-  delete($self->{ScopeItems}->{$FullKey}) if (defined $FullKey);
+  my $Key;
+  if ($self->{ScopeItems})
+  {
+    $Key = $self->GetKey();
+    my $FullKey = $self->GetFullKey($Key);
+    delete($self->{ScopeItems}->{$FullKey}) if (defined $FullKey);
+  }
 
   $self->{MasterColValues} = $MasterColValues;
   $self->{MasterKey} = ObjectModel::Collection::ComputeMasterKey($MasterColValues);
-  $FullKey = $self->GetFullKey($Key);
-  $self->{ScopeItems}->{$FullKey} = $self if (defined $FullKey);
+  if ($self->{ScopeItems})
+  {
+    my $FullKey = $self->GetFullKey($Key);
+    $self->{ScopeItems}->{$FullKey} = $self if (defined $FullKey);
+  }
 
   $self->KeyChanged();
 }
