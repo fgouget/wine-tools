@@ -221,6 +221,7 @@ h2
   margin-right: auto;
   padding: 4px;
   border: 1px solid #601919;
+  background-color: white;
 }
 
 .CollectionBlock th
@@ -347,7 +348,7 @@ td.Record { text-align: center; }
 .RecordJob { font-size: smaller; }
 .RecordDuration { }
 
-.Record-start { background-color: white; }
+.Record-start { }
 .Record-off { color: #c0c0c0; }
 .Record-unknown { background-color: #c0c0c0; }
 .Record-offline { background-color: red; }
