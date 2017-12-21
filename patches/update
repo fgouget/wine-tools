@@ -101,6 +101,18 @@ sub uniq
     return grep { !$seen{$_}++ } @_;
 }
 
+sub read_file($)
+{
+    my $file = shift;
+    if (open FILE, "<$file")
+    {
+        chomp( my $ret = <FILE> );
+        close FILE;
+        return $ret;
+    }
+    return undef;
+}
+
 my $js = <<END;
 function toggle_display(id)
 {
@@ -171,21 +183,9 @@ foreach my $file (readdir DIR)
 
     $patch{"id"} = $file;
     $patch{"author"} = "Marvin (Testbot)" if $patch{"from_marvin"};
-    $patch{"status"} = "nil";
-
-    if (open STATUS, "<$dir/$file.status")
-    {
-        my $status = <STATUS>;
-        chomp $status;
-        $patch{"status"} = $status;
-        close STATUS;
-    }
-    $patch{"order"} = $file;
-    if (open ORDER, "<$dir/$file.order")
-    {
-        $patch{"order"} = <ORDER>;
-        close ORDER;
-    }
+    $patch{"status"} = read_file( "$dir/$file.status" ) || "nil";
+    $patch{"order"}  = read_file( "$dir/$file.order" ) || $file;
+    $patch{"commit"} = read_file( "$dir/$file.commit" ) if $patch{status} eq "committed";
     if (open REVIEW, "<:raw", "$dir/$file.review")
     {
         $_ = <REVIEW>;
@@ -272,8 +272,15 @@ foreach my $file (sort { $patches{$b}->{"order"} <=> $patches{$a}->{"order"} } k
         next unless $patch->{"subject"} =~ /^\[.*PATCH.*\]/;
     }
 
-    printf INDEX "<tr class=\"%s %s\"><td class=\"id\">%s</td><td class=\"status\"><a href=\"#legend\">%s</a></td>",
-        $row & 1 ? "odd" : "even", $patch->{"status"}, $file, $status_descr{$patch->{"status"}} || $patch->{"status"};
+    printf INDEX "<tr class=\"%s %s\"><td class=\"id\">%s</td>", $row & 1 ? "odd" : "even", $patch->{status}, $file;
+    if (defined($patch->{commit}))
+    {
+        printf INDEX "<td class=\"status\"><a href=\"%s\">%s</a></td>", $patch->{commit}, $status_descr{$patch->{status}};
+    }
+    else
+    {
+        printf INDEX "<td class=\"status\"><a href=\"#legend\">%s</a></td>", $status_descr{$patch->{status}} || $patch->{status};
+    }
     if (defined $patch->{"children"})
     {
         printf INDEX "<td class=\"author\">%s</td>", escapeHTML($patch->{"author"});
