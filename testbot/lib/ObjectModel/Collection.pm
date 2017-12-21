@@ -43,6 +43,7 @@ require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(&new &ComputeMasterKey);
 
+use Scalar::Util qw(weaken);
 use ObjectModel::BackEnd;
 use ObjectModel::Item;
 use ObjectModel::PropertyDescriptor;
@@ -96,6 +97,14 @@ sub new($$$$$;$$@)
               Filters             => {},
               AllScopeItems       => $AllScopeItems || {},
               Items               => undef};
+  if ($AllScopeItems)
+  {
+    # Avoid memory cycles in case Items have Detailref properties:
+    #   ParentCollection{AllScopeItems} --> ParentItem
+    #   ParentItem --DetailrefProperty--> DetailCollection
+    #   DetailCollection{AllScopeItems} == ParentCollection{AllScopeItems}
+    weaken($self->{AllScopeItems});
+  }
   $self = bless $self, $class;
   $self->_initialize(@_);
   return $self;
