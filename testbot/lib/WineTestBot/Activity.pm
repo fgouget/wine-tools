@@ -25,6 +25,7 @@ WineTestBot::Activity -  reconstruct the TestBot's activity from its history rec
 
 =cut
 
+use Scalar::Util qw(weaken);
 use WineTestBot::Config;
 use WineTestBot::Jobs;
 use WineTestBot::RecordGroups;
@@ -112,6 +113,7 @@ sub GetActivity($)
 
       $VMStatus->{host} = $RecordHost;
       $VMStatus->{vmstatus} = $VMStatus;
+      weaken($VMStatus->{vmstatus}); # avoid memory cycles
       $VMStatus->{start} = $Group->{start};
       my ($Status, @Extra) = split / /, $Record->Value;
       $VMStatus->{status} = $Status;
@@ -176,6 +178,7 @@ sub GetActivity($)
           status => "unknown",
           rows => 1};
         $VMStatus->{vmstatus} = $VMStatus;
+        weaken($VMStatus->{vmstatus}); # avoid memory cycles
       }
       $LastStatusVMs{$VM->Name} = $StatusVMs;
     }
