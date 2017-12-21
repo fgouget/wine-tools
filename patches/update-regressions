@@ -44,7 +44,7 @@ sub read_bugs()
 {
     my $csv = Text::CSV::Encoded->new({ binary => 1 });
 
-    open LIST, "-|", "wget", "-qO-", "http://bugs.winehq.org/buglist.cgi?bug_status=UNCONFIRMED&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED&bug_status=NEEDINFO&bug_status=STAGED&columnlist=cf_regression_sha1sum%2Cshort_desc&keywords=regression&keywords_type=anywords&product=Wine&query_format=advanced&ctype=csv" or die "cannot query bug list";
+    open LIST, "-|", "wget", "-qO-", "https://bugs.winehq.org/buglist.cgi?bug_status=UNCONFIRMED&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED&bug_status=NEEDINFO&bug_status=STAGED&columnlist=cf_regression_sha1sum%2Cshort_desc&keywords=regression&keywords_type=anywords&product=Wine&query_format=advanced&ctype=csv" or die "cannot query bug list";
 
     <LIST>;  # skip header line
     while (<LIST>)
@@ -125,7 +125,7 @@ print OUTPUT "<div id=\"logo_glass\"><a href=\"/regressions\"><img src=\"//wineh
 print OUTPUT "<div id=\"logo_text\"><a href=\"/regressions\"><img src=\"//winehq.org/images/winehq_logo_text.png\" alt=\"WineHQ\" title=\"WineHQ\"></a></div>\n";
 print OUTPUT "<div id=\"tabs\"><ul>",
     "<li><a href=\"//www.winehq.org/\">WineHQ</a></li>",
-    "<li><a href=\"http://wiki.winehq.org/\">Wiki</a></li>",
+    "<li><a href=\"//wiki.winehq.org/\">Wiki</a></li>",
     "<li><a href=\"//appdb.winehq.org/\">AppDB</a></li>",
     "<li><a href=\"//bugs.winehq.org/\">Bugzilla</a></li>",
     "<li><a href=\"//forum.winehq.org/\">Forums</a></li></ul></div>\n";
