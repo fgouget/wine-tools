@@ -160,12 +160,24 @@ foreach my $arg (@ARGV)
     else { $dir = $arg; }
 }
 
+sub read_file($)
+{
+    my $file = shift;
+    if (open FILE, "<$file")
+    {
+        chomp( my $ret = <FILE> );
+        close FILE;
+        return $ret;
+    }
+    return undef;
+}
+
 sub get_patch_state($)
 {
     my $file = shift;
     my %patch;
 
-    return undef unless open PATCH, "<$dir/$file";
+    return () unless open PATCH, "<$dir/$file";
     while (<PATCH>)
     {
         if (/^Subject: (.*)$/) { $patch{subject} = $1; }
@@ -190,31 +202,9 @@ sub get_patch_state($)
     $patch{file} = $file;
     $patch{status} ||= "nil";
     $patch{mtime} ||= (stat "$dir/$file")[9];
+    $patch{commit} = read_file( "$dir/$file.commit" ) if $patch{status} eq "committed";
+    $patch{prev_status} = read_file( "$dir/OLD/$file.status" ) || "nil";
     return %patch;
-}
-
-sub get_previous_state($)
-{
-    my $file = shift;
-    my $prev_status = "nil";
-
-    if (open PREVSTATUS, "<$dir/OLD/$file.status")
-    {
-        $prev_status = <PREVSTATUS>;
-        chomp $prev_status;
-        close PREVSTATUS;
-    }
-    return $prev_status;
-}
-
-sub get_patch_reviewer($)
-{
-    my $file = shift;
-
-    return undef unless open REVIEW, "<$dir/$file.review";
-    chomp( my $ret = <REVIEW> );
-    close REVIEW;
-    return $ret;
 }
 
 sub get_notify_headers($$)
@@ -254,11 +244,12 @@ sub get_notify_headers($$)
     return @headers;
 }
 
-sub notify_state_change($$$)
+sub notify_state_change(%)
 {
-    my $file = shift;
-    my $prev_status = shift;
-    my $status = shift;
+    my (%patch) = @_;
+    my $file = $patch{file};
+    my $status = $patch{status};
+    my $prev_status = $patch{prev_status};
 
     return if $prev_status eq $status;
 
@@ -269,7 +260,7 @@ sub notify_state_change($$$)
 
     if ($status eq "assigned")
     {
-        my $reviewer = get_patch_reviewer( $file );
+        my $reviewer = read_file( "$dir/$file.review" );
         push @{$reviews{$reviewer}}, $file if $reviewer;
     }
 
@@ -293,7 +284,11 @@ been reviewed and its status set to "$status_descr{$status}".
 $status_explanation{$status}
 EOF
 
-    if ($status ne "committed" && $status ne "assigned")
+    if ($patch{commit})
+    {
+        printf SENDMAIL "\nCommit: %s\n", $patch{commit};
+    }
+    elsif ($status ne "committed" && $status ne "assigned")
     {
         print SENDMAIL <<"EOF";
 
@@ -373,9 +368,9 @@ foreach my $file (sort readdir DIR)
 {
     next unless $file =~ /^[0-9]+$/;
     my %patch = get_patch_state( $file );
-    my $prev_status = get_previous_state( $file );
+    next unless defined $patch{file};
 
-    notify_state_change( $file, $prev_status, $patch{status} );
+    notify_state_change( %patch );
 
     $patches{$patch{msgid}} = \%patch;
 }
@@ -394,6 +389,7 @@ foreach my $p (keys %patches)
         {
             unlink "$dir/$file";
             unlink "$dir/$file.status";
+            unlink "$dir/$file.commit";
             unlink "$dir/$file.order";
             unlink "$dir/$file.review";
             unlink "$dir/$file.testbot";
