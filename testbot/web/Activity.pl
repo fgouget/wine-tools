@@ -52,7 +52,7 @@ sub _GetHtmlTime($)
 {
   my ($Timestamp) = @_;
   return "<noscript><div>",
-      strftime("%d %H:%M:%S", localtime($Timestamp)), "</div></noscript>\n" .
+      strftime("<a class='title' title='%d'>%H:%M:%S</a>", localtime($Timestamp)), "</div></noscript>\n" .
       "<script type='text/javascript'><!--\n" .
       "ShowDateTime($Timestamp);\n" .
       "//--></script>";
@@ -100,8 +100,8 @@ function Pad2(n)
 function ShowDateTime(Sec1970)
 {
   var Dt = new Date(Sec1970 * 1000);
-  document.write(Pad2(Dt.getDate()) + ' ' + Pad2(Dt.getHours()) + ':' +
-                 Pad2(Dt.getMinutes()) + ':' + Pad2(Dt.getSeconds()));
+  document.write('<a class="title" title="' + Pad2(Dt.getDate()) + '">' + Pad2(Dt.getHours()) + ':' +
+                 Pad2(Dt.getMinutes()) + ':' + Pad2(Dt.getSeconds()) + "</a>");
 }
 //--></script>
 EOF
