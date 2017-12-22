@@ -340,7 +340,7 @@ pre
 .boterror  { color: #e55600; }
 .canceled  { color: black; }
 
-a.title { color:white; text-decoration: none; }
+a.title { color:inherit; text-decoration: none; }
 
 th.Record { text-align: center; }
 td.Record { text-align: center; }
