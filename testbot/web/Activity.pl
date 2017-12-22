@@ -190,9 +190,11 @@ EOF
         {
           $Label .= " ". $VMStatus->{step}->FileName;
           if ($VMStatus->{task}->CmdLineArg =~ /^\w+$/ and
-              $Label =~ s/_(?:cross)?test\.exe$//)
+              $Label =~ s/_(?:cross)?test(64)?\.exe$//)
           {
+            my $Bitness = $1;
             $Label .= ":". $VMStatus->{task}->CmdLineArg;
+            $Label .= "/64" if ($Bitness);
           }
         }
         $Label = "<a href='/JobDetails.pl?Key=". $VMStatus->{job}->Id ."#k". ($VMStatus->{step}->No * 100 + $VMStatus->{task}->No) ."'>$Label</a>";
