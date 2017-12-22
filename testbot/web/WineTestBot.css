@@ -371,3 +371,4 @@ td.Record { text-align: center; }
 /* Special borders */
 .Record.Record-left { border-left: thin solid #601919; }
 .Record.Record-right { border-right: thin solid #601919; }
+.Record.Record-miss { border-top: thick dashed #ff6600; }
