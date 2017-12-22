@@ -139,6 +139,12 @@ EOF
     next if (!$Group->{statusvms});
 
     print "<tr><td>", _GetHtmlTime($Group->{start}), "</td>";
+    if ($Group->{engine})
+    {
+      print "<td class='Record RecordEngine'>$Group->{engine}</td>\n";
+      print "<td colspan='", scalar(@SortedVMs), "'><hr></td>\n";
+      next;
+    }
     if ($Group->{runnable} or $Group->{queued})
     {
       print "<td class='Record'>", ($Group->{runnable} || 0), " / ", ($Group->{queued} || 0), "</td>";
@@ -229,7 +235,7 @@ sub GenerateFooter($)
   print "<span class='Record-running'>running</span> a task (in which case it links to it),<br>\n";
   print "<span class='Record-dirty'>dirty</span> while the server is powering off the VM after a task or while it assesses its state on startup.</p>\n";
 
-  print "<p>If no time is indicated then the VM remained in that state for less than 2 seconds. The tasks column indicates the number of runnable / queued tasks before that scheduling round.</p>\n";
+  print "<p>If no time is indicated then the VM remained in that state for less than 2 seconds. The tasks column indicates the number of runnable / queued tasks before that scheduling round. A long horizontal bar indicates the TestBot server was restarted. </p>\n";
 
   print "<p>The VM could also be <span class='Record-offline'>offline</span> due to a temporary issue,<br>\n";
   print "or until the administrator can look at it for <span class='Record-maintenance'>maintenance</span>,<br>\n";
