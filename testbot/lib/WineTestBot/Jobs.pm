@@ -258,6 +258,7 @@ sub Cancel($)
         $VM->KillChild();
         ($EProperty, $EMessage) = $VM->Save();
         $ErrMessage ||= "$EMessage ($EProperty)" if ($EMessage);
+        $VM->RecordResult(undef, "canceled");
       }
     }
   }
