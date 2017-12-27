@@ -519,6 +519,7 @@ sub ScheduleOnHost($$$$)
     {
       if (!$VM->HasRunningChild())
       {
+        $VM->RecordResult($Records, "boterror process died");
         my $ErrMessage = $VM->RunMonitor();
         return $ErrMessage if (defined $ErrMessage);
       }
