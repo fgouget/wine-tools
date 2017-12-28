@@ -233,7 +233,17 @@ sub GetActivity($)
       my $VMStatus = $StatusVMs->{$VM->Name};
       if ($VMStatus)
       {
-        $LastVMStatus->{end} = $VMStatus->{start} if ($LastVMStatus);
+        if ($LastVMStatus and $LastVMStatus->{status} eq $VMStatus->{status} and
+            ($LastVMStatus->{details} || "") eq "administrator")
+        {
+          $VMStatus = $StatusVMs->{$VM->Name} = $LastVMStatus;
+          $LastStatusVMs{$VM->Name}->{$VM->Name} = {merged => 1, vmstatus => $VMStatus};
+          $VMStatus->{rows}++;
+        }
+        else
+        {
+          $LastVMStatus->{end} = $VMStatus->{start} if ($LastVMStatus);
+        }
       }
       elsif ($LastVMStatus and $LastVMStatus->{status} ne "engine")
       {

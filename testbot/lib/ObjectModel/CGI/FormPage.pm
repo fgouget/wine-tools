@@ -358,7 +358,7 @@ sub SaveProperty($$$)
   die "Pure virtual function FormPage::SaveProperty called";
 }
 
-sub Save($)
+sub SaveProperties($)
 {
   my ($self) = @_;
 
@@ -389,6 +389,14 @@ sub Save($)
       }
     }
   }
+  return 1;
+}
+
+sub Save($)
+{
+  my ($self) = @_;
+
+  return !1 if (!$self->SaveProperties());
 
   my $ErrKey;
   ($ErrKey, $self->{ErrField}, $self->{ErrMessage}) = $self->{Collection}->Save();

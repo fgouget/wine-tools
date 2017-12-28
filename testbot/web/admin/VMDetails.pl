@@ -42,6 +42,27 @@ sub DisplayProperty($$)
   return $self->SUPER::DisplayProperty($PropertyDescriptor);
 }
 
+sub Save($)
+{
+  my ($self) = @_;
+
+  my $OldStatus = $self->{Item}->Status || "";
+  return !1 if (!$self->SaveProperties());
+
+  if ($OldStatus ne $self->{Item}->Status)
+  {
+    my ($ErrProperty, $ErrMessage) = $self->{Item}->Validate();
+    if (!defined $ErrMessage)
+    {
+      $self->{Item}->RecordStatus(undef, $self->{Item}->Status ." administrator");
+    }
+  }
+
+  my $ErrKey;
+  ($ErrKey, $self->{ErrField}, $self->{ErrMessage}) = $self->{Collection}->Save();
+  return ! defined($self->{ErrMessage});
+}
+
 package main;
 
 my $Request = shift;
