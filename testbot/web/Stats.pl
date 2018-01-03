@@ -122,7 +122,7 @@ sub _GetStatStr($$;$$)
     return "n/a" if (!$AllStats->{elapsed});
     return sprintf('%.1f%', 100 * $Value / $AllStats->{elapsed});
   }
-  if ($StatKey =~ /(?:\belapsed|\.time)\b/)
+  if ($StatKey =~ /(?:\belapsed|\.time(?!\.count))/)
   {
     return _GetDuration($Value, $Flags & $NO_TIME);
   }
