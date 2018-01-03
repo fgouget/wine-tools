@@ -163,7 +163,7 @@ sub UpdateStatus($$)
     my $TaskDir = $self->CreateDir();
     if (open TASKLOG, ">>$TaskDir/err")
     {
-      print TASKLOG "Child process died unexpectedly\n";
+      print TASKLOG "TestBot process died unexpectedly\n";
       close TASKLOG;
     }
     umask($OldUMask);
