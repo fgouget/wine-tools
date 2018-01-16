@@ -433,6 +433,25 @@ sub Validate($)
   return (undef, undef);
 }
 
+=pod
+=over 12
+
+=item C<OnDelete()>
+
+Prepares the item for deletion.
+
+The default implementation deletes any related 'Detailref' object as these
+have a foreign key referencing this Item, which would prevent its deletion.
+This allows the deletion of Items even if the database does not support
+'ON DELETE CASCADE'. To preserve this behavior OnDelete() implementations
+should remove any other foreign key that would prevent the deletion of an Item.
+
+Returns undef if successful, or an error message if the Item should not be
+deleted or something prevents its deletion.
+
+=back
+=cut
+
 sub OnDelete($)
 {
   my ($self) = @_;
