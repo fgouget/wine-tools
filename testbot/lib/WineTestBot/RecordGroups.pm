@@ -95,12 +95,12 @@ sub CreateRecordGroups(;$)
 
 sub CompareRecordGroups($$)
 {
-  my ($a, $b) = @_;
+  my ($RecordGroup1, $RecordGroup2) = @_;
 
-  # The Id will wrap eventually so sort by Timestamp
-  # and only use the Id to break ties.
-  return $a->Timestamp <=> $b->Timestamp ||
-         $a->Id <=> $b->Id;
+  # The Timestamps have a 1 second granularity and may have duplicates.
+  # So use the Id to break ties.
+  return $RecordGroup1->Timestamp <=> $RecordGroup2->Timestamp ||
+         $RecordGroup1->Id <=> $RecordGroup2->Id;
 }
 
 =pod
