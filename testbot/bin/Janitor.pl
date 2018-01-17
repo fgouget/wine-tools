@@ -72,7 +72,6 @@ if ($JobPurgeDays != 0)
       }
     }
   }
-  $Jobs = undef;
 }
 
 # Delete PatchSets that are more than a day old
@@ -123,7 +122,6 @@ if ($JobPurgeDays != 0)
       }
     }
   }
-  $Patches = undef;
 }
 
 # Archive old Jobs, that is remove all their associated files
@@ -146,7 +144,6 @@ if ($JobArchiveDays != 0)
       $Job->Save();
     }
   }
-  $Jobs = undef;
 }
 
 # Purge the deleted users and VMs if they are not referenced anymore
@@ -286,5 +283,4 @@ if ($JobPurgeDays != 0)
       }
     }
   }
-  $RecordGroups = undef;
 }
