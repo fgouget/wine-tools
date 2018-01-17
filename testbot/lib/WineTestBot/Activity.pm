@@ -44,9 +44,13 @@ require Exporter;
 =item C<GetActivity()>
 
 Loads the records for the specified VMs and processes them to build a structure
-describing the TestBot activity. The structure is as follows:
+describing the TestBot activity.
 
-  { <GroupNo1> => {
+Returns a list of the activity records, sorted from the oldest to the newest.
+Each entry contains a structure grouping all the state and event information
+for the specified timestamp. Entries have the following structure:
+
+    {
       start    => <StartTimestamp>,
       end      => <EndTimestamp>,
       runnable => <RunnableTasksCount>,
@@ -78,12 +82,10 @@ describing the TestBot activity. The structure is as follows:
           ...
         },
       },
-    },
-    <GroupNo2> => {
-      ...
-    },
-    ...
-  }
+    }
+
+GetActivity() also returns a table with the number of records and record groups
+that were processed.
 
 =back
 =cut
@@ -91,14 +93,16 @@ describing the TestBot activity. The structure is as follows:
 sub GetActivity($)
 {
   my ($VMs) = @_;
-  my ($Activity, $Counters) = ({}, {});
+  my ($ActivityHash, $Activity, $Counters) = ({}, [], {});
 
   ### First load all the RecordGroups
   my $RecordGroups = CreateRecordGroups();
   $Counters->{recordgroups} = $RecordGroups->GetItemsCount();
-  foreach my $RecordGroup (@{$RecordGroups->GetItems()})
+  foreach my $RecordGroup (sort CompareRecordGroups @{$RecordGroups->GetItems()})
   {
-    $Activity->{$RecordGroup->Id} = { start => $RecordGroup->Timestamp };
+    my $Group = { start => $RecordGroup->Timestamp };
+    $ActivityHash->{$RecordGroup->Id} = $Group;
+    push @$Activity, $Group;
   }
 
   ### And then load all the Records in one go
@@ -110,7 +114,7 @@ sub GetActivity($)
   $Counters->{records} = $Records->GetItemsCount();
   foreach my $Record (@{$Records->GetItems()})
   {
-    my $Group = $Activity->{$Record->RecordGroupId};
+    my $Group = $ActivityHash->{$Record->RecordGroupId};
     if ($Record->Type eq "tasks" and $Record->Name eq "counters")
     {
       ($Group->{runnable}, $Group->{queued}) = split / /, $Record->Value;
@@ -196,9 +200,8 @@ sub GetActivity($)
   ### Fill the holes in the table, compute end times, etc.
 
   my ($LastGroup, %LastStatusVMs);
-  foreach my $RecordGroup (sort CompareRecordGroups @{$RecordGroups->GetItems()})
+  foreach my $Group (@$Activity)
   {
-    my $Group = $Activity->{$RecordGroup->Id};
     my $StatusVMs = $Group->{statusvms};
     my $ResultVMs = $Group->{resultvms};
     next if (!$StatusVMs and !$ResultVMs);
@@ -380,7 +383,7 @@ sub GetStatistics($)
   my ($Activity, $Counters) = GetActivity($VMs);
   $GlobalStats->{"recordgroups.count"} = $Counters->{recordgroups};
   $GlobalStats->{"records.count"} = $Counters->{records};
-  foreach my $Group (values %$Activity)
+  foreach my $Group (@$Activity)
   {
     if (!$VMsStats->{start} or $VMsStats->{start} > $Group->{start})
     {

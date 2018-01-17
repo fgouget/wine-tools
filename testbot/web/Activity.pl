@@ -133,9 +133,9 @@ EOF
 
   print "<tbody>\n";
   my ($Activity, $_Counters) = GetActivity($VMs);
-  foreach my $GroupNo (sort { $b <=> $a } keys %$Activity)
+  for (my $Index = @$Activity; $Index--; )
   {
-    my $Group = $Activity->{$GroupNo};
+    my $Group = $Activity->[$Index];
     next if (!$Group->{statusvms});
 
     print "<tr><td>", _GetHtmlTime($Group->{start}), "</td>";
