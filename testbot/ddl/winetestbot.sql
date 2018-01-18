@@ -114,7 +114,7 @@ CREATE TABLE Jobs
   Priority   INT(1)      NOT NULL,
   Status     ENUM('queued', 'running', 'completed', 'badpatch', 'badbuild', 'boterror', 'canceled') NOT NULL,
   Remarks    VARCHAR(128) NULL,
-  Submitted  DATETIME    NULL,
+  Submitted  DATETIME    NOT NULL,
   Ended      DATETIME    NULL,
   PatchId    INT(7)      NULL,
   FOREIGN KEY (BranchName) REFERENCES Branches(Name),
