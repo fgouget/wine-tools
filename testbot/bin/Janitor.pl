@@ -61,7 +61,7 @@ if ($JobPurgeDays != 0)
   my $Jobs = CreateJobs();
   foreach my $Job (@{$Jobs->GetItems()})
   {
-    if (defined($Job->Ended) && $Job->Ended < $DeleteBefore)
+    if ($Job->Submitted < $DeleteBefore)
     {
       LogMsg "Deleting job ", $Job->Id, "\n";
       $Job->RmTree();
