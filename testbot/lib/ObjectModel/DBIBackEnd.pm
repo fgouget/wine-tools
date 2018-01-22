@@ -53,9 +53,18 @@ sub GetDb($)
   }
   if (!defined $self->{Db})
   {
-    $self->{Db} = DBI->connect(@{$self->{ConnectArgs}});
-  }
+    while (1)
+    {
+      # Protect this call so we can retry in case RaiseError is set
+      eval { $self->{Db} = DBI->connect(@{$self->{ConnectArgs}}) };
+      last if ($self->{Db});
 
+      # Prints errors on stderr like DBI normally does
+      $@ ||= "DBI::connect() returned undef without setting an error";
+      print STDERR "$@\n";
+      sleep(30);
+    }
+  }
   return $self->{Db};
 }
 
