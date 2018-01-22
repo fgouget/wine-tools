@@ -732,14 +732,14 @@ sub write_build_index_and_summary($)
     {
         $group_name = $group->{name};
         $header_footer = build_header_footer($group->{reports});
-        $title = "$short_date: $group_name results";
+        $title = "$short_date $group_name results";
         $filename = "index_$group_name.html";
     }
     else
     {
         $group_name = "global";
         $header_footer = build_header_footer(\@groups);
-        $title = "$short_date: Summary";
+        $title = "$short_date Summary";
         $filename = "index.html";
     }
 
@@ -773,7 +773,7 @@ EOF
         print OUT "&nbsp;|&nbsp;<a href=\"..\">index</a>\n";
         print OUT "</div>\n";
         print OUT "<div class=\"group\">\n";
-        print OUT "<h1>$short_date: $group_name results for build <a href=\".\" title=\"$build\">$short_build</a></h1>\n";
+        print OUT "<h1>$short_date $group_name results for build <a href=\".\" title=\"$build\">$short_build</a></h1>\n";
         print OUT "<table class=\"report\">\n$header_footer\n  <tbody>\n";
     }
     else
@@ -784,7 +784,7 @@ EOF
         print OUT "&nbsp;|&nbsp;<a href=\"..\">index</a>";
         print OUT "</div>\n";
         print OUT "<div class=\"main\">\n";
-        print OUT "<h1>$short_date: Summary for build $short_build</h1>\n";
+        print OUT "<h1>$short_date Summary for build $short_build</h1>\n";
         print OUT "<table class=\"report\">\n$header_footer\n  <tbody>\n";
     }
 
