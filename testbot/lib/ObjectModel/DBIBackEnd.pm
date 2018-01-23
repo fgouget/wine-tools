@@ -179,6 +179,16 @@ sub BuildFieldList($$)
   return $Fields;
 }
 
+my %_AllowedFilterTypes = (
+  "="    => 1,
+  "<>"   => 1,
+  "<"    => 1,
+  "<="   => 1,
+  ">"    => 1,
+  ">="   => 1,
+  "LIKE" => 1,
+);
+
 sub LoadCollection($$)
 {
   my ($self, $Collection) = @_;
@@ -202,7 +212,16 @@ sub LoadCollection($$)
       $Where .= " AND ";
     }
     my $PropertyDescriptor = $Collection->GetPropertyDescriptorByName($FilterProperty);
-    my $FilterValues = $Filters->{$FilterProperty};
+    my ($FilterType, $FilterValues) = @{$Filters->{$FilterProperty}};
+    if (!$_AllowedFilterTypes{$FilterType})
+    {
+      die "unknown '$FilterType' filter type";
+    }
+    if (!@$FilterValues)
+    {
+      die "no values for the '$FilterType' filter";
+    }
+
     if (@$FilterValues != 1)
     {
       $Where .= "(";
@@ -220,7 +239,7 @@ sub LoadCollection($$)
       }
       foreach my $ColName (@{$PropertyDescriptor->GetColNames()})
       {
-        $Where .= "$ColName = ?";
+        $Where .= "$ColName $FilterType ?";
         $Data[@Data] = $self->ToDb($ColValue, $PropertyDescriptor);
       }
     }

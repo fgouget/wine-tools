@@ -656,11 +656,11 @@ sub DeleteAll($)
   return undef;
 }
 
-sub AddFilter($$$)
+sub AddFilter($$$;$)
 {
-  my ($self, $PropertyName, $Value) = @_;
+  my ($self, $PropertyName, $Values, $Type) = @_;
 
-  $self->{Filters}{$PropertyName} = $Value;
+  $self->{Filters}{$PropertyName} = [($Type || "="), $Values];
 }
 
 sub GetFilters($)
