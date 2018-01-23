@@ -43,8 +43,8 @@ require Exporter;
 
 =item C<GetActivity()>
 
-Loads the records for the specified VMs and processes them to build a structure
-describing the TestBot activity.
+Loads the records for the specified VMs going back the specified number of
+seconds and processes them to build a structure describing the TestBot activity.
 
 Returns a list of the activity records, sorted from the oldest to the newest.
 Each entry contains a structure grouping all the state and event information
@@ -90,19 +90,31 @@ that were processed.
 =back
 =cut
 
-sub GetActivity($)
+sub GetActivity($;$)
 {
-  my ($VMs) = @_;
+  my ($VMs, $Seconds) = @_;
   my ($ActivityHash, $Activity, $Counters) = ({}, [], {});
 
   ### First load all the RecordGroups
   my $RecordGroups = CreateRecordGroups();
+  if ($Seconds)
+  {
+    $RecordGroups->AddFilter("Timestamp", [time() - $Seconds], ">=");
+  }
+  my $MinId;
   $Counters->{recordgroups} = $RecordGroups->GetItemsCount();
   foreach my $RecordGroup (sort CompareRecordGroups @{$RecordGroups->GetItems()})
   {
     my $Group = { start => $RecordGroup->Timestamp };
     $ActivityHash->{$RecordGroup->Id} = $Group;
     push @$Activity, $Group;
+    $MinId = $RecordGroup->Id if (!defined $MinId or $RecordGroup->Id < $MinId);
+  }
+  if (!defined $MinId)
+  {
+    # No activity was found in the specified period
+    $Counters->{records} = 0;
+    return ($Activity, $Counters);
   }
 
   ### And then load all the Records in one go
@@ -111,6 +123,7 @@ sub GetActivity($)
 
   my $Jobs = CreateJobs();
   my $Records = CreateRecords();
+  $Records->AddFilter("RecordGroupId", [$MinId], ">=");
   $Counters->{records} = $Records->GetItemsCount();
   foreach my $Record (@{$Records->GetItems()})
   {
