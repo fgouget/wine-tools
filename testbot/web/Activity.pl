@@ -24,27 +24,37 @@ package ActivityPage;
 use POSIX qw(strftime);
 use URI::Escape;
 
-use ObjectModel::CGI::Page;
+use ObjectModel::CGI::FreeFormPage;
 use WineTestBot::Config;
 use WineTestBot::Activity;
 use WineTestBot::Log;
 use WineTestBot::VMs;
 
-@ActivityPage::ISA = qw(ObjectModel::CGI::Page);
+@ActivityPage::ISA = qw(ObjectModel::CGI::FreeFormPage);
+
+my $HOURS_DEFAULT = 24;
 
 sub _initialize($$$)
 {
   my ($self, $Request, $RequiredRole) = @_;
 
   $self->{start} = Time();
+  $self->{hours} = $self->GetParam("Hours");
+  if (!defined $self->{hours} or $self->{hours} !~ /^\d{1,3}$/)
+  {
+    $self->{hours} = $HOURS_DEFAULT;
+  }
+
   $self->SUPER::_initialize($Request, $RequiredRole);
 }
 
 sub GeneratePage($)
 {
   my ($self) = @_;
-
-  $self->{Request}->headers_out->add("Refresh", "60");
+  if ($self->{hours} and $self->{hours} <= $HOURS_DEFAULT)
+  {
+    $self->{Request}->headers_out->add("Refresh", "60");
+  }
   $self->SUPER::GeneratePage();
 }
 
@@ -87,6 +97,11 @@ sub _CompareVMs()
 sub GenerateBody($)
 {
   my ($self) = @_;
+
+  # Generate a custom form to let the user specify the Hours field.
+  $self->GenerateFormStart();
+  print "<div class='ItemProperty'><label>Analyze the activity of the past <div class='ItemValue'><input type='text' name='Hours' maxlength='3' size='3' value='$self->{hours}'/></div> hours.</div>\n";
+  $self->GenerateFormEnd();
 
   print "<h1>${ProjectName} Test Bot activity</h1>\n";
   print "<div class='Content'>\n";
@@ -132,7 +147,7 @@ EOF
   ### Generate the HTML table with the newest record first
 
   print "<tbody>\n";
-  my ($Activity, $_Counters) = GetActivity($VMs);
+  my ($Activity, $_Counters) = GetActivity($VMs, $self->{hours} * 3600);
   for (my $Index = @$Activity; $Index--; )
   {
     my $Group = $Activity->[$Index];
