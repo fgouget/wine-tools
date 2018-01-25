@@ -153,7 +153,8 @@ EOF
     my $Group = $Activity->[$Index];
     next if (!$Group->{statusvms});
 
-    print "<tr><td>", _GetHtmlTime($Group->{start}), "</td>";
+    my $GroupId = $Group->{id};
+    print "<tr><td id='g$GroupId'>", _GetHtmlTime($Group->{start}), "</td>";
     if ($Group->{engine})
     {
       print "<td class='Record RecordEngine'>$Group->{engine}</td>\n";

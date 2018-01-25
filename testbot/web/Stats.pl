@@ -140,16 +140,23 @@ sub _GetStatHtml($$;$$)
   my ($Stats, $StatKey, $AllStats, $Flags) = @_;
 
   my $Value = _GetStatStr($Stats, $StatKey, $AllStats, $Flags);
-  return $Value if (!$Stats->{"$StatKey.source"});
 
   my $SrcObj = $Stats->{"$StatKey.source"};
-  my ($JobId, $StepNo, $TaskNo) = ObjectModel::Collection::SplitKey(undef, $SrcObj->GetFullKey());
-  if (defined $TaskNo)
+  if ($SrcObj)
   {
-    my $Key = "$JobId#k". ($StepNo * 100 + $TaskNo);
-    return "<a href='/JobDetails.pl?Key=$Key'>$Value</a>";
+    my ($JobId, $StepNo, $TaskNo) = ObjectModel::Collection::SplitKey(undef, $SrcObj->GetFullKey());
+    if (defined $TaskNo)
+    {
+      my $Key = "$JobId#k". ($StepNo * 100 + $TaskNo);
+      return "<a href='/JobDetails.pl?Key=$Key'>$Value</a>";
+    }
+    return "<a href='/index.pl#job$JobId'>$Value</a>";
   }
-  return "<a href='/index.pl#job$JobId'>$Value</a>";
+
+  my $GroupId = $Stats->{"$StatKey.groupid"};
+  return "<a href='/Activity.pl?Hours=0#g$GroupId'>$Value</a>" if ($GroupId);
+
+  return $Value;
 }
 
 sub _GenGlobalLine($$$;$$)

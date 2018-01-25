@@ -51,6 +51,7 @@ Each entry contains a structure grouping all the state and event information
 for the specified timestamp. Entries have the following structure:
 
     {
+      id       => <RecordGroupId>,
       start    => <StartTimestamp>,
       end      => <EndTimestamp>,
       runnable => <RunnableTasksCount>,
@@ -105,7 +106,8 @@ sub GetActivity($;$)
   $Counters->{recordgroups} = $RecordGroups->GetItemsCount();
   foreach my $RecordGroup (sort CompareRecordGroups @{$RecordGroups->GetItems()})
   {
-    my $Group = { start => $RecordGroup->Timestamp };
+    my $Group = { id => $RecordGroup->Id,
+                  start => $RecordGroup->Timestamp };
     $ActivityHash->{$RecordGroup->Id} = $Group;
     push @$Activity, $Group;
     $MinId = $RecordGroup->Id if (!defined $MinId or $RecordGroup->Id < $MinId);
@@ -305,9 +307,9 @@ sub GetActivity($;$)
   return ($Activity, $Counters);
 }
 
-sub _AddFullStat($$$;$)
+sub _AddFullStat($$$$;$)
 {
-  my ($Stats, $StatKey, $Value, $Source) = @_;
+  my ($Stats, $StatKey, $Value, $GroupId, $Source) = @_;
 
   $Stats->{"$StatKey.count"}++;
   $Stats->{$StatKey} += $Value;
@@ -315,6 +317,7 @@ sub _AddFullStat($$$;$)
   if (!exists $Stats->{$MaxKey} or $Stats->{$MaxKey} < $Value)
   {
     $Stats->{$MaxKey} = $Value;
+    $Stats->{"$MaxKey.groupid"} = $GroupId if (defined $GroupId);
     $Stats->{"$MaxKey.source"} = $Source if ($Source);
   }
 }
@@ -346,7 +349,7 @@ sub GetStatistics($)
             $Task->Status !~ /^(?:queued|running|canceled)$/)
         {
           my $Time = $Task->Ended - $Task->Started;
-          _AddFullStat($GlobalStats, "$StepType.time", $Time, $Task);
+          _AddFullStat($GlobalStats, "$StepType.time", $Time, undef, $Task);
         }
         if ($IsSpecialJob)
         {
@@ -354,11 +357,11 @@ sub GetStatistics($)
           if (-f $ReportFileName)
           {
             my $ReportSize = -s $ReportFileName;
-            _AddFullStat($GlobalStats, "$StepType.size", $ReportSize, $Task);
+            _AddFullStat($GlobalStats, "$StepType.size", $ReportSize, undef, $Task);
             if ($VMs->ItemExists($Task->VM->GetKey()))
             {
               my $VMStats = ($VMsStats->{items}->{$Task->VM->Name} ||= {});
-              _AddFullStat($VMStats, "report.size", $ReportSize, $Task);
+              _AddFullStat($VMStats, "report.size", $ReportSize, undef, $Task);
             }
           }
         }
@@ -369,7 +372,7 @@ sub GetStatistics($)
         $Job->Status !~ /^(?:queued|running|canceled)$/)
     {
       my $Time = $Job->Ended - $Job->Submitted;
-      _AddFullStat($GlobalStats, "jobs.time", $Time, $Job);
+      _AddFullStat($GlobalStats, "jobs.time", $Time, undef, $Job);
       push @JobTimes, $Time;
 
       if (!exists $GlobalStats->{start} or $GlobalStats->{start} > $Job->Submitted)
@@ -421,8 +424,8 @@ sub GetStatistics($)
         my $Status = $VMStatus->{status};
 
         my $Time = $VMStatus->{end} - $VMStatus->{start};
-        _AddFullStat($VMStats, "$Status.time", $Time);
-        _AddFullStat($HostStats, "$Status.time", $Time);
+        _AddFullStat($VMStats, "$Status.time", $Time, $Group->{id});
+        _AddFullStat($HostStats, "$Status.time", $Time, $Group->{id});
         if ($Status =~ /^(?:reverting|sleeping|running|dirty)$/)
         {
           $VMStats->{"busy.elapsed"} += $Time;
@@ -439,8 +442,8 @@ sub GetStatistics($)
                 $VMStatus->{result} eq "failed"))
         {
           my $StepType = $VMStatus->{step}->Type;
-          _AddFullStat($VMStats, "$StepType.time", $Time, $VMStatus->{task});
-          _AddFullStat($HostStats, "$StepType.time", $Time, $VMStatus->{task});
+          _AddFullStat($VMStats, "$StepType.time", $Time, $Group->{id}, $VMStatus->{task});
+          _AddFullStat($HostStats, "$StepType.time", $Time, $Group->{id}, $VMStatus->{task});
         }
       }
 
