@@ -57,19 +57,16 @@ delete $ENV{ENV};
 # Delete obsolete Jobs
 if ($JobPurgeDays != 0)
 {
-  my $DeleteBefore = time() - $JobPurgeDays * 86400;
   my $Jobs = CreateJobs();
+  $Jobs->AddFilter("Submitted", [time() - $JobPurgeDays * 86400], "<");
   foreach my $Job (@{$Jobs->GetItems()})
   {
-    if ($Job->Submitted < $DeleteBefore)
+    LogMsg "Deleting job ", $Job->Id, "\n";
+    $Job->RmTree();
+    my $ErrMessage = $Jobs->DeleteItem($Job);
+    if (defined($ErrMessage))
     {
-      LogMsg "Deleting job ", $Job->Id, "\n";
-      $Job->RmTree();
-      my $ErrMessage = $Jobs->DeleteItem($Job);
-      if (defined($ErrMessage))
-      {
-        LogMsg $ErrMessage, "\n";
-      }
+      LogMsg $ErrMessage, "\n";
     }
   }
 }
@@ -102,23 +99,20 @@ foreach my $Set (@{$Sets->GetItems()})
 # Delete obsolete Patches now that no Job references them
 if ($JobPurgeDays != 0)
 {
-  $DeleteBefore = time() - $JobPurgeDays * 86400;
   my $Patches = CreatePatches();
+  $Patches->AddFilter("Received", [time() - $JobPurgeDays * 86400], "<");
   foreach my $Patch (@{$Patches->GetItems()})
   {
-    if ($Patch->Received < $DeleteBefore)
+    my $Jobs = CreateJobs();
+    $Jobs->AddFilter("Patch", [$Patch]);
+    if ($Jobs->IsEmpty())
     {
-      my $Jobs = CreateJobs();
-      $Jobs->AddFilter("Patch", [$Patch]);
-      if ($Jobs->IsEmpty())
+      LogMsg "Deleting patch ", $Patch->Id, "\n";
+      unlink("$DataDir/patches/" . $Patch->Id);
+      my $ErrMessage = $Patches->DeleteItem($Patch);
+      if (defined($ErrMessage))
       {
-        LogMsg "Deleting patch ", $Patch->Id, "\n";
-        unlink("$DataDir/patches/" . $Patch->Id);
-        my $ErrMessage = $Patches->DeleteItem($Patch);
-        if (defined($ErrMessage))
-        {
-          LogMsg $ErrMessage, "\n";
-        }
+        LogMsg $ErrMessage, "\n";
       }
     }
   }
@@ -270,17 +264,14 @@ else
 # Delete obsolete record groups
 if ($JobPurgeDays != 0)
 {
-  $DeleteBefore = time() - $JobPurgeDays * 86400;
   my $RecordGroups = CreateRecordGroups();
+  $RecordGroups->AddFilter("Timestamp", [time() - $JobPurgeDays * 86400], "<");
   foreach my $RecordGroup (@{$RecordGroups->GetItems()})
   {
-    if ($RecordGroup->Timestamp < $DeleteBefore)
+    my $ErrMessage = $RecordGroups->DeleteItem($RecordGroup);
+    if (defined($ErrMessage))
     {
-      my $ErrMessage = $RecordGroups->DeleteItem($RecordGroup);
-      if (defined($ErrMessage))
-      {
-        LogMsg $ErrMessage, "\n";
-      }
+      LogMsg $ErrMessage, "\n";
     }
   }
 }
