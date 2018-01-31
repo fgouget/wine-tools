@@ -344,8 +344,8 @@ sub Run($$$$$)
   # So set ChildPid in the parent and synchronize with the child so it only
   # starts once this is done.
 
-  # Make sure the child process will use its own database connection
-  $self->GetBackEnd()->Close();
+  # Make sure the child process will use its own database connections
+  CloseAllDBBackEnds();
 
   use Fcntl;
   my ($fd_read, $fd_write);
