@@ -37,7 +37,7 @@ require Exporter;
 sub GetBackEnd($)
 {
   #my ($self) = @_;
-  return GetDBBackEnd('WineTestBot');
+  return $ActiveBackEnds{'WineTestBot'};
 }
 
 
@@ -61,7 +61,7 @@ require Exporter;
 sub GetBackEnd($)
 {
   #my ($self) = @_;
-  return GetDBBackEnd('WineTestBot');
+  return $ActiveBackEnds{'WineTestBot'};
 }
 
 1;

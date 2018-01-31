@@ -30,11 +30,11 @@ should provide.
 
 =cut
 
-use vars qw(@ISA @EXPORT);
+use vars qw(@ISA @EXPORT %ActiveBackEnds);
 
 require Exporter;
 @ISA = qw(Exporter);
-@EXPORT = qw(&AddDBBackEnd &GetDBBackEnd &RemoveDBBackEnd &CloseAllDBBackEnds);
+@EXPORT = qw(%ActiveBackEnds);
 
 sub new($@)
 {
@@ -49,35 +49,6 @@ sub new($@)
 sub _initialize($)
 {
   #my ($self) = @_;
-}
-
-
-my %_ActiveBackEnds;
-
-sub AddDBBackEnd($$)
-{
-  my ($Name, $BackEnd) = @_;
-  $_ActiveBackEnds{$Name} = $BackEnd;
-}
-
-sub GetDBBackEnd($)
-{
-  my ($Name) = @_;
-  return $_ActiveBackEnds{$Name};
-}
-
-sub RemoveDBBackEnd($)
-{
-  my ($Name) = @_;
-  delete $_ActiveBackEnds{$Name};
-}
-
-sub CloseAllDBBackEnds()
-{
-  foreach my $BackEnd (values %_ActiveBackEnds)
-  {
-    $BackEnd->Close();
-  }
 }
 
 1;

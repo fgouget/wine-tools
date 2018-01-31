@@ -604,12 +604,12 @@ sub Close($)
   }
 }
 
-sub UseDBIBackEnd($$$$$$)
+sub UseDBIBackEnd($$@)
 {
-  my ($class, $DbSelector, $DbSource, $DbUser, $DbPassword, $DbArgs) = @_;
+  my $class = shift;
+  my $DbSelector = shift;
 
-  my $BackEnd = $class->new();
-  $BackEnd->{ConnectArgs} = [$DbSource, $DbUser, $DbPassword, $DbArgs];
-  AddDBBackEnd($DbSelector, $BackEnd);
+  $ObjectModel::BackEnd::ActiveBackEnds{$DbSelector} = $class->new();
+  $ObjectModel::BackEnd::ActiveBackEnds{$DbSelector}->{ConnectArgs} = \@_;
 }
 1;
