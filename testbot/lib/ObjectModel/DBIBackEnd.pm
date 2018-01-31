@@ -18,9 +18,6 @@
 
 use strict;
 
-use DBI;
-use ObjectModel::BackEnd;
-
 package ObjectModel::DBIBackEnd;
 
 =head1 NAME
@@ -33,7 +30,10 @@ ObjectModel::BackEnd
 
 =cut
 
+use DBI;
 use Time::Local;
+
+use ObjectModel::BackEnd;
 
 use vars qw(@ISA @EXPORT);
 
@@ -604,12 +604,12 @@ sub Close($)
   }
 }
 
-sub UseDBIBackEnd($$@)
+sub UseDBIBackEnd($$$$$$)
 {
-  my $class = shift;
-  my $DbSelector = shift;
+  my ($class, $DbSelector, $DbSource, $DbUser, $DbPassword, $DbArgs) = @_;
 
-  $ObjectModel::BackEnd::ActiveBackEnds{$DbSelector} = $class->new();
-  $ObjectModel::BackEnd::ActiveBackEnds{$DbSelector}->{ConnectArgs} = \@_;
+  my $BackEnd = $class->new();
+  $BackEnd->{ConnectArgs} = [$DbSource, $DbUser, $DbPassword, $DbArgs];
+  AddDBBackEnd($DbSelector, $BackEnd);
 }
 1;
