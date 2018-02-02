@@ -608,6 +608,9 @@ sub UseDBIBackEnd($$$$$$)
 {
   my ($class, $DbSelector, $DbSource, $DbUser, $DbPassword, $DbArgs) = @_;
 
+  # The implementation assumes AutoCommit is on.
+  $DbArgs->{AutoCommit} = 1;
+
   my $BackEnd = $class->new();
   $BackEnd->{ConnectArgs} = [$DbSource, $DbUser, $DbPassword, $DbArgs];
   AddDBBackEnd($DbSelector, $BackEnd);

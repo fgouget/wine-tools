@@ -122,7 +122,7 @@ if (!$::BuildEnv)
   require ObjectModel::DBIBackEnd;
   ObjectModel::DBIBackEnd->UseDBIBackEnd('WineTestBot', $DbDataSource,
                                          $DbUsername, $DbPassword,
-                                         { RaiseError => 1 });
+                                         { PrintError => 1, RaiseError => 1});
 }
 
 umask 002;
