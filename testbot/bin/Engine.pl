@@ -309,9 +309,6 @@ sub HandleJobStatusChange($$$)
 
   if ($OldStatus eq "running" && $NewStatus ne "running")
   {
-    # Make sure the child process does not inherit the database connections
-    CloseAllDBBackEnds();
-
     my $Pid = fork;
     if (!defined $Pid)
     {
@@ -319,7 +316,10 @@ sub HandleJobStatusChange($$$)
     }
     elsif (!$Pid)
     {
+      # Clean up the child environment
+      CloseAllDBBackEnds();
       WineTestBot::Log::SetupRedirects();
+
       exec("$BinDir/${ProjectName}SendLog.pl $JobKey") or
       LogMsg "Unable to exec ${ProjectName}SendLog.pl: $!\n";
       exit(1);

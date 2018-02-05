@@ -344,9 +344,6 @@ sub Run($$$$$)
   # So set ChildPid in the parent and synchronize with the child so it only
   # starts once this is done.
 
-  # Make sure the child process will use its own database connections
-  CloseAllDBBackEnds();
-
   use Fcntl;
   my ($fd_read, $fd_write);
   pipe($fd_read, $fd_write); # For synchronization
@@ -378,6 +375,9 @@ sub Run($$$$$)
     return undef;
   }
 
+  # Close the database connections
+  CloseAllDBBackEnds();
+
   # Wait for the parent to set $VM->ChildPid
   close($fd_write);
   sysread($fd_read, $fd_write, 1);
@@ -389,6 +389,7 @@ sub Run($$$$$)
   require WineTestBot::VMs;
   my $VM = WineTestBot::VMs::CreateVMs()->GetItem($self->GetKey());
   exit 1 if (($VM->ChildPid || 0) != $$);
+  # Close the database connection we just opened
   $self->GetBackEnd()->Close();
 
   require WineTestBot::Log;

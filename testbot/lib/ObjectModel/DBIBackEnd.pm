@@ -45,14 +45,11 @@ sub GetDb($)
 {
   my ($self) = @_;
 
-  if (defined $self->{Db} && !$self->{Db}->ping())
+  if (!$self->{Db} or !$self->{Db}->ping())
   {
-    # This connection no longer works, probably due to the database idle timeout
-    $self->{Db}->disconnect();
+    # We don't have a connection yet, or it no longer works (probably due to
+    # the database idle timeout).
     $self->{Db} = undef;
-  }
-  if (!defined $self->{Db})
-  {
     while (1)
     {
       # Protect this call so we can retry in case RaiseError is set
@@ -597,11 +594,9 @@ sub Close($)
 {
   my ($self) = @_;
 
-  if (defined($self->{Db}))
-  {
-    $self->{Db}->disconnect();
-    $self->{Db} = undef;
-  }
+  # The connection will be automatically closed. In a child process this
+  # will automatically do the right thing thanks to AutoInactiveDestroy.
+  $self->{Db} = undef;
 }
 
 sub UseDBIBackEnd($$$$$$)
@@ -610,9 +605,13 @@ sub UseDBIBackEnd($$$$$$)
 
   # The implementation assumes AutoCommit is on.
   $DbArgs->{AutoCommit} = 1;
+  # Make sure AutoInactiveDestroy is set so the database connection is not
+  # broken if we fork() (including if it's behind our back).
+  $DbArgs->{AutoInactiveDestroy} = 1;
 
   my $BackEnd = $class->new();
   $BackEnd->{ConnectArgs} = [$DbSource, $DbUser, $DbPassword, $DbArgs];
   AddDBBackEnd($DbSelector, $BackEnd);
 }
+
 1;
