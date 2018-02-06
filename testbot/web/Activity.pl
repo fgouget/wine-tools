@@ -228,7 +228,9 @@ EOF
             $Label .= "/64" if ($Bitness);
           }
         }
-        $Label = "<a href='/JobDetails.pl?Key=". $VMStatus->{job}->Id ."#k". ($VMStatus->{step}->No * 100 + $VMStatus->{task}->No) ."'>$Label</a>";
+        my $Key = $VMStatus->{job}->Id ."#k". ($VMStatus->{step}->No * 100 + $VMStatus->{task}->No);
+        my $Title = $self->escapeHTML($VMStatus->{job}->Remarks);
+        $Label = "<a href='/JobDetails.pl?Key=$Key' title='$Title'>$Label</a>";
       }
       elsif ($VMStatus->{status} eq "dirty")
       {
