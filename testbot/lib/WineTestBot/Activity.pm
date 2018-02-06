@@ -38,6 +38,17 @@ require Exporter;
 @EXPORT = qw(&GetActivity &GetStatistics);
 
 
+sub _UpdateMin($$)
+{
+  $_[0] = $_[1] if (!defined $_[0] or $_[1] < $_[0]);
+}
+
+sub _UpdateMax($$)
+{
+  $_[0] = $_[1] if (!defined $_[0] or $_[0] < $_[1]);
+}
+
+
 =pod
 =over 12
 
@@ -110,7 +121,7 @@ sub GetActivity($;$)
                   start => $RecordGroup->Timestamp };
     $ActivityHash->{$RecordGroup->Id} = $Group;
     push @$Activity, $Group;
-    $MinId = $RecordGroup->Id if (!defined $MinId or $RecordGroup->Id < $MinId);
+    _UpdateMin($MinId, $RecordGroup->Id);
   }
   if (!defined $MinId)
   {
@@ -375,14 +386,8 @@ sub GetStatistics($)
       _AddFullStat($GlobalStats, "jobs.time", $Time, undef, $Job);
       push @JobTimes, $Time;
 
-      if (!exists $GlobalStats->{start} or $GlobalStats->{start} > $Job->Submitted)
-      {
-        $GlobalStats->{start} = $Job->Submitted;
-      }
-      if (!exists $GlobalStats->{end} or $GlobalStats->{end} < $Job->Ended)
-      {
-        $GlobalStats->{end} = $Job->Ended;
-      }
+      _UpdateMin($GlobalStats->{start}, $Job->Submitted);
+      _UpdateMax($GlobalStats->{end}, $Job->Ended);
     }
   }
 
@@ -401,14 +406,8 @@ sub GetStatistics($)
   $GlobalStats->{"records.count"} = $Counters->{records};
   foreach my $Group (@$Activity)
   {
-    if (!$VMsStats->{start} or $VMsStats->{start} > $Group->{start})
-    {
-      $VMsStats->{start} = $Group->{start};
-    }
-    if (!$VMsStats->{end} or $VMsStats->{end} < $Group->{end})
-    {
-      $VMsStats->{end} = $Group->{end};
-    }
+    _UpdateMin($VMsStats->{start}, $Group->{start});
+    _UpdateMax($VMsStats->{end}, $Group->{end});
     next if (!$Group->{statusvms});
 
     my ($IsGroupBusy, %IsHostBusy);
