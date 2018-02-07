@@ -82,8 +82,8 @@ sub _AddRate($$;$)
   $RateKey =~ s/(?:\.time)?\.count$/.rate/;
   $AllStats ||= $Stats;
   $Stats->{$RateKey} = $AllStats->{elapsed} ?
-        3600 * $Stats->{$StatKey} / $AllStats->{elapsed} :
-      "n/a";
+                       3600 * $Stats->{$StatKey} / $AllStats->{elapsed} :
+                       "n/a";
 }
 
 sub _GetAverage($$)
