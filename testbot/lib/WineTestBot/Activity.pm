@@ -106,12 +106,13 @@ sub GetActivity($;$)
 {
   my ($VMs, $Seconds) = @_;
   my ($ActivityHash, $Activity, $Counters) = ({}, [], {});
+  $Counters->{now} = time();
 
   ### First load all the RecordGroups
   my $RecordGroups = CreateRecordGroups();
   if ($Seconds)
   {
-    $RecordGroups->AddFilter("Timestamp", [time() - $Seconds], ">=");
+    $RecordGroups->AddFilter("Timestamp", [$Counters->{now} - $Seconds], ">=");
   }
   my $MinId;
   $Counters->{recordgroups} = $RecordGroups->GetItemsCount();
@@ -302,13 +303,13 @@ sub GetActivity($;$)
       $LastStatusVMs{$VM->Name} = $StatusVMs;
     }
   }
-  $LastGroup->{end} = time() if ($LastGroup);
+  $LastGroup->{end} = $Counters->{now} if ($LastGroup);
 
   foreach my $VM (@{$VMs->GetItems()})
   {
     my $LastVMStatus = $LastStatusVMs{$VM->Name}->{$VM->Name};
     next if (!$LastVMStatus);
-    $LastVMStatus->{end} = time();
+    $LastVMStatus->{end} = $Counters->{now};
     if ($LastVMStatus->{status} eq "unknown")
     {
       $LastVMStatus->{status} = $VM->Status;
