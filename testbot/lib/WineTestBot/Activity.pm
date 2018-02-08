@@ -43,11 +43,6 @@ sub _UpdateMin($$)
   $_[0] = $_[1] if (!defined $_[0] or $_[1] < $_[0]);
 }
 
-sub _UpdateMax($$)
-{
-  $_[0] = $_[1] if (!defined $_[0] or $_[0] < $_[1]);
-}
-
 
 =pod
 =over 12
@@ -345,6 +340,7 @@ sub GetStatistics($)
   foreach my $Job (@{$Jobs->GetItems()})
   {
     $GlobalStats->{"jobs.count"}++;
+    _UpdateMin($GlobalStats->{start}, $Job->Submitted);
 
     my $IsSpecialJob;
     my $Steps = $Job->Steps;
@@ -386,9 +382,6 @@ sub GetStatistics($)
       my $Time = $Job->Ended - $Job->Submitted;
       _AddFullStat($GlobalStats, "jobs.time", $Time, undef, $Job);
       push @JobTimes, $Time;
-
-      _UpdateMin($GlobalStats->{start}, $Job->Submitted);
-      _UpdateMax($GlobalStats->{end}, $Job->Ended);
     }
   }
 
@@ -408,7 +401,6 @@ sub GetStatistics($)
   foreach my $Group (@$Activity)
   {
     _UpdateMin($VMsStats->{start}, $Group->{start});
-    _UpdateMax($VMsStats->{end}, $Group->{end});
     next if (!$Group->{statusvms});
 
     my ($IsGroupBusy, %IsHostBusy);
@@ -464,6 +456,9 @@ sub GetStatistics($)
       $GlobalStats->{"busy.elapsed"} += $Group->{end} - $Group->{start};
     }
   }
+
+  # The end is now!
+  $GlobalStats->{end} = $VMsStats->{end} = $Counters->{now};
   $GlobalStats->{elapsed} = $GlobalStats->{end} - $GlobalStats->{start};
   $HostsStats->{elapsed} =
       $VMsStats->{elapsed} = $VMsStats->{end} - $VMsStats->{start};
