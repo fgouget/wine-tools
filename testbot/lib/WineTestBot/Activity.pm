@@ -311,6 +311,7 @@ sub GetActivity($;$)
     my $LastVMStatus = $LastStatusVMs{$VM->Name}->{$VM->Name};
     next if (!$LastVMStatus);
     $LastVMStatus->{end} = $Counters->{now};
+    $LastVMStatus->{ongoing} = 1;
     if ($LastVMStatus->{status} eq "unknown")
     {
       $LastVMStatus->{status} = $VM->Status;
@@ -422,8 +423,11 @@ sub GetStatistics($)
         my $Status = $VMStatus->{status};
 
         my $Time = $VMStatus->{end} - $VMStatus->{start};
-        _AddFullStat($VMStats, "$Status.time", $Time, $Group->{id});
-        _AddFullStat($HostStats, "$Status.time", $Time, $Group->{id});
+        if (!$VMStatus->{ongoing})
+        {
+          _AddFullStat($VMStats, "$Status.time", $Time, $Group->{id});
+          _AddFullStat($HostStats, "$Status.time", $Time, $Group->{id});
+        }
         if ($Status =~ /^(?:reverting|sleeping|running|dirty)$/)
         {
           $VMStats->{"busy.elapsed"} += $Time;
