@@ -226,19 +226,25 @@ sub GetActivity($;$)
   {
     my $StatusVMs = $Group->{statusvms};
     my $ResultVMs = $Group->{resultvms};
-    next if (!$StatusVMs and !$ResultVMs);
-    if ($LastGroup)
+    if ($StatusVMs)
     {
-      $LastGroup->{end} = $Group->{start};
-      foreach my $Counter ('runnable', 'queued')
+      if ($LastGroup)
       {
-        if (!exists $Group->{$Counter} and exists $LastGroup->{$Counter})
+        $LastGroup->{end} = $Group->{start};
+        foreach my $Counter ('runnable', 'queued')
         {
-          $Group->{$Counter} = $LastGroup->{$Counter};
+          if (!exists $Group->{$Counter} and exists $LastGroup->{$Counter})
+          {
+            $Group->{$Counter} = $LastGroup->{$Counter};
+          }
         }
       }
+      $LastGroup = $Group;
     }
-    $LastGroup = $Group;
+    elsif (!$ResultVMs)
+    {
+      next;
+    }
 
     foreach my $VM (@{$VMs->GetItems()})
     {
