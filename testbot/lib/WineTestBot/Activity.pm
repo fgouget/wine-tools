@@ -412,11 +412,33 @@ sub GetStatistics($;$)
     @JobTimes = (); # free early
   }
 
-  my ($Activity, $Counters) = GetActivity($VMs, $Seconds);
+  my $ActivitySeconds;
+  if ($Seconds)
+  {
+    # When looking at the activity for a VM we get an initial 'unknown' segment
+    # that goes up to the first record for that VM. This is because we don't
+    # know what the state of the VM was before that first record.
+    # For long periods it does not matter much but for short ones, say 5
+    # minutes, an unknown segment could be all we have if the VM has been in
+    # the same state for more than 5 minutes, for instance while running a
+    # task.
+    # So analyze the activity beyond the specified period, up to the largest
+    # amount of time a task can take so are sure to get the VM's 'previous'
+    # record. Then when computing the statistics, ignore any data that falls
+    # outside the period under consideration.
+    # Of course this only works for statistics about VM operations and running
+    # tasks (so running.time, reverting.time, etc) not for those about idle or
+    # off VMs (idle.time, etc.).
+    $ActivitySeconds = $Seconds + 60 +
+        ($SuiteTimeout > $ReconfigTimeout ? $SuiteTimeout : $ReconfigTimeout);
+  }
+  my ($Activity, $Counters) = GetActivity($VMs, $ActivitySeconds);
   $GlobalStats->{"recordgroups.count"} = $Counters->{recordgroups};
   $GlobalStats->{"records.count"} = $Counters->{records};
   foreach my $Group (@$Activity)
   {
+    next if ($Group->{end} < $Cutoff);
+
     _UpdateMin($VMsStats->{start}, $Group->{start});
     next if (!$Group->{statusvms});
 
