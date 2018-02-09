@@ -43,6 +43,12 @@ sub _UpdateMin($$)
   $_[0] = $_[1] if (!defined $_[0] or $_[1] < $_[0]);
 }
 
+sub max($$)
+{
+  my ($a, $b) = @_;
+  return $a > $b ? $a : $b;
+}
+
 
 =pod
 =over 12
@@ -336,18 +342,20 @@ sub _AddFullStat($$$$;$)
   }
 }
 
-sub GetStatistics($)
+sub GetStatistics($;$)
 {
-  my ($VMs) = @_;
+  my ($VMs, $Seconds) = @_;
 
   my ($GlobalStats, $HostsStats, $VMsStats) = ({}, {}, {});
 
   my @JobTimes;
   my $Jobs = CreateJobs();
+  my $Cutoff = $Seconds ? (time() - $Seconds) : 0;
   foreach my $Job (@{$Jobs->GetItems()})
   {
-    $GlobalStats->{"jobs.count"}++;
-    _UpdateMin($GlobalStats->{start}, $Job->Submitted);
+    my $CountsAsNew = ($Job->Submitted >= $Cutoff);
+    $GlobalStats->{"newjobs.count"}++ if ($CountsAsNew);
+    _UpdateMin($GlobalStats->{start}, max($Cutoff, $Job->Submitted));
 
     my $IsSpecialJob;
     my $Steps = $Job->Steps;
@@ -359,9 +367,11 @@ sub GetStatistics($)
       my $Tasks = $Step->Tasks;
       foreach my $Task (@{$Tasks->GetItems()})
       {
-        $GlobalStats->{"tasks.count"}++;
-        if ($Task->Started and $Task->Ended and
-            $Task->Status !~ /^(?:queued|running|canceled)$/)
+        $GlobalStats->{"newtasks.count"}++ if ($CountsAsNew);
+        next if (!$Task->Ended or $Task->Ended < $Cutoff);
+
+        # $Task->Started should really be set since $Task->Ended is
+        if ($Task->Started and $Task->Status !~ /^(?:queued|running|canceled)$/)
         {
           my $Time = $Task->Ended - $Task->Started;
           _AddFullStat($GlobalStats, "$StepType.time", $Time, undef, $Task);
@@ -383,7 +393,7 @@ sub GetStatistics($)
       }
     }
 
-    if (!$IsSpecialJob and$Job->Ended and
+    if (!$IsSpecialJob and $Job->Ended and $Job->Ended >= $Cutoff and
         $Job->Status !~ /^(?:queued|running|canceled)$/)
     {
       my $Time = $Job->Ended - $Job->Submitted;
@@ -402,7 +412,7 @@ sub GetStatistics($)
     @JobTimes = (); # free early
   }
 
-  my ($Activity, $Counters) = GetActivity($VMs);
+  my ($Activity, $Counters) = GetActivity($VMs, $Seconds);
   $GlobalStats->{"recordgroups.count"} = $Counters->{recordgroups};
   $GlobalStats->{"records.count"} = $Counters->{records};
   foreach my $Group (@$Activity)
@@ -456,14 +466,14 @@ sub GetStatistics($)
         # Note that we cannot simply sum the VMs busy wall clock times to get
         # the host busy wall clock time because this would count periods where
         # more than one VM is busy multiple times.
-        $HostStats->{"busy.elapsed"} += $Group->{end} - $Group->{start};
+        $HostStats->{"busy.elapsed"} += $Group->{end} - max($Cutoff, $Group->{start});
         $IsHostBusy{$Host} = 1;
         $IsGroupBusy = 1;
       }
     }
     if ($IsGroupBusy)
     {
-      $GlobalStats->{"busy.elapsed"} += $Group->{end} - $Group->{start};
+      $GlobalStats->{"busy.elapsed"} += $Group->{end} - max($Cutoff, $Group->{start});
     }
   }
 

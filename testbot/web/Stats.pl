@@ -206,12 +206,12 @@ sub GenerateBody($)
 
   _GenGlobalLine($GlobalStats, "elapsed", "Job history", "How far back the job history goes.");
 
-  _GenGlobalLine($GlobalStats, "jobs.count", "Job count", "The number of jobs in the job history.");
-  _AddRate($GlobalStats, "jobs.count");
-  _GenGlobalLine($GlobalStats, "jobs.rate", "Job rate", "How fast new jobs are coming in.");
-  _GenGlobalLine($GlobalStats, "tasks.count", "Task count", "The number of tasks.");
-  _AddRate($GlobalStats, "tasks.count");
-  _GenGlobalLine($GlobalStats, "tasks.rate", "Task rate", "How fast new tasks are coming in.");
+  _GenGlobalLine($GlobalStats, "newjobs.count", "Job count", "The number of jobs in the job history.");
+  _AddRate($GlobalStats, "newjobs.count");
+  _GenGlobalLine($GlobalStats, "newjobs.rate", "Job rate", "How fast new jobs are coming in.");
+  _GenGlobalLine($GlobalStats, "newtasks.count", "Task count", "The number of tasks.");
+  _AddRate($GlobalStats, "newtasks.count");
+  _GenGlobalLine($GlobalStats, "newtasks.rate", "Task rate", "How fast new tasks are coming in.");
   _GenGlobalLine($GlobalStats, "busy.elapsed", "Busy time", "How much wall clock time was spent running jobs.", $NO_PERCENTAGE);
   _GenGlobalLine($GlobalStats, "busy.elapsed", "Busy \%", "The percentage of wall clock time where the TestBot was busy running jobs.");
 
