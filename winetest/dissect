@@ -48,7 +48,7 @@ sub BEGIN
     }
     unshift @INC, $1 if ($0 =~ m=^(/.*)/[^/]+$=);
 }
-use vars qw/$workdir $gitdir $gitweb $maxmult $maxuserskips $maxfailedtests $maxfilesize $acceptprediluvianwin/;
+use vars qw/$workdir $gitdir $gitweb $maxmult $maxuserskips $maxfailedtests $maxunitsize $maxfilesize $acceptprediluvianwin/;
 require "winetest.conf";
 
 my $name0=$0;
@@ -435,6 +435,7 @@ while ($line = <IN> || "")
 #
 
 my ($dll, $unit, $source, $rev, $result) = ("", "", "");
+my $unitsize = 0;
 my ($failures, $todo, $skipped) = (0, 0, 0);
 my ($s_failures, $s_todo, $s_skipped, $s_total) = (0, 0, 0, 0);
 my (%pids, $rc, $summary, $broken);
@@ -523,6 +524,11 @@ sub close_test_unit($)
     $todo ||= $s_todo;
     $skipped ||= $s_skipped;
 
+    if ($unitsize > $maxunitsize)
+    {
+        add_test_line("end", "The test prints too much data ($unitsize bytes)");
+        $extra_failures++;
+    }
     if (!$broken and defined $rc)
     {
         # Check the exit code, particularly against failures reported
@@ -563,6 +569,7 @@ sub close_test_unit($)
     }
 
     $dll = $unit = "";
+    $unitsize = 0;
     $failures = $todo = $skipped = 0;
     $s_failures = $s_todo = $s_skipped = $s_total = 0;
     $extra_failures = $broken = 0;
@@ -572,6 +579,7 @@ sub close_test_unit($)
 
 $line =~ /^Test output:/ or mydie "no test header: $line";
 while ($line = <IN>) {
+    $unitsize += length($line);
     next if ($line =~ /^\s*$/);
     chomp $line;
     $line =~ s/\r+$//;
