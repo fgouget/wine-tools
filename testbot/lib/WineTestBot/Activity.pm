@@ -368,7 +368,9 @@ sub GetStatistics($;$)
       foreach my $Task (@{$Tasks->GetItems()})
       {
         $GlobalStats->{"newtasks.count"}++ if ($CountsAsNew);
+
         next if (!$Task->Ended or $Task->Ended < $Cutoff);
+        $GlobalStats->{"donetasks.count"}++;
 
         # $Task->Started should really be set since $Task->Ended is
         if ($Task->Started and $Task->Status !~ /^(?:queued|running|canceled)$/)
@@ -393,12 +395,15 @@ sub GetStatistics($;$)
       }
     }
 
-    if (!$IsSpecialJob and $Job->Ended and $Job->Ended >= $Cutoff and
-        $Job->Status !~ /^(?:queued|running|canceled)$/)
+    if ($Job->Ended and $Job->Ended >= $Cutoff)
     {
-      my $Time = $Job->Ended - $Job->Submitted;
-      _AddFullStat($GlobalStats, "jobs.time", $Time, undef, $Job);
-      push @JobTimes, $Time;
+      $GlobalStats->{"donejobs.count"}++;
+      if (!$IsSpecialJob and $Job->Status !~ /^(?:queued|running|canceled)$/)
+      {
+        my $Time = $Job->Ended - $Job->Submitted;
+        _AddFullStat($GlobalStats, "jobs.time", $Time, undef, $Job);
+        push @JobTimes, $Time;
+      }
     }
   }
 
