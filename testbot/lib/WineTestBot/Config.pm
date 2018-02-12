@@ -36,7 +36,7 @@ use vars qw (@ISA @EXPORT @EXPORT_OK $UseSSL $LogDir $DataDir $BinDir
              $LDAPBindDN $LDAPSearchBase $LDAPSearchFilter
              $LDAPRealNameAttribute $LDAPEMailAttribute $AgentPort $Tunnel
              $TunnelDefaults $PrettyHostNames $JobPurgeDays $JobArchiveDays
-             $WebHostName $RegistrationQ $RegistrationARE);
+             $WebHostName $RegistrationQ $RegistrationARE $MuninAPIKey);
 
 require Exporter;
 @ISA = qw(Exporter);
@@ -50,7 +50,7 @@ require Exporter;
              $LDAPServer $LDAPBindDN $LDAPSearchBase $LDAPSearchFilter
              $LDAPRealNameAttribute $LDAPEMailAttribute $AgentPort $Tunnel
              $TunnelDefaults $PrettyHostNames $JobPurgeDays $JobArchiveDays
-             $WebHostName $RegistrationQ $RegistrationARE);
+             $WebHostName $RegistrationQ $RegistrationARE $MuninAPIKey);
 @EXPORT_OK = qw($DbDataSource $DbUsername $DbPassword);
 
 if ($::RootDir !~ m=^/=)

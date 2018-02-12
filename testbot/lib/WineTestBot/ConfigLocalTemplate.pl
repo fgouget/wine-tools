@@ -110,4 +110,8 @@ $WineTestBot::Config::TunnelDefaults = undef;
 #    "gateway:port1" => "vm1"
 $WineTestBot::Config::PrettyHostNames = undef;
 
+# Specifies the APIKey that the Munin plugin must use to retrieve the TestBot
+# activity statistics.
+$WineTestBot::Config::MuninAPIKey = undef;
+
 1;
