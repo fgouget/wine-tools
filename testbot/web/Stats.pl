@@ -264,15 +264,15 @@ sub GenerateBody($)
     print "<th>$DisplayHost</th>\n";
 
     _AddRate($HostsStats->{items}->{$Host}, "reverting.time.count", $HostsStats);
-    _AddRate($HostsStats->{items}->{$Host}, "running.time.count", $HostsStats);
+    _AddRate($HostsStats->{items}->{$Host}, "newtasks.count", $HostsStats);
   }
   print "</tr></thead>\n";
 
   print "<tbody>\n";
   _GenStatsLine($HostsStats, "reverting.time.count", "Revert count", $SortedHosts);
   _GenStatsLine($HostsStats, "reverting.rate", "Revert rate", $SortedHosts);
-  _GenStatsLine($HostsStats, "running.time.count", "Task count", $SortedHosts);
-  _GenStatsLine($HostsStats, "running.rate", "Task rate", $SortedHosts);
+  _GenStatsLine($HostsStats, "newtasks.count", "Task count", $SortedHosts);
+  _GenStatsLine($HostsStats, "newtasks.rate", "Task rate", $SortedHosts);
   _GenStatsLine($HostsStats, "busy.elapsed", "Busy time", $SortedHosts, $NO_PERCENTAGE);
   _GenStatsLine($HostsStats, "busy.elapsed", "Busy \%", $SortedHosts);
 

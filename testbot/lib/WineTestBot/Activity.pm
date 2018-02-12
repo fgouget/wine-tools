@@ -367,10 +367,20 @@ sub GetStatistics($;$)
       my $Tasks = $Step->Tasks;
       foreach my $Task (@{$Tasks->GetItems()})
       {
-        $GlobalStats->{"newtasks.count"}++ if ($CountsAsNew);
-
+        my $HostStats;
+        if ($VMs->ItemExists($Task->VM->GetKey()))
+        {
+          my $Host = $Task->VM->GetHost();
+          $HostStats = ($HostsStats->{items}->{$Host} ||= {});
+        }
+        if ($CountsAsNew)
+        {
+          $GlobalStats->{"newtasks.count"}++;
+          $HostStats->{"newtasks.count"}++ if ($HostStats);
+        }
         next if (!$Task->Ended or $Task->Ended < $Cutoff);
         $GlobalStats->{"donetasks.count"}++;
+        $HostStats->{"donetasks.count"}++ if ($HostStats);
 
         # $Task->Started should really be set since $Task->Ended is
         if ($Task->Started and $Task->Status !~ /^(?:queued|running|canceled)$/)
