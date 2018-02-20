@@ -736,6 +736,12 @@ sub main()
 
   # Validate and adjust the configuration options
   $MaxActiveVMs ||= 1;
+  $MaxRunningVMs ||= $MaxActiveVMs;
+  if ($MaxRunningVMs > $MaxActiveVMs)
+  {
+    $MaxRunningVMs = $MaxActiveVMs;
+    LogMsg "Capping MaxRunningVMs to MaxActiveVMs ($MaxRunningVMs)\n";
+  }
   $MaxRevertingVMs ||= $MaxActiveVMs;
   if ($MaxRevertingVMs > $MaxActiveVMs)
   {
