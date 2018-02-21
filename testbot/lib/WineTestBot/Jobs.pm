@@ -572,6 +572,7 @@ sub _CheckAndClassifyVMs()
     nicefuture => {},
     runnable => 0,
     queued => 0,
+    blocked => 0,
     recordgroups => CreateRecordGroups(),
   };
   $Sched->{recordgroup} = $Sched->{recordgroups}->Add();
@@ -848,30 +849,29 @@ sub _ScheduleTasks($)
     $Steps->AddFilter("Status", ["queued", "running"]);
     foreach my $Step (sort { $a->No <=> $b->No } @{$Steps->GetItems()})
     {
-      my $Tasks = $Step->Tasks;
-      $Tasks->AddFilter("Status", ["queued"]);
-      $Sched->{queued} += $Tasks->GetItemsCount();
-
       # StepRank 0 contains the runnable tasks, 1 the 'may soon be runnable'
       # ones, and 2 and greater tasks we don't care about yet
-      next if ($StepRank >= 2);
-      if ($StepRank == 0)
-      {
-        $Step->HandleStaging() if ($Step->Status eq "queued");
-        $Sched->{runnable} += $Tasks->GetItemsCount();
-      }
-      elsif (!$PreviousVMs)
-      {
-        # The previous step is nowhere near done so skip this one for now
-        next;
-      }
+      $Step->HandleStaging() if ($StepRank == 0 and $Step->Status eq "queued");
 
       my $StepVMs = [];
+
+      my $Tasks = $Step->Tasks;
+      $Tasks->AddFilter("Status", ["queued"]);
       foreach my $Task (@{$Tasks->GetItems()})
       {
         my $VM = $Task->VM;
-        next if (!$VM->HasEnabledRole() or !$VM->HasEnabledStatus());
+        if (!$VM->HasEnabledRole() or !$VM->HasEnabledStatus())
+        {
+          $Sched->{blocked}++;
+          next;
+        }
+        $Sched->{queued}++;
 
+        if ($StepRank >= 2 or !$PreviousVMs)
+        {
+          # The previous step is nowhere near done so skip this one for now
+          next;
+        }
         if ($StepRank == 1)
         {
           # Passing $PreviousVMs ensures this VM will be reverted if and only
@@ -880,6 +880,7 @@ sub _ScheduleTasks($)
           _AddNeededVM($NeededVMs, $VM, $NEXT_BASE + $JobRank, $PreviousVMs);
           next;
         }
+        $Sched->{runnable}++; # $StepRank == 0
 
         if (!_AddNeededVM($NeededVMs, $VM, $JobRank))
         {
@@ -1108,9 +1109,6 @@ sub _RevertVMs($$)
         #   preparing future VMs.
         # - Checking there are no queued tasks on that host would be better
         #   but this information is not available on a per-host basis.
-        # - Also the number of queued tasks includes tasks scheduled to run
-        #   on maintenance and retired/deleted VMs. Any such task would prevent
-        #   preparing future VMs for no good reason.
         # - It forces the host to go through an extra poweroff during which we
         #   lose track of which VM is 'hot'.
         # - However on startup this helps ensure that we are not prevented
@@ -1253,9 +1251,7 @@ sub ScheduleJobs()
 
   if (@{$Sched->{records}->GetItems()})
   {
-    # FIXME Add the number of tasks scheduled to run on a maintenance, retired
-    #       or deleted VM...
-    my $TaskCounts = "$Sched->{runnable} $Sched->{queued} 0";
+    my $TaskCounts = "$Sched->{runnable} $Sched->{queued} $Sched->{blocked}";
     if ($TaskCounts ne $_LastTaskCounts)
     {
       $Sched->{records}->AddRecord('tasks', 'counters', $TaskCounts);
