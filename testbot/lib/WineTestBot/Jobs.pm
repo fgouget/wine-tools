@@ -1069,7 +1069,22 @@ sub _DumpHostVMs($$$$)
     $VM = $Sched->{VMs}->GetItem($VMKey);
     next if ($VM->GetHost() ne $HostKey);
 
-    push @VMInfo, join(":", "$VMKey(". $VM->Status .")", $NeededVMs->{$VMKey}->[0], $NeededVMs->{$VMKey}->[1], $NeededVMs->{$VMKey}->[2]);
+    my $NeededVM = $NeededVMs->{$VMKey};
+    my $Dep = "";
+    if ($NeededVM->[3])
+    {
+      foreach my $DepVM (@{$NeededVM->[3]})
+      {
+        if ($DepVM->Status !~ /^(?:reverting|sleeping|running)$/)
+        {
+          $Dep = ":". $DepVM->Name;
+          last;
+        }
+      }
+      $Dep .= "/". scalar(@{$NeededVM->[3]});
+    }
+    push @VMInfo, join(":", "$VMKey(". $VM->Status ."$Dep)",
+                       $NeededVM->[0], $NeededVM->[1], $NeededVM->[2]);
   }
   my $PrettyHost = ($PrettyHostNames ? $PrettyHostNames->{$HostKey} : "") ||
                    $HostKey;
