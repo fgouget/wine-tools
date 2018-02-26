@@ -132,7 +132,6 @@ sub GetOutput($)
   my $Stats = GetStatistics($VMs, $Period * 60);
 
   my @SortedHosts = sort keys %{$Stats->{hosts}->{items}};
-  print sorted keys %{$Stats->{hosts}->{items}}, "\n";
   my %HostDisplayNames;
   foreach my $Host (@SortedHosts)
   {
