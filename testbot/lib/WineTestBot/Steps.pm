@@ -30,6 +30,10 @@ A Job is composed of multiple Steps that each do a specific operation: build
 the test executable, or run a given test, etc. A Step is in turn composed of
 a WineTestBot::Task object for each VM it should be run on.
 
+Note that the PreviousNo relation will prevent the deletion of the target Step.
+It is the responsibility of the caller to delete the Steps in a suitable order,
+or to reset their PreviousNo fields beforehand.
+
 =cut
 
 use File::Copy;
@@ -59,6 +63,30 @@ sub InitializeNew($$)
   $self->ReportSuccessfulTests(!1);
 
   $self->SUPER::InitializeNew($Collection);
+}
+
+=pod
+=over 12
+
+=item C<Validate()>
+
+Enforces strict ordering to avoid loops.
+
+Note that a side effect is that processing steps in increasing step number
+order is sufficient to ensure the dependencies are processed first.
+
+=back
+=cut
+
+sub Validate($)
+{
+  my ($self) = @_;
+
+  if ($self->PreviousNo and $self->PreviousNo >= $self->No)
+  {
+    return ("PreviousNo", "The previous step number must be less than this one's.");
+  }
+  return $self->SUPER::Validate();
 }
 
 sub GetDir($)
@@ -178,6 +206,7 @@ BEGIN
 {
   @PropertyDescriptors = (
     CreateBasicPropertyDescriptor("No", "Step no",  1,  1, "N", 2),
+    CreateBasicPropertyDescriptor("PreviousNo", "Previous step", !1, !1, "N", 2),
     CreateEnumPropertyDescriptor("Status", "Status",  !1,  1, ['queued', 'running', 'completed', 'badpatch', 'badbuild', 'boterror', 'canceled', 'skipped']),
     CreateEnumPropertyDescriptor("Type", "Step type",  !1,  1, ['suite', 'single', 'build', 'reconfig']),
     CreateBasicPropertyDescriptor("FileName", "File name",  !1,  1, "A", 100),
