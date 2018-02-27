@@ -317,6 +317,19 @@ h2
   padding-bottom: 0.1em;
 }
 
+details
+{
+  font-style: italic;
+  color: #505050;
+}
+
+summary
+{
+  font-style: normal;
+  color: black;
+}
+
+
 pre
 {
   margin: 0;

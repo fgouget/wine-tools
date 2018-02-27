@@ -230,7 +230,12 @@ sub GenerateFields($)
       {
         print "<div><input type='hidden' name='ShowAll' value='1'></div>\n";
       }
-  
+      print "<div class='CollectionBlock'><table>\n";
+      print "<thead><tr><th class='Record'></th>\n";
+      print "<th class='Record'>VM Name</th>\n";
+      print "<th class='Record'>Description</th>\n";
+      print "</th><tbody>\n";
+
       my $VMs = CreateVMs();
       if ($self->{FileType} eq "exe64" || $self->{FileType} eq "dll64")
       {
@@ -249,36 +254,37 @@ sub GenerateFields($)
       {
         $VMs->AddFilter("Role", ["base"]);
       }
+      my $Even = 1;
       my $SortedKeys = $VMs->SortKeysBySortOrder($VMs->GetKeys());
       foreach my $VMKey (@$SortedKeys)
       {
         my $VM = $VMs->GetItem($VMKey);
         my $FieldName = "vm_" . $self->CGI->escapeHTML($VMKey);
-        print "<div class='ItemProperty'><label>",
-              $self->CGI->escapeHTML($VM->Name);
-        if ($VM->Description)
+        print "<tr class='", ($Even ? "even" : "odd"),
+            "'><td><input name='$FieldName' type='checkbox'";
+        $Even = !$Even;
+        my ($Checked, $Status) = (1, "");
+        if ($VM->Status =~ /^(offline|maintenance)$/)
         {
-          print " (", $self->CGI->escapeHTML($VM->Description), ")";
-        }
-        my $Checked = 1;
-        if ($VM->Status eq 'offline')
-        {
-          print " [offline]";
+          $Status = " [". $VM->Status ."]";
           $Checked = undef;
         }
-        elsif ($VM->Status eq 'maintenance')
-        {
-          print " [maintenance]";
-          $Checked = undef;
-        }
-        print "</label><div class='ItemValue'><input type='checkbox' name='$FieldName'";
         if ($Checked and
             ($self->GetParam("Page") == 1 || $self->GetParam($FieldName)))
         {
           print " checked='checked'";
         }
-        print "/></div></div>\n";
+        print "/></td>\n";
+
+        print "<td>", $self->CGI->escapeHTML($VM->Name), "</td>\n";
+        print "<td><details><summary>",
+              $self->CGI->escapeHTML($VM->Description || $VM->Name),
+              "$Status</summary>",
+              $self->CGI->escapeHTML($VM->Details || "No details!"),
+              "</details></td>";
+        print "</tr>\n";
       }
+      print "</tbody></table>\n";
     }
     else
     {
