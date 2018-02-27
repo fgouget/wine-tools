@@ -624,7 +624,6 @@ while ($line = <IN>) {
         add_test_line("failed", escapeHTML($pollution) .
                                 get_source_link($l_unit, $l_num) .": ".
                                 escapeHTML($l_text));
-        check_unit($l_unit, "failure");
         $failures++;
     }
     elsif ($line =~ /^()([_a-z0-9]+)\.c:(\d+): (Test marked todo: .*)$/ or
@@ -635,7 +634,6 @@ while ($line = <IN>) {
         add_test_line("todo", escapeHTML($pollution) .
                               get_source_link($l_unit, $l_num) .": ".
                               escapeHTML($l_text));
-        check_unit($l_unit, "todo");
         $todo++;
     }
     elsif ($line =~ /^()([_a-z0-9]+)\.c:(\d+): (Tests skipped: .*)$/ or
