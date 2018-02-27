@@ -238,6 +238,10 @@ EOF
       {
         $Label = $VMStatus->{details} || $VMStatus->{status};
       }
+      elsif ($VMStatus->{status} eq "reverting")
+      {
+        $Label = "<a class='title' title='". $VM->Name ."'>reverting</a>";
+      }
       else
       {
         $Label = $VMStatus->{status};
