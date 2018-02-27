@@ -248,6 +248,12 @@ sub GenerateBody($)
     my $VM = $Item->VM;
     print "<h2><a name='k", $self->escapeHTML($Key), "'></a>" ,
           $self->escapeHTML($Item->GetTitle()), "</h2>\n";
+
+    print "<details><summary>",
+          $self->CGI->escapeHTML($VM->Description || $VM->Name), "</summary>",
+          $self->CGI->escapeHTML($VM->Details || "No details!"),
+          "</details>\n";
+
     my $ScreenshotParamName = "scrshot_$Key";
     my $FullLogParamName = "log_$Key";
     my $LogName = "$TaskDir/log";
@@ -321,6 +327,7 @@ sub GenerateBody($)
       }
     }
     print "</div>\n";
+
     if (open LOGFILE, "<$LogName")
     {
       my $HasLogEntries = !1;
