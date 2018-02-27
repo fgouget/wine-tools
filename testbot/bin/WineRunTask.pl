@@ -511,6 +511,7 @@ if ($TA->GetFile($RptFileName, $FullLogFileName))
     # track of the current one. Note that for the TestBot we don't count or
     # complain about misplaced skips.
     my ($CurrentDll, $CurrentUnit) = ("", "");
+    my $UnitSize = 0;
     my ($LineFailures, $LineTodos, $LineSkips) = (0, 0, 0);
     my ($SummaryFailures, $SummaryTodos, $SummarySkips) = (0, 0, 0);
     my ($CurrentIsBroken, %CurrentPids, $CurrentRc, $LogFailures);
@@ -564,6 +565,11 @@ if ($TA->GetFile($RptFileName, $FullLogFileName))
       # so only use them as a fallback.
       $LineFailures ||= $SummaryFailures;
 
+      if ($UnitSize > $MaxUnitSize)
+      {
+        LogTaskError("$CurrentDll:$CurrentUnit prints too much data ($UnitSize bytes)\n");
+        $LogFailures++;
+      }
       if (!$CurrentIsBroken and defined $CurrentRc)
       {
         # Check the exit code, particularly against failures reported
@@ -601,6 +607,7 @@ if ($TA->GetFile($RptFileName, $FullLogFileName))
       $LogFailures += $LineFailures;
 
       $CurrentDll = $CurrentUnit = "";
+      $UnitSize = 0;
       $LineFailures = $LineTodos = $LineSkips = 0;
       $SummaryFailures = $SummaryTodos = $SummarySkips = 0;
       $CurrentIsBroken = 0;
@@ -610,6 +617,7 @@ if ($TA->GetFile($RptFileName, $FullLogFileName))
 
     foreach my $Line (<$LogFile>)
     {
+      $UnitSize += length($Line);
       if ($Line =~ m%^([_.a-z0-9-]+):([_a-z0-9]*) (start|skipped) (?:-|[/_.a-z0-9]+) (?:-|[.0-9a-f]+)\r?$%)
       {
         my ($Dll, $Unit, $Type) = ($1, $2, $3);

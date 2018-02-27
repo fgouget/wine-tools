@@ -32,7 +32,7 @@ use vars qw (@ISA @EXPORT @EXPORT_OK $UseSSL $LogDir $DataDir $BinDir
              $SleepAfterRevert $WaitForToolsInVM $MaxTaskTries $AdminEMail
              $RobotEMail
              $WinePatchToOverride $WinePatchCc $SuiteTimeout $SingleTimeout
-             $BuildTimeout $ReconfigTimeout $TagPrefix
+             $BuildTimeout $ReconfigTimeout $TagPrefix $MaxUnitSize
              $ProjectName $PatchesMailingList $LDAPServer
              $LDAPBindDN $LDAPSearchBase $LDAPSearchFilter
              $LDAPRealNameAttribute $LDAPEMailAttribute $AgentPort $Tunnel
@@ -47,7 +47,7 @@ require Exporter;
              $MaxTaskTries $AdminEMail
              $RobotEMail $WinePatchToOverride $WinePatchCc $SuiteTimeout
              $SingleTimeout $BuildTimeout $ReconfigTimeout
-             $TagPrefix $ProjectName $PatchesMailingList
+             $TagPrefix $MaxUnitSize $ProjectName $PatchesMailingList
              $LDAPServer $LDAPBindDN $LDAPSearchBase $LDAPSearchFilter
              $LDAPRealNameAttribute $LDAPEMailAttribute $AgentPort $Tunnel
              $TunnelDefaults $PrettyHostNames $JobPurgeDays $JobArchiveDays
@@ -96,6 +96,8 @@ $BuildTimeout = 5 * 60;
 # How long to let a full recompilation run before forcibly shutting it down
 # (in seconds).
 $ReconfigTimeout = 45 * 60;
+# Maximum amount of traces for a test unit.
+$MaxUnitSize = 32 * 1024;
 
 $ProjectName = "Wine";
 $PatchesMailingList = "wine-devel";
