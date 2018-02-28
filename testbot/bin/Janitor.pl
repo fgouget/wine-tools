@@ -258,7 +258,7 @@ if (opendir(my $dh, "$DataDir/staging"))
 }
 else
 {
-  LogMsg "0Unable to open '$DataDir/staging': $!";
+  LogMsg "Unable to open '$DataDir/staging': $!";
 }
 
 # Delete obsolete record groups
