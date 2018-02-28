@@ -451,6 +451,26 @@ sub RunCheckIdle($)
 =pod
 =over 12
 
+=item C<RunCheckOff()>
+
+If the hypervisor domain state matches that of this VM instance, power if off.
+If not the VM is simply marked as off. While this is happening the VM status
+is set to dirty so the job scheduler does not try to use it.
+
+This operation can take a long time so it is performed in a separate process.
+
+=back
+=cut
+
+sub RunCheckOff($)
+{
+  my ($self) = @_;
+  return $self->_RunVMTool("dirty", ["--log-only", "checkoff", $self->GetKey()]);
+}
+
+=pod
+=over 12
+
 =item C<RunMonitor()>
 
 Monitors an offline VM to detect when it becomes accessible again.
