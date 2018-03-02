@@ -297,7 +297,7 @@ EOF
       }
       else
       {
-        $FailureKeys[scalar @FailureKeys] = $Key;
+        push @FailureKeys, $Key;
       }
     }
     elsif (open ERRFILE, "<$TaskDir/err")
@@ -317,7 +317,7 @@ EOF
       }
       else
       {
-        $FailureKeys[scalar @FailureKeys] = $Key;
+        push @FailureKeys, $Key;
       }
     }
   }

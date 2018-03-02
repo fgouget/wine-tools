@@ -320,8 +320,8 @@ sub GetMasterKey($)
     {
       foreach my $ColName (@{$PropertyDescriptor->GetColNames()})
       {
-        @MasterColNames[scalar @MasterColNames] = $ColNamePrefix . $ColName;
-        @MasterColValues[scalar @MasterColValues] = $self->GetColValue($ColName);
+        push @MasterColNames, $ColNamePrefix . $ColName;
+        push @MasterColValues, $self->GetColValue($ColName);
       }
     }
   }
