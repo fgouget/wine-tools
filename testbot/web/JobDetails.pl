@@ -91,8 +91,7 @@ sub CanCancel($)
 {
   my ($self) = @_;
 
-  my $Job = CreateJobs()->GetItem($self->{JobId});
-  my $Status = $Job->Status;
+  my $Status = $self->{Job}->Status;
   if ($Status ne "queued" && $Status ne "running")
   {
     return "Job already $Status"; 
@@ -105,7 +104,7 @@ sub CanCancel($)
   }
   my $CurrentUser = $Session->User;
   if (! $CurrentUser->HasRole("admin") &&
-      $Job->User->GetKey() ne $CurrentUser->GetKey())
+      $self->{Job}->User->GetKey() ne $CurrentUser->GetKey())
   {
     return "You are not authorized to cancel this job";
   }
@@ -117,8 +116,7 @@ sub CanRestart($)
 {
   my ($self) = @_;
 
-  my $Job = CreateJobs()->GetItem($self->{JobId});
-  my $Status = $Job->Status;
+  my $Status = $self->{Job}->Status;
   if ($Status ne "boterror" && $Status ne "canceled")
   {
     return "Not a failed / canceled Job";
@@ -131,7 +129,7 @@ sub CanRestart($)
   }
   my $CurrentUser = $Session->User;
   if (! $CurrentUser->HasRole("admin") &&
-      $Job->User->GetKey() ne $CurrentUser->GetKey()) # FIXME: Admin only?
+      $self->{Job}->User->GetKey() ne $CurrentUser->GetKey()) # FIXME: Admin only?
   {
     return "You are not authorized to restart this job";
   }
