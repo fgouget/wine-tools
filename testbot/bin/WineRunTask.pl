@@ -44,7 +44,6 @@ use WineTestBot::Config;
 use WineTestBot::Jobs;
 use WineTestBot::VMs;
 use WineTestBot::Log;
-use WineTestBot::RecordGroups;
 use WineTestBot::Engine::Notify;
 
 
