@@ -242,8 +242,7 @@ if (opendir(my $dh, "$DataDir/staging"))
       {
         if ($Age >= $JobPurgeDays + 7)
         {
-          if ((-d $FileName and !rmtree($FileName)) or
-              !unlink($FileName))
+          if (!rmtree($FileName))
           {
             LogMsg "Could not delete '$FileName': $!\n";
           }
