@@ -237,11 +237,11 @@ sub GenerateBody($)
   my $Keys = $self->SortKeys(undef, $self->{Collection}->GetKeys());
   foreach my $Key (@$Keys)
   {
-    my $Item = $self->{Collection}->GetItem($Key);
-    my $TaskDir = $Item->GetTaskDir();
-    my $VM = $Item->VM;
+    my $StepTask = $self->{Collection}->GetItem($Key);
+    my $TaskDir = $StepTask->GetTaskDir();
+    my $VM = $StepTask->VM;
     print "<h2><a name='k", $self->escapeHTML($Key), "'></a>" ,
-          $self->escapeHTML($Item->GetTitle()), "</h2>\n";
+          $self->escapeHTML($StepTask->GetTitle()), "</h2>\n";
 
     print "<details><summary>",
           $self->CGI->escapeHTML($VM->Description || $VM->Name), "</summary>",
@@ -254,8 +254,8 @@ sub GenerateBody($)
     my $ErrName = "$TaskDir/err";
     print "<div class='TaskMoreInfoLinks'>\n";
     # FIXME: Disable live screenshots for now
-    if (0 && $Item->Status eq "running" &&
-        ($Item->Type eq "single" || $Item->Type eq "suite"))
+    if (0 && $StepTask->Status eq "running" &&
+        ($StepTask->Type eq "single" || $StepTask->Type eq "suite"))
     {
       if (defined($self->GetParam($ScreenshotParamName)))
       {
@@ -279,8 +279,8 @@ sub GenerateBody($)
       if (defined($self->GetParam($ScreenshotParamName)))
       {
         my $URI = "/Screenshot.pl?JobKey=" . uri_escape($self->{JobId}) .
-                  "&StepKey=" . uri_escape($Item->StepNo) .
-                  "&TaskKey=" . uri_escape($Item->TaskNo);
+                  "&StepKey=" . uri_escape($StepTask->StepNo) .
+                  "&TaskKey=" . uri_escape($StepTask->TaskNo);
         print "<div class='Screenshot'><img src='" .
               $self->CGI->escapeHTML($URI) . "' alt='Screenshot' /></div>\n";
       }
@@ -406,8 +406,8 @@ sub GenerateBody($)
       else
       {
         print $HasLogEntries ? "No " .
-                               ($Item->Type eq "single" ||
-                                $Item->Type eq "suite" ? "test" : "build") .
+                               ($StepTask->Type eq "single" ||
+                                $StepTask->Type eq "suite" ? "test" : "build") .
                                " failures found" : "Empty log";
       }
     }
@@ -435,11 +435,11 @@ sub GenerateBody($)
       }
       close ERRFILE;
     }
-    elsif ($Item->Status eq "canceled")
+    elsif ($StepTask->Status eq "canceled")
     {
       print "<p>No log, task was canceled</p>\n";
     }
-    elsif ($Item->Status eq "skipped")
+    elsif ($StepTask->Status eq "skipped")
     {
       print "<p>No log, task skipped</p>\n";
     }
@@ -453,36 +453,36 @@ sub GenerateBody($)
 
 sub GenerateDataCell($$$$$)
 {
-  my ($self, $CollectionBlock, $Item, $PropertyDescriptor, $DetailsPage) = @_;
+  my ($self, $CollectionBlock, $StepTask, $PropertyDescriptor, $DetailsPage) = @_;
 
   my $PropertyName = $PropertyDescriptor->GetName();
   if ($PropertyName eq "VM")
   {
-    print "<td><a href='#k", $self->escapeHTML($Item->GetKey()), "'>";
-    print $self->escapeHTML($self->GetDisplayValue($CollectionBlock, $Item,
+    print "<td><a href='#k", $self->escapeHTML($StepTask->GetKey()), "'>";
+    print $self->escapeHTML($self->GetDisplayValue($CollectionBlock, $StepTask,
                                                    $PropertyDescriptor));
     print "</a></td>\n";
   }
   elsif ($PropertyName eq "FileName")
   {
-    my $FileName = $Item->GetStepDir() ."/". $Item->FileName;
+    my $FileName = $StepTask->GetStepDir() ."/". $StepTask->FileName;
     if (-r $FileName)
     {
       my $URI = "/GetFile.pl?JobKey=" . uri_escape($self->{JobId}) .
-                  "&StepKey=" . uri_escape($Item->StepNo);
+                  "&StepKey=" . uri_escape($StepTask->StepNo);
       print "<td><a href='" . $self->escapeHTML($URI) . "'>";
-      print $self->escapeHTML($self->GetDisplayValue($CollectionBlock, $Item,
+      print $self->escapeHTML($self->GetDisplayValue($CollectionBlock, $StepTask,
                                                      $PropertyDescriptor));
       print "</a></td>\n";
     }
     else
     {
-      $self->SUPER::GenerateDataCell($CollectionBlock, $Item, $PropertyDescriptor, $DetailsPage);
+      $self->SUPER::GenerateDataCell($CollectionBlock, $StepTask, $PropertyDescriptor, $DetailsPage);
     }
   }
   else
   {
-    $self->SUPER::GenerateDataCell($CollectionBlock, $Item, $PropertyDescriptor, $DetailsPage);
+    $self->SUPER::GenerateDataCell($CollectionBlock, $StepTask, $PropertyDescriptor, $DetailsPage);
   }
 }
 
