@@ -219,13 +219,9 @@ sub GeneratePage($)
 {
   my ($self) = @_;
 
-  foreach my $Job (@{$self->{Collection}->GetItems()})
+  if ($self->{Job}->Status =~ /^(queued|running)$/)
   {
-    if ($Job->Status eq "queued" || $Job->Status eq "running")
-    {
-      $self->{Request}->headers_out->add("Refresh", "30");
-      last;
-    }
+    $self->{Request}->headers_out->add("Refresh", "30");
   }
 
   $self->SUPER::GeneratePage();
