@@ -146,12 +146,7 @@ sub UpdateStatus($$)
   return $Status if ($Status ne "queued" && $Status ne "running");
 
   my %Has;
-  my $Tasks = $self->Tasks;
-  foreach my $TaskKey (@{$Tasks->GetKeys()})
-  {
-    my $Task = $Tasks->GetItem($TaskKey);
-    $Has{$Task->UpdateStatus($Skip)} = 1;
-  }
+  map { $Has{$_->UpdateStatus($Skip)} = 1 } (@{$self->Tasks->GetItems()});
 
   # Inherit the tasks most significant status.
   # Note that one or more tasks may have been requeued during the cleanup phase
