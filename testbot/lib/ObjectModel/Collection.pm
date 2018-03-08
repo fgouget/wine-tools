@@ -46,7 +46,6 @@ require Exporter;
 use Scalar::Util qw(weaken);
 use ObjectModel::BackEnd;
 use ObjectModel::Item;
-use ObjectModel::PropertyDescriptor;
 
 
 sub ComputeMasterKey($)

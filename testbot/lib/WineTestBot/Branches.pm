@@ -51,7 +51,6 @@ WineTestBot::Branches - A collection of WineTestBot::Branch objects
 =cut
 
 use ObjectModel::BasicPropertyDescriptor;
-use ObjectModel::PropertyDescriptor;
 use WineTestBot::WineTestBotObjects;
 
 use vars qw (@ISA @EXPORT @PropertyDescriptors);

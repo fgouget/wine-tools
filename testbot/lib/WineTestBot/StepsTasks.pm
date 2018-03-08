@@ -97,7 +97,6 @@ WineTestBot::StepsTasks - A collection of StepsTasks objects
 
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::ItemrefPropertyDescriptor;
-use ObjectModel::PropertyDescriptor;
 use WineTestBot::Steps;
 use WineTestBot::Tasks;
 use WineTestBot::VMs;

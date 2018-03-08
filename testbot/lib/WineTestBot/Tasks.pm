@@ -206,7 +206,6 @@ WineTestBot::Tasks - A collection of WineTestBot::Task objects
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::EnumPropertyDescriptor;
 use ObjectModel::ItemrefPropertyDescriptor;
-use ObjectModel::PropertyDescriptor;
 use WineTestBot::VMs;
 use WineTestBot::WineTestBotObjects;
 

@@ -395,7 +395,6 @@ use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::EnumPropertyDescriptor;
 use ObjectModel::DetailrefPropertyDescriptor;
 use ObjectModel::ItemrefPropertyDescriptor;
-use ObjectModel::PropertyDescriptor;
 use WineTestBot::WineTestBotObjects;
 use WineTestBot::Branches;
 use WineTestBot::Config;

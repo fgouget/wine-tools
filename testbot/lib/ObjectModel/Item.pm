@@ -29,7 +29,6 @@ ObjectModel::Item - Base class for items
 use Scalar::Util qw(weaken);
 use ObjectModel::BackEnd;
 use ObjectModel::Collection;
-use ObjectModel::PropertyDescriptor;
 
 use vars qw(@ISA @EXPORT_OK);
 

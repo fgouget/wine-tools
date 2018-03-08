@@ -632,7 +632,6 @@ role or status.
 
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::EnumPropertyDescriptor;
-use ObjectModel::PropertyDescriptor;
 use WineTestBot::WineTestBotObjects;
 
 use vars qw (@ISA @EXPORT @PropertyDescriptors);

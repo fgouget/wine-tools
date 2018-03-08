@@ -21,7 +21,6 @@ use strict;
 
 package BranchesListPage;
 
-use ObjectModel::PropertyDescriptor;
 use ObjectModel::CGI::CollectionPage;
 use WineTestBot::Config;
 use WineTestBot::Branches;

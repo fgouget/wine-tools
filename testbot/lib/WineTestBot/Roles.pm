@@ -45,7 +45,6 @@ WineTestBot::Roles - A collection of WineTestBot::Role objects
 
 =cut
 
-use ObjectModel::PropertyDescriptor;
 use ObjectModel::BasicPropertyDescriptor;
 use WineTestBot::WineTestBotObjects;
 

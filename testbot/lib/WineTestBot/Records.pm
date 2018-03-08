@@ -64,7 +64,6 @@ WineTestBot::Records - A collection of WineTestBot::Record objects
 
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::EnumPropertyDescriptor;
-use ObjectModel::PropertyDescriptor;
 use WineTestBot::WineTestBotObjects;
 
 use vars qw (@ISA @EXPORT @PropertyDescriptors @FlatPropertyDescriptors);

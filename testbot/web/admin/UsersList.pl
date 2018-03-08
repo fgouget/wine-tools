@@ -22,7 +22,6 @@ use strict;
 
 package UsersListPage;
 
-use ObjectModel::PropertyDescriptor;
 use ObjectModel::CGI::CollectionPage;
 use WineTestBot::CGI::Sessions;
 use WineTestBot::Config;

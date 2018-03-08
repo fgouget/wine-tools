@@ -59,7 +59,6 @@ WineTestBot::RecordGroups - A collection of WineTestBot::RecordGroup objects
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::EnumPropertyDescriptor;
 use ObjectModel::DetailrefPropertyDescriptor;
-use ObjectModel::PropertyDescriptor;
 use WineTestBot::WineTestBotObjects;
 use WineTestBot::Records;
 

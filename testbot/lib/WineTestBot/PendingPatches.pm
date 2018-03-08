@@ -48,7 +48,6 @@ WineTestBot::PendingPatches - A collection of WineTestBot::PendingPatch objects
 
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::ItemrefPropertyDescriptor;
-use ObjectModel::PropertyDescriptor;
 use WineTestBot::Patches;
 use WineTestBot::WineTestBotObjects;
 

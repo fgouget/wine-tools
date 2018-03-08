@@ -21,7 +21,6 @@ use strict;
 
 package VMsListPage;
 
-use ObjectModel::PropertyDescriptor;
 use ObjectModel::CGI::CollectionPage;
 use WineTestBot::VMs;
 

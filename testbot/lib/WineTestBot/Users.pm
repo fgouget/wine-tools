@@ -299,7 +299,6 @@ use Net::LDAP;
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::EnumPropertyDescriptor;
 use ObjectModel::DetailrefPropertyDescriptor;
-use ObjectModel::PropertyDescriptor;
 use WineTestBot::Config;
 use WineTestBot::UserRoles;
 use WineTestBot::WineTestBotObjects;

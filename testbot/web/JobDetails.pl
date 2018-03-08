@@ -22,7 +22,6 @@ use strict;
 package JobDetailsPage;
 
 use URI::Escape;
-use ObjectModel::PropertyDescriptor;
 use ObjectModel::CGI::CollectionPage;
 use WineTestBot::Config;
 use WineTestBot::Jobs;

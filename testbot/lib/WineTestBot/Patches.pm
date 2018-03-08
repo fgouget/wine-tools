@@ -366,7 +366,6 @@ WineTestBot::Patches - A collection of WineTestBot::Patch objects
 =cut
 
 use ObjectModel::BasicPropertyDescriptor;
-use ObjectModel::PropertyDescriptor;
 use WineTestBot::Config;
 use WineTestBot::WineTestBotObjects;
 

@@ -192,7 +192,6 @@ WineTestBot::Steps - A collection of Job Steps
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::EnumPropertyDescriptor;
 use ObjectModel::DetailrefPropertyDescriptor;
-use ObjectModel::PropertyDescriptor;
 use WineTestBot::Tasks;
 use WineTestBot::WineTestBotObjects;
 

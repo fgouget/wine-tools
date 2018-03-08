@@ -41,7 +41,6 @@ WineTestBot::UserRoles - A collection of WineTestBot::UserRole objects
 =cut
 
 use ObjectModel::ItemrefPropertyDescriptor;
-use ObjectModel::PropertyDescriptor;
 use WineTestBot::Roles;
 use WineTestBot::WineTestBotObjects;
 

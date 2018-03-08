@@ -22,7 +22,6 @@ use strict;
 package PatchesListPage;
 
 use URI::Escape;
-use ObjectModel::PropertyDescriptor;
 use ObjectModel::CGI::CollectionPage;
 use WineTestBot::Patches;
 
