@@ -20,13 +20,13 @@
 
 use strict;
 
+package ObjectModel::CGI::ItemPage;
+
 =head1 NAME
 
 ObjectModel::CGI::ItemPage - Base class for bound web forms
 
 =cut
-
-package ObjectModel::CGI::ItemPage;
 
 use URI::Escape;
 use ObjectModel::CGI::FormPage;

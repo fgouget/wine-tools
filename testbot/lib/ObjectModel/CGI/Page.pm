@@ -19,13 +19,13 @@
 
 use strict;
 
+package ObjectModel::CGI::Page;
+
 =head1 NAME
 
 ObjectModel::CGI::Page - Base class for web pages
 
 =cut
-
-package ObjectModel::CGI::Page;
 
 use CGI;
 

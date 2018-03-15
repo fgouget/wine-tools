@@ -19,13 +19,13 @@
 
 use strict;
 
+package WineTestBot::Engine::Notify;
+
 =head1 NAME
 
 WineTestBot::Engine::Notify - Engine notification
 
 =cut
-
-package WineTestBot::Engine::Notify;
 
 use Socket;
 use WineTestBot::Config;

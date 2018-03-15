@@ -19,13 +19,13 @@
 
 use strict;
 
+package ObjectModel::CGI::FreeFormPage;
+
 =head1 NAME
 
 ObjectModel::CGI::FreeFormPage - Base class for unbound web forms
 
 =cut
-
-package ObjectModel::CGI::FreeFormPage;
 
 use ObjectModel::CGI::FormPage;
 

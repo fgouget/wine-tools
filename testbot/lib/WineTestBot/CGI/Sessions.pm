@@ -19,14 +19,14 @@
 
 use strict;
 
-=head1 NAME
-
-WineTestBot::CGI::Sessions - Session collection
-
-=cut
-
 
 package WineTestBot::CGI::Session;
+
+=head1 NAME
+
+WineTestBot::CGI::Session - A web user's session
+
+=cut
 
 use WineTestBot::Utils;
 use WineTestBot::WineTestBotObjects;
@@ -44,7 +44,14 @@ sub InitializeNew($$)
   $self->Permanent(!1);
 }
 
+
 package WineTestBot::CGI::Sessions;
+
+=head1 NAME
+
+WineTestBot::CGI::Sessions - A Session collection
+
+=cut
 
 use CGI::Cookie;
 use ObjectModel::BasicPropertyDescriptor;

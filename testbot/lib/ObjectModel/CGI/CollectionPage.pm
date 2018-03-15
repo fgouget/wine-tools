@@ -19,13 +19,13 @@
 
 use strict;
 
+package ObjectModel::CGI::CollectionPage;
+
 =head1 NAME
 
 ObjectModel::CGI::CollectionPage - Base class for list pages
 
 =cut
-
-package ObjectModel::CGI::CollectionPage;
 
 use ObjectModel::CGI::CollectionBlockForPage;
 use ObjectModel::CGI::Page;

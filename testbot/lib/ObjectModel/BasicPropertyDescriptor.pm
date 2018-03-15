@@ -18,6 +18,8 @@
 
 use strict;
 
+package ObjectModel::BasicPropertyDescriptor;
+
 =head1 NAME
 
 ObjectModel::BasicPropertyDescriptor - Defines a basic property
@@ -27,8 +29,6 @@ ObjectModel::BasicPropertyDescriptor - Defines a basic property
 This handles the boolean, a number and string columns.
 
 =cut
-
-package ObjectModel::BasicPropertyDescriptor;
 
 use ObjectModel::PropertyDescriptor;
 

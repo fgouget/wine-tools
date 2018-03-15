@@ -20,13 +20,13 @@
 
 use strict;
 
+package WineTestBot::CGI::PageBase;
+
 =head1 NAME
 
 WineTestBot::CGI::PageBase - Base class for web pages
 
 =cut
-
-package WineTestBot::CGI::PageBase;
 
 use Apache2::Const -compile => qw(REDIRECT);
 use Apache2::ServerRec;

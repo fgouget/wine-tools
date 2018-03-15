@@ -19,13 +19,13 @@
 
 use strict;
 
+package WineTestBot::Engine::Events;
+
 =head1 NAME
 
 WineTestBot::Engine::Events - Engine events
 
 =cut
-
-package WineTestBot::Engine::Events;
 
 use vars qw (@ISA @EXPORT);
 

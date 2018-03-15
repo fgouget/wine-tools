@@ -20,13 +20,13 @@
 
 use strict;
 
+package ObjectModel::CGI::FormPage;
+
 =head1 NAME
 
 ObjectModel::CGI::FormPage - Base class for web forms
 
 =cut
-
-package ObjectModel::CGI::FormPage;
 
 use ObjectModel::CGI::Page;
 
