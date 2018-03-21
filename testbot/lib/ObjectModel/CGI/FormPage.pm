@@ -44,6 +44,7 @@ sub _initialize($$$$)
   $self->{PropertyDescriptors} = $PropertyDescriptors;
   $self->{HasRequired} = !1;
   $self->{ActionPerformed} = !1;
+  $self->{Method} = "post";
 }
 
 sub GetPropertyDescriptors($)
@@ -136,9 +137,9 @@ sub GenerateBody($)
 
 sub GenerateFormStart($)
 {
-  #my ($self) = @_;
+  my ($self) = @_;
   print "<form action='" . $ENV{"SCRIPT_NAME"} .
-       "' method='post' enctype='multipart/form-data'>\n";
+       "' method='$self->{Method}' enctype='multipart/form-data'>\n";
 }
 
 sub GenerateFields($)
