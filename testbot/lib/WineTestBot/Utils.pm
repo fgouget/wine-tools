@@ -121,14 +121,6 @@ sub CreateNewDir($$)
   }
 }
 
-sub DateTimeToString($)
-{
-  my ($Time) = @_;
-
-#  my ($Sec, $Min, $Hour, $MDay, $Mon, $Year, $WDay, $YDay, $IsDst) = localtime($Time);
-  return strftime("%Y/%m/%d %H:%M:%S", localtime($Time));
-}
-
 sub BuildEMailRecipient($$)
 {
   my ($EMailAddress, $Name) = @_;
