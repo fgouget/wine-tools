@@ -292,7 +292,12 @@ It is up to the caller to save the updated VM object.
 sub KillChild($)
 {
   my ($self) = @_;
-  kill("TERM", $self->ChildPid) if ($self->ChildPid);
+  if ($self->ChildPid)
+  {
+    require WineTestBot::Log;
+    WineTestBot::Log::LogMsg("Killing child ". $self->ChildPid ."\n");
+    kill("TERM", $self->ChildPid);
+  }
   $self->ChildPid(undef);
 }
 
