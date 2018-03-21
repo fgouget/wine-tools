@@ -1,0 +1,39 @@
+#!/bin/sh
+#
+# Pre-push git hook to store commit ids in the patch.commit files
+# based on the patch id stored in git notes.
+#
+# Copyright 2017 Alexandre Julliard
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+urlbase=$(git config remote.$1.patchesurl) || exit 0
+patchdir=$(git config --path patches.dir) || exit 0
+
+while read local_ref local_sha remote_ref remote_sha
+do
+    for commit in $(git rev-list "$remote_sha..$local_sha" 2>/dev/null)
+    do
+        for patch in $(git notes show $commit 2>/dev/null | grep "^Patch-Id: " | cut -c11-)
+        do
+            if test -f $patchdir/$patch
+            then
+                echo "$urlbase/commit/$commit" >$patchdir/$patch.commit
+            fi
+        done
+    done
+done
+
+exit 0
