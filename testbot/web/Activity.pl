@@ -46,6 +46,7 @@ sub _initialize($$$)
   }
 
   $self->SUPER::_initialize($Request, $RequiredRole);
+  $self->{Method} = "get";
 }
 
 sub GeneratePage($)
