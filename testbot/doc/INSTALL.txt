@@ -67,7 +67,7 @@ General setup for the web site:
 Janitorial tasks:
 - Run the Janitor.pl script once per day to perform the janitorial
   tasks. For instance:
-    0 0 * * * $HOME/tools/testbot/bin/Janitor.pl
+    0 0 * * * $HOME/tools/testbot/bin/Janitor.pl --log-only
 - Run the CheckWineTestBot.pl script periodically to get notified in
   case the WineTestBot server dies. For instance:
     */20 * * * * $HOME/tools/testbot/scripts/CheckWineTestBot.pl

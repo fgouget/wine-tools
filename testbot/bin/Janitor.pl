@@ -37,6 +37,8 @@ sub BEGIN
     unshift @INC, "$::RootDir/lib";
   }
 }
+my $Name0 = $0;
+$Name0 =~ s+^.*/++;
 
 use File::Path;
 
@@ -50,9 +52,60 @@ use WineTestBot::RecordGroups;
 use WineTestBot::Users;
 use WineTestBot::VMs;
 
+my $LogOnly;
+sub Trace(@)
+{
+  print @_ if (!$LogOnly);
+  LogMsg @_;
+}
+
+sub Error(@)
+{
+  print STDERR "$Name0:error: ", @_ if (!$LogOnly);
+  LogMsg @_;
+}
+
+
 
 $ENV{PATH} = "/usr/bin:/bin";
 delete $ENV{ENV};
+
+# Grab the command line options
+my ($Usage, $DryRun);
+while (@ARGV)
+{
+  my $Arg = shift @ARGV;
+  if ($Arg eq "--dry-run")
+  {
+    $DryRun = 1;
+  }
+  elsif ($Arg eq "--log-only")
+  {
+    $LogOnly = 1;
+  }
+  elsif ($Arg =~ /^(?:-\?|-h|--help)$/)
+  {
+    $Usage = 0;
+    last;
+  }
+  else
+  {
+    Error "unexpected argument '$Arg'\n";
+    $Usage = 2;
+    last;
+  }
+}
+# Check parameters
+if (defined $Usage)
+{
+  print "Usage: $Name0 [--dry-run] [--log-only] [--help]\n";
+  exit $Usage;
+}
+
+
+#
+# Main
+#
 
 # Delete obsolete Jobs
 if ($JobPurgeDays != 0)
@@ -61,13 +114,12 @@ if ($JobPurgeDays != 0)
   $Jobs->AddFilter("Submitted", [time() - $JobPurgeDays * 86400], "<");
   foreach my $Job (@{$Jobs->GetItems()})
   {
-    LogMsg "Deleting job ", $Job->Id, "\n";
+    Trace "Deleting job ", $Job->Id, "\n";
+    next if ($DryRun);
+
     $Job->RmTree();
     my $ErrMessage = $Jobs->DeleteItem($Job);
-    if (defined($ErrMessage))
-    {
-      LogMsg $ErrMessage, "\n";
-    }
+    Error "$ErrMessage\n" if (defined $ErrMessage);
   }
 }
 
@@ -89,7 +141,9 @@ foreach my $Set (@{$Sets->GetItems()})
   if (! defined($MostRecentPatch) ||
       $MostRecentPatch->Received < $DeleteBefore)
   {
-    LogMsg "Deleting pending series for ", $Set->EMail, "\n";
+    Error "Deleting pending series for ", $Set->EMail, "\n";
+    next if ($DryRun);
+
     $Sets->DeleteItem($Set);
     $MostRecentPatch->Disposition("Incomplete series, discarded");
     $MostRecentPatch->Save();
@@ -107,13 +161,12 @@ if ($JobPurgeDays != 0)
     $Jobs->AddFilter("Patch", [$Patch]);
     if ($Jobs->IsEmpty())
     {
-      LogMsg "Deleting patch ", $Patch->Id, "\n";
+      Trace "Deleting patch ", $Patch->Id, "\n";
+      next if ($DryRun);
+
       unlink("$DataDir/patches/" . $Patch->Id);
       my $ErrMessage = $Patches->DeleteItem($Patch);
-      if (defined($ErrMessage))
-      {
-        LogMsg $ErrMessage, "\n";
-      }
+      Error "$ErrMessage\n" if (defined $ErrMessage);
     }
   }
 }
@@ -128,7 +181,9 @@ if ($JobArchiveDays != 0)
   {
     if (defined($Job->Ended) && $Job->Ended < $ArchiveBefore)
     {
-      LogMsg "Archiving job ", $Job->Id, "\n";
+      Trace "Archiving job ", $Job->Id, "\n";
+      next if ($DryRun);
+
       foreach my $Step (@{$Job->Steps->GetItems()})
       {
         unlink $Step->GetDir() . "/" . $Step->FileName;
@@ -157,7 +212,7 @@ if (%DeletedUsers or %DeletedVMs)
   {
     if (exists $DeletedUsers{$Job->User->Name})
     {
-      LogMsg "Keeping the ", $Job->User->Name, " account for job ", $Job->Id, "\n";
+      Trace "Keeping the ", $Job->User->Name, " account for job ", $Job->Id, "\n";
       delete $DeletedUsers{$Job->User->Name};
     }
 
@@ -169,7 +224,7 @@ if (%DeletedUsers or %DeletedVMs)
         {
           if (exists $DeletedVMs{$Task->VM->Name})
           {
-            LogMsg "Keeping the ", $Task->VM->Name, " VM for task ", join("/", @{$Task->GetMasterKey()}), "\n";
+            Trace "Keeping the ", $Task->VM->Name, " VM for task ", join("/", @{$Task->GetMasterKey()}), "\n";
             delete $DeletedVMs{$Task->VM->Name};
           }
         }
@@ -182,15 +237,14 @@ if (%DeletedUsers or %DeletedVMs)
     foreach my $UserName (keys %DeletedUsers)
     {
       my $User = $Users->GetItem($UserName);
+      Trace "Deleting the $UserName account\n";
+      next if ($DryRun);
+
       DeleteSessions($User);
       my $ErrMessage = $Users->DeleteItem($User);
       if (defined $ErrMessage)
       {
-        LogMsg "Unable to delete the $UserName account: $ErrMessage\n";
-      }
-      else
-      {
-        LogMsg "Deleted the $UserName account\n";
+        Error "Unable to delete the $UserName account: $ErrMessage\n";
       }
     }
   }
@@ -198,14 +252,13 @@ if (%DeletedUsers or %DeletedVMs)
   foreach my $VMKey (keys %DeletedVMs)
   {
     my $VM = $VMs->GetItem($VMKey);
+    Trace "Deleting the $VMKey VM\n";
+    next if ($DryRun);
+
     my $ErrMessage = $VMs->DeleteItem($VM);
     if (defined $ErrMessage)
     {
-      LogMsg "Unable to delete the $VMKey VM: $ErrMessage\n";
-    }
-    else
-    {
-      LogMsg "Deleted the $VMKey VM\n";
+      Error "Unable to delete the $VMKey VM: $ErrMessage\n";
     }
   }
 }
@@ -223,41 +276,43 @@ if (opendir(my $dh, "$DataDir/staging"))
     my $FileName = "$DataDir/staging/$1";
     my $Age = int((-M $FileName) + 0.5);
 
-    if ($Entry =~ /^[0-9a-f]{32}-websubmit_/)
-    {
-      if ($Age >= 1 and !unlink $FileName)
-      {
-        # The user abandoned the submit procedure half-way through
-        LogMsg "Could not delete '$FileName': $!\n" if (!unlink($FileName));
-      }
-    }
-    else
+    if ($Entry !~ /^[0-9a-f]{32}-websubmit_/)
     {
       if ($Entry !~ /^[0-9a-f]{32}_(?:patch|patch\.diff|wine-patches|winetest(?:64)?-latest\.exe|work)$/)
       {
-        LogMsg "Found a suspicious staging file: $Entry\n";
+        Trace "Found a suspicious staging file: $Entry\n";
       }
 
       if ($JobPurgeDays != 0)
       {
         if ($Age >= $JobPurgeDays + 7)
         {
-          if (!rmtree($FileName))
+          Trace "Deleting '$FileName'\n";
+          if (!$DryRun and !rmtree($FileName))
           {
-            LogMsg "Could not delete '$FileName': $!\n";
+            Error "Could not delete '$FileName': $!\n";
           }
         }
         elsif ($Age > $JobPurgeDays)
         {
-          LogMsg "'$FileName' is $Age days old and should have been deleted already. It will be deleted in ", $JobPurgeDays + 7 - $Age, " day(s).\n";
+          Error "'$FileName' is $Age days old and should have been deleted already. It will be deleted in ", $JobPurgeDays + 7 - $Age, " day(s).\n";
         }
+      }
+    }
+    elsif ($Age >= 1)
+    {
+      Trace "Deleting '$FileName'\n";
+      if (!$DryRun and !unlink $FileName)
+      {
+        # The user abandoned the submit procedure half-way through
+        Error "Could not delete '$FileName': $!\n";
       }
     }
   }
 }
 else
 {
-  LogMsg "Unable to open '$DataDir/staging': $!";
+  Error "Unable to open '$DataDir/staging': $!";
 }
 
 # Delete obsolete record groups
@@ -267,10 +322,14 @@ if ($JobPurgeDays != 0)
   $RecordGroups->AddFilter("Timestamp", [time() - $JobPurgeDays * 86400], "<");
   foreach my $RecordGroup (@{$RecordGroups->GetItems()})
   {
-    my $ErrMessage = $RecordGroups->DeleteItem($RecordGroup);
-    if (defined($ErrMessage))
+    if ($DryRun)
     {
-      LogMsg $ErrMessage, "\n";
+      Trace "Deleting RecordGroup ", $RecordGroup->Id, "\n";
+    }
+    else
+    {
+      my $ErrMessage = $RecordGroups->DeleteItem($RecordGroup);
+      Error "$ErrMessage\n" if (defined $ErrMessage);
     }
   }
 }
