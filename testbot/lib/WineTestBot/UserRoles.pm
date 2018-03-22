@@ -40,23 +40,17 @@ WineTestBot::UserRoles - A collection of WineTestBot::UserRole objects
 
 =cut
 
+use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::ItemrefPropertyDescriptor;
 use WineTestBot::Roles;
 use WineTestBot::WineTestBotObjects;
 
-use vars qw(@ISA @EXPORT @PropertyDescriptors);
+use vars qw(@ISA @EXPORT);
 
 require Exporter;
 @ISA = qw(WineTestBot::WineTestBotCollection Exporter);
 @EXPORT = qw(&CreateUserRoles);
 
-BEGIN
-{
-  @PropertyDescriptors = (
-    CreateItemrefPropertyDescriptor("Role", "Role", 1,  1, \&CreateRoles, ["RoleName"]),
-  );
-
-}
 
 sub CreateItem($)
 {
@@ -64,6 +58,20 @@ sub CreateItem($)
 
   return WineTestBot::UserRole->new($self);
 }
+
+my @PropertyDescriptors = (
+  CreateItemrefPropertyDescriptor("Role", "Role", 1,  1, \&CreateRoles, ["RoleName"]),
+);
+
+=pod
+=over 12
+
+=item C<CreateUserRoles()>
+
+Creates a collection of UserRole objects.
+
+=back
+=cut
 
 sub CreateUserRoles(;$$)
 {

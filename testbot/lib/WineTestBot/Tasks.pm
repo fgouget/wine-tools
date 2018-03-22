@@ -209,25 +209,12 @@ use ObjectModel::ItemrefPropertyDescriptor;
 use WineTestBot::VMs;
 use WineTestBot::WineTestBotObjects;
 
-use vars qw(@ISA @EXPORT @PropertyDescriptors);
+use vars qw(@ISA @EXPORT);
 
 require Exporter;
 @ISA = qw(WineTestBot::WineTestBotCollection Exporter);
 @EXPORT = qw(&CreateTasks);
 
-BEGIN
-{
-  @PropertyDescriptors = (
-    CreateBasicPropertyDescriptor("No", "Task no",  1,  1, "N", 2),
-    CreateEnumPropertyDescriptor("Status", "Status",  !1,  1, ['queued', 'running', 'completed', 'badpatch', 'badbuild', 'boterror', 'canceled', 'skipped']),
-    CreateItemrefPropertyDescriptor("VM", "VM", !1,  1, \&CreateVMs, ["VMName"]),
-    CreateBasicPropertyDescriptor("Timeout", "Timeout", !1, 1, "N", 4),
-    CreateBasicPropertyDescriptor("CmdLineArg", "Command line args", !1, !1, "A", 256),
-    CreateBasicPropertyDescriptor("Started", "Execution started", !1, !1, "DT", 19),
-    CreateBasicPropertyDescriptor("Ended", "Execution ended", !1, !1, "DT", 19),
-    CreateBasicPropertyDescriptor("TestFailures", "Number of test failures", !1, !1, "N", 6),
-  );
-}
 
 sub CreateItem($)
 {
@@ -235,6 +222,27 @@ sub CreateItem($)
 
   return WineTestBot::Task->new($self);
 }
+
+my @PropertyDescriptors = (
+  CreateBasicPropertyDescriptor("No", "Task no",  1,  1, "N", 2),
+  CreateEnumPropertyDescriptor("Status", "Status",  !1,  1, ['queued', 'running', 'completed', 'badpatch', 'badbuild', 'boterror', 'canceled', 'skipped']),
+  CreateItemrefPropertyDescriptor("VM", "VM", !1,  1, \&CreateVMs, ["VMName"]),
+  CreateBasicPropertyDescriptor("Timeout", "Timeout", !1, 1, "N", 4),
+  CreateBasicPropertyDescriptor("CmdLineArg", "Command line args", !1, !1, "A", 256),
+  CreateBasicPropertyDescriptor("Started", "Execution started", !1, !1, "DT", 19),
+  CreateBasicPropertyDescriptor("Ended", "Execution ended", !1, !1, "DT", 19),
+  CreateBasicPropertyDescriptor("TestFailures", "Number of test failures", !1, !1, "N", 6),
+);
+
+=pod
+=over 12
+
+=item C<CreateTasks()>
+
+Creates a collection of Patch objects.
+
+=back
+=cut
 
 sub CreateTasks(;$$)
 {

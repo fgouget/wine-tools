@@ -61,21 +61,12 @@ use ObjectModel::DetailrefPropertyDescriptor;
 use WineTestBot::WineTestBotObjects;
 use WineTestBot::Records;
 
-use vars qw (@ISA @EXPORT @PropertyDescriptors);
+use vars qw (@ISA @EXPORT);
 
 require Exporter;
 @ISA = qw(WineTestBot::WineTestBotCollection Exporter);
 @EXPORT = qw(&CreateRecordGroups &CompareRecordGroups &SaveRecord);
 
-
-BEGIN
-{
-  @PropertyDescriptors = (
-    CreateBasicPropertyDescriptor("Id",        "Group id",   1,  1, "S",  6),
-    CreateBasicPropertyDescriptor("Timestamp", "Timestamp", !1,  1, "DT", 19),
-    CreateDetailrefPropertyDescriptor("Records", "Records", !1, !1, \&CreateRecords),
-  );
-}
 
 sub CreateItem($)
 {
@@ -83,6 +74,22 @@ sub CreateItem($)
 
   return WineTestBot::RecordGroup->new($self);
 }
+
+my @PropertyDescriptors = (
+  CreateBasicPropertyDescriptor("Id",          "Group id",   1,  1, "S",  6),
+  CreateBasicPropertyDescriptor("Timestamp",   "Timestamp", !1,  1, "DT", 19),
+  CreateDetailrefPropertyDescriptor("Records", "Records",   !1, !1, \&CreateRecords),
+);
+
+=pod
+=over 12
+
+=item C<CreateRecordGroups()>
+
+Creates a collection of RecordGroup objects.
+
+=back
+=cut
 
 sub CreateRecordGroups(;$)
 {

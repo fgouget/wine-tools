@@ -61,26 +61,41 @@ use WineTestBot::Users;
 use WineTestBot::Utils;
 use WineTestBot::WineTestBotObjects;
 
-use vars qw(@ISA @EXPORT @PropertyDescriptors);
+use vars qw(@ISA @EXPORT);
 
 require Exporter;
 @ISA = qw(WineTestBot::WineTestBotCollection Exporter);
 @EXPORT = qw(&CreateSessions &DeleteSessions &NewSession);
 
-BEGIN
-{
-  @PropertyDescriptors = (
-    CreateBasicPropertyDescriptor("Id",        "Session id",         1,  1, "A", 32),
-    CreateItemrefPropertyDescriptor("User",    "User",              !1,  1, \&CreateUsers, ["UserName"]),
-    CreateBasicPropertyDescriptor("Permanent", "Permanent session", !1,  1, "B",  1),
-  );
-}
 
 sub CreateItem($)
 {
   my ($self) = @_;
 
   return WineTestBot::CGI::Session->new($self);
+}
+
+my @PropertyDescriptors = (
+  CreateBasicPropertyDescriptor("Id",        "Session id",         1,  1, "A", 32),
+  CreateItemrefPropertyDescriptor("User",    "User",              !1,  1, \&CreateUsers, ["UserName"]),
+  CreateBasicPropertyDescriptor("Permanent", "Permanent session", !1,  1, "B",  1),
+);
+
+=pod
+=over 12
+
+=item C<CreateSessions()>
+
+Creates a collection of Session objects.
+
+=back
+=cut
+
+sub CreateSessions(;$)
+{
+  my ($ScopeObject) = @_;
+  return WineTestBot::CGI::Sessions->new("Sessions", "Sessions", "Session",
+                                         \@PropertyDescriptors, $ScopeObject);
 }
 
 sub DeleteNonPermanentSessions($)
@@ -127,13 +142,6 @@ sub NewSession($$$)
   my ($ErrKey, $ErrProperty, $ErrMessage) = $self->Save();
 
   return ($ErrMessage, $Session);
-}
-
-sub CreateSessions(;$)
-{
-  my ($ScopeObject) = @_;
-  return WineTestBot::CGI::Sessions->new("Sessions", "Sessions", "Session",
-                                         \@PropertyDescriptors, $ScopeObject);
 }
 
 1;

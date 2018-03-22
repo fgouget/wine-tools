@@ -51,19 +51,12 @@ use ObjectModel::ItemrefPropertyDescriptor;
 use WineTestBot::Patches;
 use WineTestBot::WineTestBotObjects;
 
-use vars qw(@ISA @EXPORT @PropertyDescriptors);
+use vars qw(@ISA @EXPORT);
 
 require Exporter;
 @ISA = qw(WineTestBot::WineTestBotCollection Exporter);
 @EXPORT = qw(&CreatePendingPatches);
 
-BEGIN
-{
-  @PropertyDescriptors = (
-    CreateBasicPropertyDescriptor("No", "Part no", 1, 1, "N", 2),
-    CreateItemrefPropertyDescriptor("Patch", "Submitted via patch", !1, 1, \&WineTestBot::Patches::CreatePatches, ["PatchId"]),
-  );
-}
 
 sub CreateItem($)
 {
@@ -72,11 +65,28 @@ sub CreateItem($)
   return WineTestBot::PendingPatch->new($self);
 }
 
+my @PropertyDescriptors = (
+  CreateBasicPropertyDescriptor("No", "Part no", 1, 1, "N", 2),
+  CreateItemrefPropertyDescriptor("Patch", "Submitted via patch", !1, 1, \&WineTestBot::Patches::CreatePatches, ["PatchId"]),
+);
+
+=pod
+=over 12
+
+=item C<CreatePendingPatches()>
+
+Creates a collection of PendingPatch objects.
+
+=back
+=cut
+
 sub CreatePendingPatches(;$$)
 {
   my ($ScopeObject, $PendingPatchSet) = @_;
 
-  return WineTestBot::PendingPatches->new("PendingPatches", "PendingPatches", "PendingPatch", \@PropertyDescriptors, $ScopeObject, $PendingPatchSet);
+  return WineTestBot::PendingPatches->new(
+      "PendingPatches", "PendingPatches", "PendingPatch",
+      \@PropertyDescriptors, $ScopeObject, $PendingPatchSet);
 }
 
 1;

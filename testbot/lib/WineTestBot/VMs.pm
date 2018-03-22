@@ -639,30 +639,12 @@ use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::EnumPropertyDescriptor;
 use WineTestBot::WineTestBotObjects;
 
-use vars qw (@ISA @EXPORT @PropertyDescriptors);
+use vars qw (@ISA @EXPORT);
 
 require Exporter;
 @ISA = qw(WineTestBot::WineTestBotCollection Exporter);
 @EXPORT = qw(&CreateVMs);
 
-
-BEGIN
-{
-  @PropertyDescriptors = (
-    CreateBasicPropertyDescriptor("Name", "VM name", 1, 1, "A", 20),
-    CreateBasicPropertyDescriptor("SortOrder", "Display order", !1, 1, "N", 3),
-    CreateEnumPropertyDescriptor("Type", "Type of VM", !1, 1, ['win32', 'win64', 'build']),
-    CreateEnumPropertyDescriptor("Role", "VM Role", !1, 1, ['extra', 'base', 'winetest', 'retired', 'deleted']),
-    CreateEnumPropertyDescriptor("Status", "Current status", !1, 1, ['dirty', 'reverting', 'sleeping', 'idle', 'running', 'off', 'offline', 'maintenance']),
-    CreateBasicPropertyDescriptor("ChildPid", "Child process id", !1, !1, "N", 5),
-    CreateBasicPropertyDescriptor("VirtURI", "LibVirt URI of the VM", !1, 1, "A", 64),
-    CreateBasicPropertyDescriptor("VirtDomain", "LibVirt Domain for the VM", !1, 1, "A", 32),
-    CreateBasicPropertyDescriptor("IdleSnapshot", "Name of idle snapshot", !1, 1, "A", 32),
-    CreateBasicPropertyDescriptor("Hostname", "The VM hostname", !1, 1, "A", 64),
-    CreateBasicPropertyDescriptor("Description", "Description", !1, !1, "A", 40),
-    CreateBasicPropertyDescriptor("Details", "VM configuration details", !1, !1, "A", 512),
-  );
-}
 
 sub CreateItem($)
 {
@@ -670,6 +652,31 @@ sub CreateItem($)
 
   return WineTestBot::VM->new($self);
 }
+
+my @PropertyDescriptors = (
+  CreateBasicPropertyDescriptor("Name", "VM name", 1, 1, "A", 20),
+  CreateBasicPropertyDescriptor("SortOrder", "Display order", !1, 1, "N", 3),
+  CreateEnumPropertyDescriptor("Type", "Type of VM", !1, 1, ['win32', 'win64', 'build']),
+  CreateEnumPropertyDescriptor("Role", "VM Role", !1, 1, ['extra', 'base', 'winetest', 'retired', 'deleted']),
+  CreateEnumPropertyDescriptor("Status", "Current status", !1, 1, ['dirty', 'reverting', 'sleeping', 'idle', 'running', 'off', 'offline', 'maintenance']),
+  CreateBasicPropertyDescriptor("ChildPid", "Child process id", !1, !1, "N", 5),
+  CreateBasicPropertyDescriptor("VirtURI", "LibVirt URI of the VM", !1, 1, "A", 64),
+  CreateBasicPropertyDescriptor("VirtDomain", "LibVirt Domain for the VM", !1, 1, "A", 32),
+  CreateBasicPropertyDescriptor("IdleSnapshot", "Name of idle snapshot", !1, 1, "A", 32),
+  CreateBasicPropertyDescriptor("Hostname", "The VM hostname", !1, 1, "A", 64),
+  CreateBasicPropertyDescriptor("Description", "Description", !1, !1, "A", 40),
+  CreateBasicPropertyDescriptor("Details", "VM configuration details", !1, !1, "A", 512),
+);
+
+=pod
+=over 12
+
+=item C<CreateVMs()>
+
+Creates a collection of VM objects.
+
+=back
+=cut
 
 sub CreateVMs(;$)
 {

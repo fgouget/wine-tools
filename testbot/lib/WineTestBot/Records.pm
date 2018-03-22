@@ -66,25 +66,12 @@ use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::EnumPropertyDescriptor;
 use WineTestBot::WineTestBotObjects;
 
-use vars qw (@ISA @EXPORT @PropertyDescriptors @FlatPropertyDescriptors);
+use vars qw (@ISA @EXPORT);
 
 require Exporter;
 @ISA = qw(WineTestBot::WineTestBotCollection Exporter);
 @EXPORT = qw(&CreateRecords);
 
-
-BEGIN
-{
-  @PropertyDescriptors = (
-    CreateEnumPropertyDescriptor("Type",   "Type",   1,  1, ['engine', 'tasks', 'vmresult', 'vmstatus']),
-    CreateBasicPropertyDescriptor("Name",  "Name",   1,  1, "A", 96),
-    CreateBasicPropertyDescriptor("Value", "Value", !1, !1, "A", 64),
-  );
-  @FlatPropertyDescriptors = (
-    CreateBasicPropertyDescriptor("RecordGroupId", "Record group id", 1, 1, "S",  6),
-    @PropertyDescriptors
-  );
-}
 
 sub CreateItem($)
 {
@@ -93,15 +80,26 @@ sub CreateItem($)
   return WineTestBot::Record->new($self);
 }
 
+my @PropertyDescriptors = (
+  CreateEnumPropertyDescriptor("Type",   "Type",   1,  1, ['engine', 'tasks', 'vmresult', 'vmstatus']),
+  CreateBasicPropertyDescriptor("Name",  "Name",   1,  1, "A", 96),
+  CreateBasicPropertyDescriptor("Value", "Value", !1, !1, "A", 64),
+);
+my @FlatPropertyDescriptors = (
+  CreateBasicPropertyDescriptor("RecordGroupId", "Group id", 1, 1, "S", 6),
+  @PropertyDescriptors
+);
+
 =pod
 =over 12
 
 =item C<CreateRecords()>
 
-Creates a collection containing the records of the specified RecordGroup. In
-this case the Record objects have no RecordGroupId property.
+When given a RecordGroup object returns a collection containing the
+corresponding records. In this case the Record objects don't store the key of
+their parent.
 
-If no RecordGroup is specified all the table records are returned and the
+If no RecordGroup object is specified all the table rows are returned and the
 Record objects have a RecordGroupId property.
 
 =back

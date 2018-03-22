@@ -190,27 +190,12 @@ use ObjectModel::DetailrefPropertyDescriptor;
 use WineTestBot::Tasks;
 use WineTestBot::WineTestBotObjects;
 
-use vars qw(@ISA @EXPORT @PropertyDescriptors);
+use vars qw(@ISA @EXPORT);
 
 require Exporter;
 @ISA = qw(WineTestBot::WineTestBotCollection Exporter);
 @EXPORT = qw(&CreateSteps);
 
-BEGIN
-{
-  @PropertyDescriptors = (
-    CreateBasicPropertyDescriptor("No", "Step no",  1,  1, "N", 2),
-    CreateBasicPropertyDescriptor("PreviousNo", "Previous step", !1, !1, "N", 2),
-    CreateEnumPropertyDescriptor("Status", "Status",  !1,  1, ['queued', 'running', 'completed', 'badpatch', 'badbuild', 'boterror', 'canceled', 'skipped']),
-    CreateEnumPropertyDescriptor("Type", "Step type",  !1,  1, ['suite', 'single', 'build', 'reconfig']),
-    CreateBasicPropertyDescriptor("FileName", "File name",  !1,  1, "A", 100),
-    CreateEnumPropertyDescriptor("FileType", "File type",  !1,  1, ['exe32', 'exe64', 'patchdlls', 'patchprograms']),
-    CreateBasicPropertyDescriptor("InStaging", "File is in staging area", !1, 1, "B", 1),
-    CreateBasicPropertyDescriptor("DebugLevel", "Debug level (WINETEST_DEBUG)", !1, 1, "N", 2),
-    CreateBasicPropertyDescriptor("ReportSuccessfulTests", "Report successful tests (WINETEST_REPORT_SUCCESS)", !1, 1, "B", 1),
-    CreateDetailrefPropertyDescriptor("Tasks", "Tasks", !1, !1, \&CreateTasks),
-  );
-}
 
 sub CreateItem($)
 {
@@ -218,6 +203,33 @@ sub CreateItem($)
 
   return WineTestBot::Step->new($self);
 }
+
+my @PropertyDescriptors = (
+  CreateBasicPropertyDescriptor("No", "Step no",  1,  1, "N", 2),
+  CreateBasicPropertyDescriptor("PreviousNo", "Previous step", !1, !1, "N", 2),
+  CreateEnumPropertyDescriptor("Status", "Status",  !1,  1, ['queued', 'running', 'completed', 'badpatch', 'badbuild', 'boterror', 'canceled', 'skipped']),
+  CreateEnumPropertyDescriptor("Type", "Step type",  !1,  1, ['suite', 'single', 'build', 'reconfig']),
+  CreateBasicPropertyDescriptor("FileName", "File name",  !1,  1, "A", 100),
+  CreateEnumPropertyDescriptor("FileType", "File type",  !1,  1, ['exe32', 'exe64', 'patchdlls', 'patchprograms']),
+  CreateBasicPropertyDescriptor("InStaging", "File is in staging area", !1, 1, "B", 1),
+  CreateBasicPropertyDescriptor("DebugLevel", "Debug level (WINETEST_DEBUG)", !1, 1, "N", 2),
+  CreateBasicPropertyDescriptor("ReportSuccessfulTests", "Report successful tests (WINETEST_REPORT_SUCCESS)", !1, 1, "B", 1),
+  CreateDetailrefPropertyDescriptor("Tasks", "Tasks", !1, !1, \&CreateTasks),
+);
+
+=pod
+=over 12
+
+=item C<CreateSteps()>
+
+Creates a collection containing the steps of the specified Job. In
+this case the Step objects don't store the key of their parent.
+
+If no Job is specified all the table rows are returned and the
+Step objects have a JobId property.
+
+=back
+=cut
 
 sub CreateSteps(;$$)
 {

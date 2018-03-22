@@ -303,24 +303,12 @@ use WineTestBot::Config;
 use WineTestBot::UserRoles;
 use WineTestBot::WineTestBotObjects;
 
-use vars qw (@ISA @EXPORT @PropertyDescriptors);
+use vars qw (@ISA @EXPORT);
 
 require Exporter;
 @ISA = qw(WineTestBot::WineTestBotCollection Exporter);
 @EXPORT = qw(&CreateUsers &GetBatchUser &Authenticate);
 
-BEGIN
-{
-  @PropertyDescriptors = (
-    CreateBasicPropertyDescriptor("Name",      "Username",   1,  1, "A", 40),
-    CreateBasicPropertyDescriptor("EMail",     "EMail",     !1,  1, "A", 40),
-    CreateEnumPropertyDescriptor("Status",     "Status",    !1,  1, ['active', 'disabled', 'deleted']),
-    CreateBasicPropertyDescriptor("Password",  "Password",  !1,  1, "A", 49),
-    CreateBasicPropertyDescriptor("RealName",  "Real name", !1, !1, "A", 40),
-    CreateBasicPropertyDescriptor("ResetCode", "Password reset code", !1, !1, "A", 32),
-    CreateDetailrefPropertyDescriptor("Roles", "Roles",     !1, !1, \&CreateUserRoles),
-  );
-}
 
 sub CreateItem($)
 {
@@ -328,6 +316,26 @@ sub CreateItem($)
 
   return WineTestBot::User->new($self);
 }
+
+my @PropertyDescriptors = (
+  CreateBasicPropertyDescriptor("Name",      "Username",   1,  1, "A", 40),
+  CreateBasicPropertyDescriptor("EMail",     "EMail",     !1,  1, "A", 40),
+  CreateEnumPropertyDescriptor("Status",     "Status",    !1,  1, ['active', 'disabled', 'deleted']),
+  CreateBasicPropertyDescriptor("Password",  "Password",  !1,  1, "A", 49),
+  CreateBasicPropertyDescriptor("RealName",  "Real name", !1, !1, "A", 40),
+  CreateBasicPropertyDescriptor("ResetCode", "Password reset code", !1, !1, "A", 32),
+  CreateDetailrefPropertyDescriptor("Roles", "Roles",     !1, !1, \&CreateUserRoles),
+);
+
+=pod
+=over 12
+
+=item C<CreateUsers()>
+
+Creates a collection of User objects.
+
+=back
+=cut
 
 sub CreateUsers(;$)
 {

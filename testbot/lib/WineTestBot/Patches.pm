@@ -375,28 +375,41 @@ require Exporter;
 @ISA = qw(WineTestBot::WineTestBotCollection Exporter);
 @EXPORT = qw(&CreatePatches);
 
-my @PropertyDescriptors;
-
-BEGIN
-{
-  @PropertyDescriptors = (
-    CreateBasicPropertyDescriptor("Id", "Patch id", 1, 1, "S",  7),
-    CreateBasicPropertyDescriptor("WebPatchId", "Wine Web Patch id", !1, !1, "N",  7),
-    CreateBasicPropertyDescriptor("Received", "Received", !1, 1, "DT", 19),
-    CreateBasicPropertyDescriptor("AffectsTests", "Affects tests", !1, 1, "B", 1),
-    CreateBasicPropertyDescriptor("FromName", "Author", !1, !1, "A", 40),
-    CreateBasicPropertyDescriptor("FromEMail", "Author's email address", !1, !1, "A", 40),
-    CreateBasicPropertyDescriptor("Subject", "Subject", !1, !1, "A", 120),
-    CreateBasicPropertyDescriptor("MessageId", "Message id", !1, !1, "A", 256),
-    CreateBasicPropertyDescriptor("Disposition", "Disposition", !1, 1, "A", 40),
-  );
-}
 
 sub CreateItem($)
 {
   my ($self) = @_;
 
   return WineTestBot::Patch->new($self);
+}
+
+my @PropertyDescriptors = (
+  CreateBasicPropertyDescriptor("Id", "Patch id", 1, 1, "S",  7),
+  CreateBasicPropertyDescriptor("WebPatchId", "Wine Web Patch id", !1, !1, "N",  7),
+  CreateBasicPropertyDescriptor("Received", "Received", !1, 1, "DT", 19),
+  CreateBasicPropertyDescriptor("AffectsTests", "Affects tests", !1, 1, "B", 1),
+  CreateBasicPropertyDescriptor("FromName", "Author", !1, !1, "A", 40),
+  CreateBasicPropertyDescriptor("FromEMail", "Author's email address", !1, !1, "A", 40),
+  CreateBasicPropertyDescriptor("Subject", "Subject", !1, !1, "A", 120),
+  CreateBasicPropertyDescriptor("MessageId", "Message id", !1, !1, "A", 256),
+  CreateBasicPropertyDescriptor("Disposition", "Disposition", !1, 1, "A", 40),
+);
+
+=pod
+=over 12
+
+=item C<CreatePatches()>
+
+Creates a collection of Patch objects.
+
+=back
+=cut
+
+sub CreatePatches(;$)
+{
+  my ($ScopeObject) = @_;
+  return WineTestBot::Patches->new("Patches", "Patches", "Patch",
+                                   \@PropertyDescriptors, $ScopeObject);
 }
 
 sub IsPatch($$)
@@ -537,12 +550,6 @@ sub NewPatch($$$)
   }
 
   return undef;
-}
-
-sub CreatePatches(;$)
-{
-  my ($ScopeObject) = @_;
-  return WineTestBot::Patches->new("Patches", "Patches", "Patch", \@PropertyDescriptors, $ScopeObject);
 }
 
 1;

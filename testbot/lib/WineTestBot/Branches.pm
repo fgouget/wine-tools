@@ -53,7 +53,7 @@ WineTestBot::Branches - A collection of WineTestBot::Branch objects
 use ObjectModel::BasicPropertyDescriptor;
 use WineTestBot::WineTestBotObjects;
 
-use vars qw (@ISA @EXPORT @PropertyDescriptors);
+use vars qw (@ISA @EXPORT);
 
 require Exporter;
 @ISA = qw(WineTestBot::WineTestBotCollection Exporter);
@@ -71,14 +71,6 @@ sub GetDefaultBranch($)
   return undef;
 }
 
-BEGIN
-{
-  @PropertyDescriptors = (
-    CreateBasicPropertyDescriptor("Name",      "Branch name",          1,  1, "A", 20),
-    CreateBasicPropertyDescriptor("IsDefault", "Default branch",       !1,  1, "B",  1),
-  );
-}
-
 sub MultipleBranchesPresent($)
 {
   my ($self) = @_;
@@ -92,6 +84,21 @@ sub CreateItem($)
 
   return WineTestBot::Branch->new($self);
 }
+
+my @PropertyDescriptors = (
+  CreateBasicPropertyDescriptor("Name",      "Branch name",     1,  1, "A", 20),
+  CreateBasicPropertyDescriptor("IsDefault", "Default branch", !1,  1, "B",  1),
+);
+
+=pod
+=over 12
+
+=item C<CreateBranches()>
+
+Creates a collection of Branch objects.
+
+=back
+=cut
 
 sub CreateBranches(;$)
 {

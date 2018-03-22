@@ -48,19 +48,12 @@ WineTestBot::Roles - A collection of WineTestBot::Role objects
 use ObjectModel::BasicPropertyDescriptor;
 use WineTestBot::WineTestBotObjects;
 
-use vars qw (@ISA @EXPORT @PropertyDescriptors);
+use vars qw (@ISA @EXPORT);
 
 require Exporter;
 @ISA = qw(WineTestBot::WineTestBotCollection Exporter);
 @EXPORT = qw(&CreateRoles);
 
-BEGIN
-{
-  @PropertyDescriptors = (
-    CreateBasicPropertyDescriptor("Name", "Role name", 1,  1, "A", 20),
-    CreateBasicPropertyDescriptor("IsDefaultRole", "Should new users get this role by default", !1, 1, "B", 1),
-  );
-}
 
 sub CreateItem($)
 {
@@ -68,6 +61,21 @@ sub CreateItem($)
 
   return WineTestBot::Role->new($self);
 }
+
+my @PropertyDescriptors = (
+  CreateBasicPropertyDescriptor("Name", "Role name", 1,  1, "A", 20),
+  CreateBasicPropertyDescriptor("IsDefaultRole", "Should new users get this role by default", !1, 1, "B", 1),
+);
+
+=pod
+=over 12
+
+=item C<CreateRoles()>
+
+Creates a collection of Role objects.
+
+=back
+=cut
 
 sub CreateRoles(;$)
 {

@@ -161,28 +161,40 @@ use WineTestBot::Patches;
 use WineTestBot::Utils;
 use WineTestBot::WineTestBotObjects;
 
-use vars qw(@ISA @EXPORT @PropertyDescriptors);
+use vars qw(@ISA @EXPORT);
 
 require Exporter;
 @ISA = qw(WineTestBot::WineTestBotCollection Exporter);
 @EXPORT = qw(&CreatePendingPatchSets);
 
-my @PropertyDescriptors;
-
-BEGIN
-{
-  @PropertyDescriptors = (
-    CreateBasicPropertyDescriptor("EMail", "EMail of series author", 1, 1, "A", 40),
-    CreateBasicPropertyDescriptor("TotalParts", "Expected number of parts in series", 1, 1, "N", 2),
-    CreateDetailrefPropertyDescriptor("Parts", "Parts received so far", !1, !1, \&CreatePendingPatches),
-  );
-}
 
 sub CreateItem($)
 {
   my ($self) = @_;
 
   return WineTestBot::PendingPatchSet->new($self);
+}
+
+my @PropertyDescriptors = (
+  CreateBasicPropertyDescriptor("EMail", "EMail of series author", 1, 1, "A", 40),
+  CreateBasicPropertyDescriptor("TotalParts", "Expected number of parts in series", 1, 1, "N", 2),
+  CreateDetailrefPropertyDescriptor("Parts", "Parts received so far", !1, !1, \&CreatePendingPatches),
+);
+
+=pod
+=over 12
+
+=item C<CreatePendingPatchSets()>
+
+Creates a collection of PendingPatchSet objects.
+
+=back
+=cut
+
+sub CreatePendingPatchSets(;$)
+{
+  my ($ScopeObject) = @_;
+  return WineTestBot::PendingPatchSets->new("PendingPatchSets", "PendingPatchSets", "PendingPatchSet", \@PropertyDescriptors, $ScopeObject);
 }
 
 =pod
@@ -321,12 +333,6 @@ sub CheckForCompleteSet($)
   }
 
   return $ErrMessage;
-}
-
-sub CreatePendingPatchSets(;$)
-{
-  my ($ScopeObject) = @_;
-  return WineTestBot::PendingPatchSets->new("PendingPatchSets", "PendingPatchSets", "PendingPatchSet", \@PropertyDescriptors, $ScopeObject);
 }
 
 1;

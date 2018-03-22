@@ -404,30 +404,12 @@ use WineTestBot::Steps;
 use WineTestBot::Users;
 use WineTestBot::VMs;
 
-use vars qw(@ISA @EXPORT @PropertyDescriptors);
+use vars qw(@ISA @EXPORT);
 
 require Exporter;
 @ISA = qw(WineTestBot::WineTestBotCollection Exporter);
 @EXPORT = qw(&CreateJobs &ScheduleJobs &CheckJobs);
 
-my @PropertyDescriptors;
-
-BEGIN
-{
-  @PropertyDescriptors = (
-    CreateBasicPropertyDescriptor("Id", "Job id", 1, 1, "S",  5),
-    CreateBasicPropertyDescriptor("Archived", "Job is archived", !1, 1, "B", 1),
-    CreateItemrefPropertyDescriptor("Branch", "Branch", !1, 1, \&CreateBranches, ["BranchName"]),
-    CreateItemrefPropertyDescriptor("User", "Author", !1, 1, \&WineTestBot::Users::CreateUsers, ["UserName"]),
-    CreateBasicPropertyDescriptor("Priority", "Priority", !1, 1, "N", 1),
-    CreateEnumPropertyDescriptor("Status", "Status", !1, 1, ['queued', 'running', 'completed', 'badpatch', 'badbuild', 'boterror', 'canceled']),
-    CreateBasicPropertyDescriptor("Remarks", "Remarks", !1, !1, "A", 128),
-    CreateBasicPropertyDescriptor("Submitted", "Submitted", !1, !1, "DT", 19),
-    CreateBasicPropertyDescriptor("Ended", "Ended", !1, !1, "DT", 19),
-    CreateItemrefPropertyDescriptor("Patch", "Submitted from patch", !1, !1, \&WineTestBot::Patches::CreatePatches, ["PatchId"]),
-    CreateDetailrefPropertyDescriptor("Steps", "Steps", !1, !1, \&CreateSteps),
-  );
-}
 
 sub CreateItem($)
 {
@@ -435,6 +417,30 @@ sub CreateItem($)
 
   return WineTestBot::Job->new($self);
 }
+
+my @PropertyDescriptors = (
+  CreateBasicPropertyDescriptor("Id", "Job id", 1, 1, "S",  5),
+  CreateBasicPropertyDescriptor("Archived", "Job is archived", !1, 1, "B", 1),
+  CreateItemrefPropertyDescriptor("Branch", "Branch", !1, 1, \&CreateBranches, ["BranchName"]),
+  CreateItemrefPropertyDescriptor("User", "Author", !1, 1, \&WineTestBot::Users::CreateUsers, ["UserName"]),
+  CreateBasicPropertyDescriptor("Priority", "Priority", !1, 1, "N", 1),
+  CreateEnumPropertyDescriptor("Status", "Status", !1, 1, ['queued', 'running', 'completed', 'badpatch', 'badbuild', 'boterror', 'canceled']),
+  CreateBasicPropertyDescriptor("Remarks", "Remarks", !1, !1, "A", 128),
+  CreateBasicPropertyDescriptor("Submitted", "Submitted", !1, !1, "DT", 19),
+  CreateBasicPropertyDescriptor("Ended", "Ended", !1, !1, "DT", 19),
+  CreateItemrefPropertyDescriptor("Patch", "Submitted from patch", !1, !1, \&WineTestBot::Patches::CreatePatches, ["PatchId"]),
+  CreateDetailrefPropertyDescriptor("Steps", "Steps", !1, !1, \&CreateSteps),
+);
+
+=pod
+=over 12
+
+=item C<CreateJobs()>
+
+Creates a collection of Job objects.
+
+=back
+=cut
 
 sub CreateJobs(;$)
 {
