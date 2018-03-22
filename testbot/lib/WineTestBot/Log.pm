@@ -26,12 +26,13 @@ WineTestBot::Log - Logging
 =cut
 
 use WineTestBot::Config;
+use WineTestBot::Utils;
 
 use vars qw (@ISA @EXPORT);
 
 require Exporter;
 @ISA = qw(Exporter);
-@EXPORT = qw(&LogMsg &OpenLog &Time &Elapsed);
+@EXPORT = qw(&LogMsg &OpenLog &Time &Elapsed &PrettyElapsed);
 
 my $logfile;
 my $logprefix;
@@ -106,6 +107,12 @@ sub Elapsed($)
 {
     my ($Start) = @_;
     return sprintf("%0.2f", Time()-$Start);
+}
+
+sub PrettyElapsed($)
+{
+    my ($Start) = @_;
+    return DurationToString(Time()-$Start);
 }
 
 1;

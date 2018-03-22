@@ -265,15 +265,14 @@ sub Monitor()
                          "$VMKey does not exist anymore";
       NotifyAdministrator("The $VMKey VM is not relevant anymore",
                           "The $VMKey VM was offline but ceased to be relevant after ".
-                          Elapsed($Start). " seconds:\n\n$Reason\n");
+                          PrettyElapsed($Start). ":\n\n$Reason\n");
       return 1;
     }
     if ($VM->Status ne "offline")
     {
       NotifyAdministrator("The $VMKey VM is working again (". $VM->Status .")",
                           "The status of the $VMKey VM unexpectedly switched from offline\n".
-                          "to ". $VM->Status ." after ". Elapsed($Start)
-                          ." seconds.");
+                          "to ". $VM->Status ." after ". PrettyElapsed($Start) .".");
       return 0;
     }
 
@@ -320,7 +319,7 @@ sub Monitor()
         return 1 if (ChangeStatus("offline", "off", "done"));
         NotifyAdministrator("The $VMKey VM is working again",
                             "The $VMKey VM started working again after ".
-                            Elapsed($Start) ." seconds.");
+                            PrettyElapsed($Start) ." seconds.");
         return 0;
       }
     }
@@ -459,6 +458,6 @@ else
   Error("Unsupported action $Action!\n");
   $Rc = 1;
 }
-LogMsg "$Action on $VMKey completed in ", Elapsed($Start), " s\n";
+LogMsg "$Action on $VMKey completed in ", PrettyElapsed($Start), " s\n";
 
 exit $Rc;
