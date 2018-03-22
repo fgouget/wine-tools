@@ -38,31 +38,6 @@ sub _initialize($$$)
   $self->SUPER::_initialize($Request, $RequiredRole);
 }
 
-sub _GetDuration($;$)
-{
-  my ($Secs, $Raw) = @_;
-
-  return "n/a" if (!defined $Secs);
-
-  my @Parts;
-  if (!$Raw)
-  {
-    my $Mins = int($Secs / 60);
-    my $Hours = int($Mins / 60);
-    my $Days = int($Hours / 24);
-    push @Parts, "${Days}d" if ($Days);
-    my $Part = $Hours - 24 * $Days;
-    push @Parts, "${Part}h" if ($Part);
-    $Part = $Mins - 60 * $Hours;
-    push @Parts, "${Part}m" if ($Part);
-    $Secs = $Secs - 60 * $Mins;
-  }
-  push @Parts, (@Parts or int($Secs) == $Secs) ?
-               int($Secs) ."s" :
-               sprintf('%.1fs', $Secs);
-  return join(" ", @Parts);
-}
-
 sub _CompareVMs()
 {
   my ($aHost, $bHost) = ($a->GetHost(), $b->GetHost());
@@ -105,7 +80,7 @@ sub _GetStatStr($$;$$)
       exists $Stats->{"$StatKey.count"})
   {
     my $Avg = _GetAverage($Stats, $StatKey);
-    return $Avg eq "n/a" ? "n/a" : _GetDuration($Avg, $Flags & $NO_TIME);
+    return $Avg eq "n/a" ? "n/a" : DurationToString($Avg, $Flags & $NO_TIME);
   }
 
   if ($StatKey =~ /\.size$/ and !($Flags & $NO_AVERAGE) and
@@ -124,7 +99,7 @@ sub _GetStatStr($$;$$)
   }
   if ($StatKey =~ /(?:\belapsed|\.time(?!\.count))/)
   {
-    return _GetDuration($Value, $Flags & $NO_TIME);
+    return DurationToString($Value, $Flags & $NO_TIME);
   }
   if ($StatKey =~ /\.rate$/)
   {

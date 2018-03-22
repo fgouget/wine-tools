@@ -35,7 +35,7 @@ require Exporter;
 @ISA = qw(Exporter);
 @EXPORT = qw(&MakeSecureURL &SecureConnection &GenerateRandomString
              &OpenNewFile &CreateNewFile &CreateNewLink &CreateNewDir
-             &BuildEMailRecipient);
+             &DurationToString &BuildEMailRecipient);
 
 sub MakeSecureURL($)
 {
@@ -119,6 +119,34 @@ sub CreateNewDir($$)
     # This is not an error that will be fixed by trying a different path
     return undef if (!$!{EEXIST});
   }
+}
+
+sub DurationToString($;$)
+{
+  my ($Secs, $Raw) = @_;
+
+  return "n/a" if (!defined $Secs);
+
+  my @Parts;
+  if (!$Raw)
+  {
+    my $Mins = int($Secs / 60);
+    $Secs -= 60 * $Mins;
+    my $Hours = int($Mins / 60);
+    $Mins -= 60 * $Hours;
+    my $Days = int($Hours / 24);
+    $Hours -= 24 * $Days;
+    push @Parts, "${Days}d" if ($Days);
+    push @Parts, "${Hours}h" if ($Hours);
+    push @Parts, "${Mins}m" if ($Mins);
+  }
+  if (!@Parts or int($Secs) != 0)
+  {
+    push @Parts, (@Parts or int($Secs) == $Secs) ?
+                 int($Secs) ."s" :
+                 sprintf('%.1fs', $Secs);
+  }
+  return join(" ", @Parts);
 }
 
 sub BuildEMailRecipient($$)

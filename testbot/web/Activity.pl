@@ -28,6 +28,7 @@ use ObjectModel::CGI::FreeFormPage;
 use WineTestBot::Config;
 use WineTestBot::Activity;
 use WineTestBot::Log;
+use WineTestBot::Utils;
 use WineTestBot::VMs;
 
 @ActivityPage::ISA = qw(ObjectModel::CGI::FreeFormPage);
@@ -72,16 +73,7 @@ sub _GetHtmlTime($)
 sub _GetHtmlDuration($)
 {
   my ($Secs) = @_;
-
-  return "" if ($Secs < 2);
-  my $Mins = int($Secs / 60);
-  my $Hours = int($Mins / 60);
-
-  my @Parts;
-  push @Parts, "${Hours}h" if ($Hours);
-  push @Parts, "${Mins}m" if ($Mins %= 60);
-  push @Parts, "${Secs}s" if ($Secs %= 60);
-  return "<span class='RecordDuration'>". join(" ", @Parts) ."</span>";
+  return ($Secs < 2) ? "" : "<span class='RecordDuration'>". DurationToString($Secs) ."</span>";
 }
 
 sub _CompareVMs()
