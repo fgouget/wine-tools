@@ -21,7 +21,7 @@ package WineTestBot::RecordGroup;
 
 =head1 NAME
 
-WineTestBot::RecordGroup - a group of related history records
+WineTestBot::RecordGroup - A group of related history records
 
 =head1 DESCRIPTION
 

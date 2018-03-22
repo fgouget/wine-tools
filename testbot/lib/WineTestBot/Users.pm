@@ -22,7 +22,7 @@ package WineTestBot::User;
 
 =head1 NAME
 
-WineTestBot::Users - A User
+WineTestBot::User - A User
 
 =cut
 

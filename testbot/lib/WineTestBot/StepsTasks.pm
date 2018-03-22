@@ -22,12 +22,7 @@ package WineTestBot::StepTask;
 
 =head1 NAME
 
-WineTestBot::StepTask - Merged job steps/tasks
-
-=head1 DESCRIPTION
-
-This ties together a given WineTestBot::Task object with the corresponding
-WineTestBot::Step object.
+WineTestBot::StepTask - Merged Step + Task object
 
 =cut
 
@@ -92,6 +87,13 @@ package WineTestBot::StepsTasks;
 =head1 NAME
 
 WineTestBot::StepsTasks - A collection of StepsTasks objects
+
+=head1 DESCRIPTION
+
+Provides a flat collection of all the tasks in the specified Job.
+
+Note that this is an in-memory only collection since it does not correspond to
+a specific database table.
 
 =cut
 
