@@ -373,7 +373,7 @@ sub GetActions($)
   my ($MasterColNames, $MasterColValues) = $self->{Collection}->GetMasterCols();
   if (defined($MasterColNames))
   {
-    $Actions[@Actions] = 'Cancel';
+    push @Actions, "Cancel";
   }
 
   return \@Actions;

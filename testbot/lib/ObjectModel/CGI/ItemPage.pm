@@ -116,8 +116,7 @@ sub GetActions($)
   my ($self) = @_;
 
   my @Actions = @{$self->SUPER::GetActions()};
-  $Actions[@Actions] = "OK";
-  $Actions[@Actions] = "Cancel";
+  push @Actions, "OK", "Cancel";
 
   return \@Actions;
 }

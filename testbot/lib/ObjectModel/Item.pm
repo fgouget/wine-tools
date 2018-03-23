@@ -386,7 +386,7 @@ sub GetKeyComponents($)
     {
       foreach my $ColName (@{$PropertyDescriptor->GetColNames()})
       {
-        $KeyComponents[@KeyComponents] = $self->{ColValues}{$ColName};
+        push @KeyComponents, $self->{ColValues}{$ColName};
       }
     }
   }

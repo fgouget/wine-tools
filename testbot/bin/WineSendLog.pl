@@ -106,13 +106,13 @@ sub ReadLog($$$)
         {
           if ($Line =~ m/${BaseName}:${TestSet} done \(258\)/)
           {
-            $Messages[@Messages] = "The test timed out";
+            push @Messages, "The test timed out";
           }
           $Found = 1;
         }
         else
         {
-          $Messages[@Messages] = $Line;
+          push @Messages, $Line;
         }
       }
     }

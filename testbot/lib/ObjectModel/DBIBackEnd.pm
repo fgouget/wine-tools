@@ -385,8 +385,8 @@ sub GetInsertData($$$)
   {
     foreach my $ColName (@{$PropertyDescriptor->GetColNames()})
     {
-      $Data[@Data] = $self->ToDb($Item->GetColValue($ColName),
-                                 $PropertyDescriptor);
+      push @Data, $self->ToDb($Item->GetColValue($ColName),
+                              $PropertyDescriptor);
     }
   }
 
@@ -434,8 +434,8 @@ sub GetUpdateData($$$)
     {
       foreach my $ColName (@{$PropertyDescriptor->GetColNames()})
       {
-        $Data[@Data] = $self->ToDb($Item->GetColValue($ColName),
-                                   $PropertyDescriptor);
+        push @Data, $self->ToDb($Item->GetColValue($ColName),
+                                $PropertyDescriptor);
       }
     }
   }
@@ -451,7 +451,7 @@ sub GetUpdateData($$$)
     {
       foreach my $ColName (@{$PropertyDescriptor->GetColNames()})
       {
-        $Data[@Data] = $Item->GetColValue($ColName);
+        push @Data, $Item->GetColValue($ColName);
       }
     }
   }

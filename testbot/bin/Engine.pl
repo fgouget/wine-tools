@@ -813,9 +813,9 @@ sub main()
       {
         if (PrepareSocket($NewClientSocket))
         {
-          $Clients[@Clients] = {Socket => $NewClientSocket,
-                                InBuf => "",
-                                OutBuf => ""};
+          push @Clients, {Socket => $NewClientSocket,
+                          InBuf => "",
+                          OutBuf => ""};
         }
         else
         {
