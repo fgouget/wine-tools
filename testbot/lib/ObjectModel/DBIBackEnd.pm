@@ -198,7 +198,7 @@ sub LoadCollection($$)
   if (defined($MasterColNames))
   {
     $Where = join(" = ? AND ", @{$MasterColNames}) . " = ?";
-    push(@Data, @{$MasterColValues});
+    push @Data, @{$MasterColValues};
   }
 
   my $Filters = $Collection->GetFilters();
@@ -299,11 +299,11 @@ sub LoadItem($$$)
   if (defined($MasterColNames))
   {
     $Where = join(" = ? AND ", @{$MasterColNames}) . " = ?";
-    push(@Data, @{$MasterColValues});
+    push @Data, @{$MasterColValues};
   }
   $Where = $self->BuildKeyWhere($Collection->GetPropertyDescriptors(), "",
                                 $Where);
-  push(@Data, $Collection->SplitKey($RequestedKey));
+  push @Data, $Collection->SplitKey($RequestedKey);
 
   my $Query = "SELECT $Fields FROM " . $Collection->GetTableName();
   if ($Where ne "")
@@ -378,7 +378,7 @@ sub GetInsertData($$$)
   my @Data;
   if (defined($MasterColValues))
   {
-    push(@Data, @$MasterColValues);
+    push @Data, @$MasterColValues;
   }
 
   foreach my $PropertyDescriptor (@{$Item->GetPropertyDescriptors()})
@@ -442,7 +442,7 @@ sub GetUpdateData($$$)
 
   if (defined($MasterColValues))
   {
-    push(@Data, @$MasterColValues);
+    push @Data, @$MasterColValues;
   }
 
   foreach my $PropertyDescriptor (@{$Item->GetPropertyDescriptors()})
@@ -550,11 +550,11 @@ sub DeleteItem($$)
   if (defined($MasterColNames))
   {
     $Where = join(" = ? AND ", @{$MasterColNames}) . " = ?";
-    push(@Data, @{$MasterColValues});
+    push @Data, @{$MasterColValues};
   }
   $Where = $self->BuildKeyWhere($Item->GetPropertyDescriptors(), "",
                                 $Where);
-  push(@Data, $Item->GetKeyComponents());
+  push @Data, $Item->GetKeyComponents();
 
   my $Statement = $self->GetDb()->prepare("DELETE FROM " .
                                           $Item->GetTableName() .
@@ -575,7 +575,7 @@ sub DeleteAll($$)
   if (defined($MasterColNames))
   {
     $Where = join(" = ? AND ", @{$MasterColNames}) . " = ?";
-    push(@Data, @{$MasterColValues});
+    push @Data, @{$MasterColValues};
   }
 
   my $Query = "DELETE FROM " . $Collection->GetTableName();

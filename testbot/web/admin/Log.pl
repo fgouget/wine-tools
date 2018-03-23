@@ -59,7 +59,7 @@ sub GetActions($)
   my ($self) = @_;
 
   my $Actions = $self->SUPER::GetActions();
-  push(@$Actions, "Download");
+  push @$Actions, "Download";
 
   return $Actions;
 }

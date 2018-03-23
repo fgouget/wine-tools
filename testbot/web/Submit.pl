@@ -358,19 +358,19 @@ sub GetActions($)
   my $Actions = $self->SUPER::GetActions();
   if ($self->{Page} == 1)
   {
-    push(@$Actions, "Next >");
+    push @$Actions, "Next >";
   }
   elsif ($self->{Page} == 2)
   {
-    push(@$Actions, "< Prev", "Next >");
+    push @$Actions, "< Prev", "Next >";
   }
   elsif ($self->{Page} == 3)
   {
-    push(@$Actions, "< Prev", "Submit");
+    push @$Actions, "< Prev", "Submit";
   }
   elsif ($self->{Page} == 4)
   {
-    push(@$Actions, "OK");
+    push @$Actions, "OK";
   }
 
   return $Actions;

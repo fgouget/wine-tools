@@ -89,7 +89,7 @@ sub GetActions($)
   my ($self) = @_;
 
   my $Actions = $self->SUPER::GetActions();
-  push(@$Actions, "Log in");
+  push @$Actions, "Log in";
 
   return $Actions;
 }

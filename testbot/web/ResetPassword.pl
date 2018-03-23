@@ -75,7 +75,7 @@ sub GetActions($)
   my ($self) = @_;
 
   my $Actions = $self->SUPER::GetActions();
-  push(@$Actions, "Change password");
+  push @$Actions, "Change password";
 
   return $Actions;
 }

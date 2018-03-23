@@ -61,7 +61,7 @@ sub GetActions($)
     push @Actions, "Reject" if ($self->{Item}->Name);
   }
 
-  push(@Actions, @{$self->SUPER::GetActions()});
+  push @Actions, @{$self->SUPER::GetActions()};
 
   return \@Actions;
 }
