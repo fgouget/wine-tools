@@ -137,6 +137,16 @@ sub SaveProperty($$$)
   return 1;
 }
 
+sub Save($)
+{
+  my ($self) = @_;
+
+  return !1 if (!$self->SaveProperties());
+
+  ($self->{ErrField}, $self->{ErrMessage}) = $self->{Item}->Save();
+  return ! defined($self->{ErrMessage});
+}
+
 sub OnAction($$)
 {
   my ($self, $Action) = @_;
