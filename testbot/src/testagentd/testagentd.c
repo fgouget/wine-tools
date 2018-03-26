@@ -37,9 +37,10 @@
  * 1.3:  Fix the zero / infinite timeouts in the wait2 RPC.
  * 1.4:  Add the settime RPC.
  * 1.5:  Add support for upgrading the server.
- * 1.6:  Add support for the rmchildproc and getcwd RPC.
+ * 1.6:  Add the rmchildproc and getcwd RPCs.
+ * 1.7:  Add --show-restarts and the setproperty RPC.
  */
-#define PROTOCOL_VERSION "testagentd 1.6"
+#define PROTOCOL_VERSION "testagentd 1.7"
 
 #define BLOCK_SIZE       65536
 
@@ -91,6 +92,7 @@ enum rpc_ids_t
     RPCID_UPGRADE,
     RPCID_RMCHILDPROC,
     RPCID_GETCWD,
+    RPCID_SETPROPERTY,
 };
 
 /* This is the RPC currently being processed */
@@ -113,6 +115,7 @@ static const char* rpc_name(uint32_t id)
         "upgrade",
         "rmchildproc",
         "getcwd",
+        "setproperty",
     };
 
     if (id < sizeof(names) / sizeof(*names))
@@ -620,6 +623,47 @@ static int send_file(SOCKET client, int fd, const char* filename)
 
 
 /*
+ * TestAgentd restart / Windows reboot tracking.
+ */
+
+static unsigned int start_count = 0;
+
+static char* start_count_filename(void)
+{
+    char* filename = malloc(strlen(name0) + 5 + 1);
+    sprintf(filename, "%s.data", name0);
+    return filename;
+}
+
+static void load_start_count(void)
+{
+    FILE *fh;
+    char* filename = start_count_filename();
+    fh = fopen(filename, "r");
+    if (fh)
+    {
+        if (!fscanf(fh, "%d", &start_count))
+            start_count = 0;
+        fclose(fh);
+    }
+    free(filename);
+}
+
+static void save_start_count(void)
+{
+    FILE *fh;
+    char* filename = start_count_filename();
+    fh = fopen(filename, "w");
+    if (fh)
+    {
+        fprintf(fh, "%d\n", start_count);
+        fclose(fh);
+    }
+    free(filename);
+}
+
+
+/*
  * High-level operations.
  */
 
@@ -969,7 +1013,7 @@ static void do_getproperties(SOCKET client)
         send_error(client);
         return;
     }
-    send_list_size(client, 2);
+    send_list_size(client, 3);
 
     format_msg(&buf, &size, "protocol.version=%s", PROTOCOL_VERSION);
     send_string(client, buf);
@@ -984,7 +1028,51 @@ static void do_getproperties(SOCKET client)
 #endif
     format_msg(&buf, &size, "server.arch=%s", arch);
     send_string(client, buf);
+
+    format_msg(&buf, &size, "start.count=%u", start_count);
+    send_string(client, buf);
+
     free(buf);
+}
+
+static void do_setproperty(SOCKET client)
+{
+    char *name = NULL, *value = NULL;
+
+    if (!expect_list_size(client, 2) ||
+        !recv_string(client, &name) ||
+        !recv_string(client, &value))
+    {
+        send_error(client);
+        return;
+    }
+
+    if (strcmp(name, "start.count") == 0)
+    {
+        unsigned int val;
+        if (sscanf(value, "%u", &val) == 1)
+        {
+            start_count = val;
+            save_start_count();
+            send_list_size(client, 0);
+        }
+        else
+        {
+            set_status(ST_ERROR, "'%s' is not a valid %s value", value, name);
+            send_error(client);
+        }
+    }
+    else if (strcmp(name, "protocol.version") == 0 ||
+             strcmp(name, "server.arch") == 0)
+    {
+        set_status(ST_ERROR, "%s is read-only", name);
+        send_error(client);
+    }
+    else
+    {
+        set_status(ST_ERROR, "unknown property %s", name);
+        send_error(client);
+    }
 }
 
 static void do_upgrade(SOCKET client)
@@ -1033,6 +1121,10 @@ static void do_upgrade(SOCKET client)
         free(args[0]);
         if (success)
         {
+            /* Decrement the start count since this one is intentional */
+            start_count--;
+            save_start_count();
+
             broken = 1;
             quit = 1;
         }
@@ -1129,6 +1221,9 @@ static void process_rpc(SOCKET client)
     case RPCID_RMCHILDPROC:
         do_rmchildproc(client);
         break;
+    case RPCID_SETPROPERTY:
+        do_setproperty(client);
+        break;
     default:
         do_unknown(client, rpcid);
     }
@@ -1214,11 +1309,33 @@ static int is_host_allowed(SOCKET client, const char* srchost, int addrlen)
     return 0;
 }
 
+
+static void reset_start_count(void)
+{
+    start_count = 1;
+    save_start_count();
+}
+
+static void check_start_count(void)
+{
+    load_start_count();
+    start_count++;
+    save_start_count();
+
+    if (start_count > 1)
+    {
+        char msg[255];
+        sprintf(msg, "%s was restarted (%d). Did Windows reboot?\n", name0, start_count);
+        platform_show_message(msg, &reset_start_count);
+    }
+}
+
 int main(int argc, char** argv)
 {
     const char* p;
     char** arg;
     int opt_detach = 0;
+    int opt_show_restarts = 0;
     char* opt_port = NULL;
     char* opt_srchost = NULL;
     struct addrinfo *addresses, *addrp;
@@ -1246,6 +1363,10 @@ int main(int argc, char** argv)
         else if (strcmp(*arg, "--detach") == 0)
         {
             opt_detach = 1;
+        }
+        else if (strcmp(*arg, "--show-restarts") == 0)
+        {
+            opt_show_restarts = 1;
         }
         else if (strcmp(*arg, "--help") == 0)
         {
@@ -1328,11 +1449,15 @@ int main(int argc, char** argv)
         printf("  --debug  Prints detailed information about what happens.\n");
         printf("  --detach Detach from the console / terminal. Note that on Windows you should\n");
         printf("           combine this with start: start %s --detach ...\n", name0);
+        printf("  --show-restarts Shows a message if %s has been restarted (for instance\n", name0);
+        printf("           because of a Windows reboot).\n");
         printf("  --help   Shows this usage message.\n");
         exit(0);
     }
     if (opt_detach)
         platform_detach_console();
+    if (opt_show_restarts)
+        check_start_count();
 
     /* Bind to the host in a protocol neutral way */
 #ifdef SOCK_CLOEXEC

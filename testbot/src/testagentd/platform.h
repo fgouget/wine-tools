@@ -103,6 +103,14 @@ int platform_settime(uint64_t epoch, uint32_t leeway);
  */
 int platform_upgrade_script(const char* script, const char* tmpserver, char** argv);
 
+/* Called when the message has been dismissed by the user.
+ */
+typedef void (*message_dismissed_func)(void);
+
+/* Shows the specified message.
+ */
+void platform_show_message(const char* message, message_dismissed_func func);
+
 /* Returns a string describing the last socket-related error */
 int sockeintr(void);
 const char* sockerror(void);

@@ -52,7 +52,7 @@ sub error(@)
     print STDERR "$name0:error: ", @_;
 }
 
-my ($Cmd, $Hostname, $LocalFilename, $ServerFilename, $PropName, @Rm);
+my ($Cmd, $Hostname, $LocalFilename, $ServerFilename, $PropName, $PropValue, @Rm);
 my (@Run, $RunIn, $RunOut, $RunErr, $WaitPid);
 my $SendFlags = 0;
 my $RunFlags = 0;
@@ -229,6 +229,12 @@ while (@ARGV)
         set_cmd($arg);
         $PropName = @ARGV ? check_opt_val($arg, $PropName) : '*';
     }
+    elsif ($arg eq "setproperty")
+    {
+        set_cmd($arg);
+        $PropName = check_opt_val($arg, $PropName);
+        $PropValue = check_opt_val($arg, $PropValue);
+    }
     elsif ($arg eq "upgrade")
     {
         set_cmd($arg);
@@ -319,6 +325,8 @@ if (defined $Usage)
     print "or     $name0 [options] <hostname> wait <pid>\n";
     print "or     $name0 [options] <hostname> settime\n";
     print "or     $name0 [options] <hostname> rm <serverfiles>\n";
+    print "or     $name0 [options] <hostname> getproperty <name>\n";
+    print "or     $name0 [options] <hostname> setproperty <name> <value>\n";
     print "or     $name0 [options] <hostname> [getcwd|ping|version]\n";
     print "\n";
     print "This is a testagentd client. It can be used to send/receive files and to run commands on the server.\n";
@@ -346,6 +354,7 @@ if (defined $Usage)
     print "  getproperty <name> Retrieves and prints the specified server property, for\n";
     print "                instance its architecture, 'server.arch'. One can print all the\n";
     print "                properties at once by omitting the name or setting it to '*'.\n";
+    print "  setproperty <name> <value> Sets the specified property.\n";
     print "  getcwd        Returns the server's current working directory.\n";
     print "  ping          Makes sure the server is still alive.\n";
     print "  upgrade       Replaces the server executable with the specified file and\n";
@@ -479,6 +488,10 @@ elsif ($Cmd eq "getversion")
 {
     $Result = $TA->GetVersion();
     print "Version=$Result\n" if (defined $Result);
+}
+elsif ($Cmd eq "setproperty")
+{
+    $Result = $TA->SetProperty($PropName, $PropValue);
 }
 elsif ($Cmd eq "ping")
 {

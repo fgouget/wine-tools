@@ -42,6 +42,7 @@ my $RPC_GETPROPERTIES = 8;
 my $RPC_UPGRADE = 9;
 my $RPC_RMCHILDPROC = 10;
 my $RPC_GETCWD = 11;
+my $RPC_SETPROPERTY = 12;
 
 my %RpcNames=(
     $RPC_PING => 'ping',
@@ -56,6 +57,7 @@ my %RpcNames=(
     $RPC_UPGRADE => 'upgrade',
     $RPC_RMCHILDPROC => 'rmchildproc',
     $RPC_GETCWD => 'getcwd',
+    $RPC_SETPROPERTY => 'setproperty',
 );
 
 my $Debug = 0;
@@ -1384,6 +1386,24 @@ sub GetProperties($;$)
 
   return $Properties->{$PropName} if (defined $PropName);
   return $Properties;
+}
+
+sub SetProperty($$$)
+{
+  my ($self, $PropName, $PropValue) = @_;
+  debug("SetProperty\n");
+
+  # Send the command
+  if (!$self->_StartRPC($RPC_SETPROPERTY) or
+      !$self->_SendListSize('ArgC', 2) or
+      !$self->_SendString('PropName', $PropName) or
+      !$self->_SendString('PropValue', $PropValue))
+  {
+    return undef;
+  }
+
+  # Get the reply
+  return $self->_RecvList('');
 }
 
 sub Upgrade($$)

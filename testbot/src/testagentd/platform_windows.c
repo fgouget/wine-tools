@@ -312,6 +312,37 @@ int platform_upgrade_script(const char* script, const char* tmpserver, char** ar
     return 1;
 }
 
+struct msg_thread_t
+{
+    char* message;
+    message_dismissed_func dismissed;
+};
+
+DWORD WINAPI msg_thread(LPVOID parameter)
+{
+    struct msg_thread_t* data = parameter;
+
+    MessageBoxA(NULL, data->message, "Message", MB_OK);
+    free(data->message);
+    if (data->dismissed)
+        (*data->dismissed)();
+    free(data);
+    return 0;
+}
+
+void platform_show_message(const char* message, message_dismissed_func dismissed)
+{
+    HANDLE thread;
+    struct msg_thread_t* data = malloc(sizeof(struct msg_thread_t));
+
+    fprintf(stderr, message);
+
+    data->message = strdup(message);
+    data->dismissed = dismissed;
+    thread = CreateThread(NULL, 0, &msg_thread, data, 0, NULL);
+    CloseHandle(thread);
+}
+
 int sockretry(void)
 {
     return (WSAGetLastError() == WSAEINTR);

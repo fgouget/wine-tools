@@ -270,6 +270,15 @@ int platform_upgrade_script(const char* script, const char* tmpserver, char** ar
     return 1;
 }
 
+void platform_show_message(const char* message, message_dismissed_func dismissed)
+{
+    /* Don't bother trying to pop up a GUI. There may not be one anyway.
+     * Since the user has no way to dismiss the dialog the dismissed function
+     * is not called.
+     */
+    fprintf(stderr, "%s", message);
+}
+
 int sockeintr(void)
 {
     return errno == EINTR;
