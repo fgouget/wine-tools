@@ -50,6 +50,7 @@ sub new($$$$$@)
               IsKey       => $IsKey,
               IsRequired  => $IsRequired,
               Class       => undef};
+  $self->{KeyPrefix} = "" if ($IsKey);
   $self = bless $self, $class;
   $self->_initialize(@_);
   return $self;

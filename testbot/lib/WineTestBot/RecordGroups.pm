@@ -80,6 +80,7 @@ my @PropertyDescriptors = (
   CreateBasicPropertyDescriptor("Timestamp",   "Timestamp", !1,  1, "DT", 19),
   CreateDetailrefPropertyDescriptor("Records", "Records",   !1, !1, \&CreateRecords),
 );
+SetDetailrefKeyPrefix("RecordGroup", @PropertyDescriptors);
 
 =pod
 =over 12

@@ -233,13 +233,22 @@ my @PropertyDescriptors = (
   CreateBasicPropertyDescriptor("Ended", "Execution ended", !1, !1, "DT", 19),
   CreateBasicPropertyDescriptor("TestFailures", "Number of test failures", !1, !1, "N", 6),
 );
+my @FlatPropertyDescriptors = (
+  CreateBasicPropertyDescriptor("JobId", "Job id", 1, 1, "S", 5),
+  CreateBasicPropertyDescriptor("StepNo", "Step no",  1,  1, "N", 2),
+  @PropertyDescriptors
+);
 
 =pod
 =over 12
 
 =item C<CreateTasks()>
 
-Creates a collection of Patch objects.
+When given a Step object returns a collection containing the corresponding
+tasks. In this case the Task objects don't store the key of their parent.
+
+If no Step object is specified all the table rows are returned and the Task
+objects have JobId and StepNo properties.
 
 =back
 =cut
@@ -248,7 +257,8 @@ sub CreateTasks(;$$)
 {
   my ($ScopeObject, $Step) = @_;
   return WineTestBot::Tasks->new("Tasks", "Tasks", "Task",
-                                 \@PropertyDescriptors, $ScopeObject, $Step);
+      $Step ? \@PropertyDescriptors : \@FlatPropertyDescriptors,
+      $ScopeObject, $Step);
 }
 
 1;

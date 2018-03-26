@@ -62,13 +62,21 @@ sub CreateItem($)
 my @PropertyDescriptors = (
   CreateItemrefPropertyDescriptor("Role", "Role", 1,  1, \&CreateRoles, ["RoleName"]),
 );
+my @FlatPropertyDescriptors = (
+  CreateBasicPropertyDescriptor("UserName", "Username",  1,  1, "A", 40),
+  @PropertyDescriptors
+);
 
 =pod
 =over 12
 
 =item C<CreateUserRoles()>
 
-Creates a collection of UserRole objects.
+When given a User object returns a collection containing the corresponding
+roles. In this case the Role objects don't store the key of their parent.
+
+If no User object is specified all the table rows are returned and the UserRole
+objects have a UserName property.
 
 =back
 =cut
@@ -77,7 +85,8 @@ sub CreateUserRoles(;$$)
 {
   my ($ScopeObject, $User) = @_;
   return WineTestBot::UserRoles->new("UserRoles", "UserRoles", "UserRole",
-                                     \@PropertyDescriptors, $ScopeObject, $User);
+      $User ? \@PropertyDescriptors : \@FlatPropertyDescriptors,
+      $ScopeObject, $User);
 }
 
 1;

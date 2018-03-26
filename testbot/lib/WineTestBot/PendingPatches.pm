@@ -69,13 +69,24 @@ my @PropertyDescriptors = (
   CreateBasicPropertyDescriptor("No", "Part no", 1, 1, "N", 2),
   CreateItemrefPropertyDescriptor("Patch", "Submitted via patch", !1, 1, \&WineTestBot::Patches::CreatePatches, ["PatchId"]),
 );
+my @FlatPropertyDescriptors = (
+  CreateBasicPropertyDescriptor("PendingPatchSetEMail", "EMail of series author", 1, 1, "A", 40),
+  CreateBasicPropertyDescriptor("PendingPatchSetTotalParts", "Expected number of parts in series", 1, 1, "N", 2),
+  @PropertyDescriptors
+);
 
 =pod
 =over 12
 
 =item C<CreatePendingPatches()>
 
-Creates a collection of PendingPatch objects.
+When given a PendingPatchSet object returns a collection containing the
+corresponding parts. In this case the PendingPatch objects don't store the
+key of their parent.
+
+If no PendingPatchSet object is specified all the table rows are returned and
+the PendingPatch objects have PendingPatchSetEMail and
+PendingPatchSetTotalParts properties.
 
 =back
 =cut
@@ -86,7 +97,8 @@ sub CreatePendingPatches(;$$)
 
   return WineTestBot::PendingPatches->new(
       "PendingPatches", "PendingPatches", "PendingPatch",
-      \@PropertyDescriptors, $ScopeObject, $PendingPatchSet);
+      $PendingPatchSet ? \@PropertyDescriptors : \@FlatPropertyDescriptors,
+      $ScopeObject, $PendingPatchSet);
 }
 
 1;

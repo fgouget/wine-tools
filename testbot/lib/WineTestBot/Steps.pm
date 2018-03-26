@@ -216,17 +216,22 @@ my @PropertyDescriptors = (
   CreateBasicPropertyDescriptor("ReportSuccessfulTests", "Report successful tests (WINETEST_REPORT_SUCCESS)", !1, 1, "B", 1),
   CreateDetailrefPropertyDescriptor("Tasks", "Tasks", !1, !1, \&CreateTasks),
 );
+SetDetailrefKeyPrefix("Step", @PropertyDescriptors);
+my @FlatPropertyDescriptors = (
+  CreateBasicPropertyDescriptor("JobId", "Job id", 1, 1, "S", 5),
+  @PropertyDescriptors
+);
 
 =pod
 =over 12
 
 =item C<CreateSteps()>
 
-Creates a collection containing the steps of the specified Job. In
-this case the Step objects don't store the key of their parent.
+When given a Job object returns a collection containing the corresponding
+steps. In this case the Step objects don't store the key of their parent.
 
-If no Job is specified all the table rows are returned and the
-Step objects have a JobId property.
+If no Job object is specified all the table rows are returned and the Step
+objects have a JobId property.
 
 =back
 =cut
@@ -236,7 +241,8 @@ sub CreateSteps(;$$)
   my ($ScopeObject, $Job) = @_;
 
   return WineTestBot::Steps->new("Steps", "Steps", "Step",
-                                 \@PropertyDescriptors, $ScopeObject, $Job);
+      $Job ? \@PropertyDescriptors : \@FlatPropertyDescriptors,
+      $ScopeObject, $Job);
 }
 
 1;

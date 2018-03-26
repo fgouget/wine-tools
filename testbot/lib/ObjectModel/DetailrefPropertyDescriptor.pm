@@ -29,7 +29,7 @@ use vars qw(@ISA @EXPORT);
 
 require Exporter;
 @ISA = qw(ObjectModel::PropertyDescriptor Exporter);
-@EXPORT = qw(&CreateDetailrefPropertyDescriptor);
+@EXPORT = qw(&CreateDetailrefPropertyDescriptor &SetDetailrefKeyPrefix);
 
 sub _initialize($$)
 {
@@ -64,6 +64,21 @@ sub CreateDetailrefPropertyDescriptor($$$$$)
 {
   my ($Name, $DisplayName, $IsKey, $IsRequired, $Creator) = @_;
   return ObjectModel::DetailrefPropertyDescriptor->new($Name, $DisplayName, $IsKey, $IsRequired, $Creator);
+}
+
+sub SetDetailrefKeyPrefix($@)
+{
+  my $KeyPrefix = shift;
+  foreach my $PropertyDescriptor (@_)
+  {
+    if ($PropertyDescriptor->{IsKey})
+    {
+      # Defines the prefix to prepend to the field name when the key is
+      # inherited by a child object through a DetailrefPropertyDescriptor
+      # relation.
+      $PropertyDescriptor->{KeyPrefix} = $KeyPrefix;
+    }
+  }
 }
 
 1;

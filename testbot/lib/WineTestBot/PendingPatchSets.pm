@@ -180,6 +180,7 @@ my @PropertyDescriptors = (
   CreateBasicPropertyDescriptor("TotalParts", "Expected number of parts in series", 1, 1, "N", 2),
   CreateDetailrefPropertyDescriptor("Parts", "Parts received so far", !1, !1, \&CreatePendingPatches),
 );
+SetDetailrefKeyPrefix("PendingPatchSet", @PropertyDescriptors);
 
 =pod
 =over 12

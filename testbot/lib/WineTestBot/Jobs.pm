@@ -431,6 +431,7 @@ my @PropertyDescriptors = (
   CreateItemrefPropertyDescriptor("Patch", "Submitted from patch", !1, !1, \&WineTestBot::Patches::CreatePatches, ["PatchId"]),
   CreateDetailrefPropertyDescriptor("Steps", "Steps", !1, !1, \&CreateSteps),
 );
+SetDetailrefKeyPrefix("Job", @PropertyDescriptors);
 
 =pod
 =over 12

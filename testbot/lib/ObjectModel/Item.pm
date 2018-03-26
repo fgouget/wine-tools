@@ -305,8 +305,6 @@ sub GetMasterKey($)
 {
   my ($self) = @_;
 
-  my $ColNamePrefix = ref($self);
-  $ColNamePrefix =~ s/.*://;
   my @MasterColNames, my @MasterColValues;
   if (defined($self->{MasterColNames}))
   {
@@ -319,7 +317,7 @@ sub GetMasterKey($)
     {
       foreach my $ColName (@{$PropertyDescriptor->GetColNames()})
       {
-        push @MasterColNames, $ColNamePrefix . $ColName;
+        push @MasterColNames, $PropertyDescriptor->{KeyPrefix} . $ColName;
         push @MasterColValues, $self->GetColValue($ColName);
       }
     }

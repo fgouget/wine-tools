@@ -326,6 +326,7 @@ my @PropertyDescriptors = (
   CreateBasicPropertyDescriptor("ResetCode", "Password reset code", !1, !1, "A", 32),
   CreateDetailrefPropertyDescriptor("Roles", "Roles",     !1, !1, \&CreateUserRoles),
 );
+SetDetailrefKeyPrefix("User", @PropertyDescriptors);
 
 =pod
 =over 12
