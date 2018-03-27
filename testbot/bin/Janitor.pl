@@ -49,6 +49,7 @@ use WineTestBot::Patches;
 use WineTestBot::PendingPatchSets;
 use WineTestBot::CGI::Sessions;
 use WineTestBot::RecordGroups;
+use WineTestBot::Tasks;
 use WineTestBot::Users;
 use WineTestBot::VMs;
 
@@ -195,70 +196,66 @@ if ($JobArchiveDays != 0)
   }
 }
 
-# Purge the deleted users and VMs if they are not referenced anymore
+# Purge the deleted VMs if they are not referenced anymore
 my $VMs = CreateVMs();
 $VMs->AddFilter("Role", ["deleted"]);
 my %DeletedVMs;
 map { $DeletedVMs{$_} = 1 } @{$VMs->GetKeys()};
 
+if (%DeletedVMs)
+{
+  foreach my $Task (@{CreateTasks($VMs)->GetItems()})
+  {
+    if (exists $DeletedVMs{$Task->VM->Name})
+    {
+      Trace "Keeping the ", $Task->VM->Name, " VM for task ", join("/", @{$Task->GetMasterKey()}), "\n";
+      delete $DeletedVMs{$Task->VM->Name};
+      last if (!%DeletedVMs);
+    }
+  }
+  foreach my $VMKey (keys %DeletedVMs)
+  {
+    Trace "Deleting the $VMKey VM\n";
+    next if ($DryRun);
+
+    my $VM = $VMs->GetItem($VMKey);
+    my $ErrMessage = $VMs->DeleteItem($VM);
+    if (defined $ErrMessage)
+    {
+      Error "Unable to delete the $VMKey VM: $ErrMessage\n";
+    }
+  }
+}
+
+# Purge the deleted users if they are not referenced anymore
 my $Users = CreateUsers();
 $Users->AddFilter("Status", ["deleted"]);
 my %DeletedUsers;
 map { $DeletedUsers{$_} = 1 } @{$Users->GetKeys()};
 
-if (%DeletedUsers or %DeletedVMs)
+if (%DeletedUsers)
 {
-  foreach my $Job (@{CreateJobs()->GetItems()})
+  foreach my $Job (@{CreateJobs($Users)->GetItems()})
   {
     if (exists $DeletedUsers{$Job->User->Name})
     {
       Trace "Keeping the ", $Job->User->Name, " account for job ", $Job->Id, "\n";
       delete $DeletedUsers{$Job->User->Name};
-    }
-
-    if (%DeletedVMs)
-    {
-      foreach my $Step (@{$Job->Steps->GetItems()})
-      {
-        foreach my $Task (@{$Step->Tasks->GetItems()})
-        {
-          if (exists $DeletedVMs{$Task->VM->Name})
-          {
-            Trace "Keeping the ", $Task->VM->Name, " VM for task ", join("/", @{$Task->GetMasterKey()}), "\n";
-            delete $DeletedVMs{$Task->VM->Name};
-          }
-        }
-      }
+      last if (!%DeletedUsers);
     }
   }
 
-  if (%DeletedUsers)
+  foreach my $UserKey (keys %DeletedUsers)
   {
-    foreach my $UserName (keys %DeletedUsers)
-    {
-      my $User = $Users->GetItem($UserName);
-      Trace "Deleting the $UserName account\n";
-      next if ($DryRun);
-
-      DeleteSessions($User);
-      my $ErrMessage = $Users->DeleteItem($User);
-      if (defined $ErrMessage)
-      {
-        Error "Unable to delete the $UserName account: $ErrMessage\n";
-      }
-    }
-  }
-
-  foreach my $VMKey (keys %DeletedVMs)
-  {
-    my $VM = $VMs->GetItem($VMKey);
-    Trace "Deleting the $VMKey VM\n";
+    Trace "Deleting the $UserKey account\n";
     next if ($DryRun);
 
-    my $ErrMessage = $VMs->DeleteItem($VM);
+    my $User = $Users->GetItem($UserKey);
+    DeleteSessions($User);
+    my $ErrMessage = $Users->DeleteItem($User);
     if (defined $ErrMessage)
     {
-      Error "Unable to delete the $VMKey VM: $ErrMessage\n";
+      Error "Unable to delete the $UserKey account: $ErrMessage\n";
     }
   }
 }
