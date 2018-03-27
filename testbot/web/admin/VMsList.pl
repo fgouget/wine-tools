@@ -58,7 +58,7 @@ sub OnItemAction($$$$)
   if ($Action eq "Delete")
   {
     $Item->Role("deleted");
-    my ($ErrKey, $ErrProperty, $ErrMessage) = $self->{Collection}->Save();
+    my ($ErrProperty, $ErrMessage) = $Item->Save();
     return ! defined($ErrMessage);
   }
 
