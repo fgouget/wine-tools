@@ -372,8 +372,14 @@ my $TA = $VM->GetAgent();
 Debug(Elapsed($Start), " Setting the time\n");
 if (!$TA->SetTime())
 {
-  # Not a fatal error
-  LogTaskError("Unable to set the VM system time: ". $TA->GetLastError() .". Maybe the TestAgentd process is missing the required privileges.\n");
+  # Not a fatal error. Try the next port in case the VM runs a privileged
+  # TestAgentd daemon there.
+  my $PrivilegedTA = $VM->GetAgent(1);
+  if (!$PrivilegedTA->SetTime())
+  {
+    LogTaskError("Unable to set the VM system time: ". $PrivilegedTA->GetLastError() .". Maybe the TestAgentd process is missing the required privileges.\n");
+    $PrivilegedTA->Disconnect();
+  }
 }
 
 my $FileType = $Step->FileType;

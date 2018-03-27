@@ -208,9 +208,9 @@ sub GetDomain($)
   return LibvirtDomain->new($self);
 }
 
-sub GetAgent($)
+sub GetAgent($;$)
 {
-  my ($self) = @_;
+  my ($self, $Privileged) = @_;
 
   # Use either the tunnel specified in the configuration file
   # or autodetect the settings based on the VM's VirtURI setting.
@@ -226,7 +226,9 @@ sub GetAgent($)
     $TunnelInfo->{sshport}  = $ParsedURI->port;
     $TunnelInfo->{username} = $ParsedURI->userinfo;
   }
-  return TestAgent->new($self->Hostname, $AgentPort, $TunnelInfo);
+  my $Port = $AgentPort;
+  $Port++ if ($Privileged);
+  return TestAgent->new($self->Hostname, $Port, $TunnelInfo);
 }
 
 sub Status($;$)
