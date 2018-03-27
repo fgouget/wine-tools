@@ -26,6 +26,7 @@ use ObjectModel::Collection;
 use WineTestBot::Config;
 use WineTestBot::Activity;
 use WineTestBot::Log;
+use WineTestBot::Utils;
 use WineTestBot::VMs;
 
 @StatsPage::ISA = qw(ObjectModel::CGI::Page);
