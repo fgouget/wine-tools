@@ -96,12 +96,11 @@ int platform_rmchildproc(SOCKET client, uint64_t pid);
  */
 int platform_settime(uint64_t epoch, uint32_t leeway);
 
-/* Creates a script to be invoked to upgrade the current server.
- * The current server is responsible for starting the script and quickly exit.
- * The script will wait a bit, replace the server file and restart the server
- * with the same arguments as the original server.
+/* Replaces server file and restarts the server.
+ * Returns non-zero if successful, which will let the caller know to complete
+ * the current RPC and cleanly exit. Returns 0 otherwise.
  */
-int platform_upgrade_script(const char* script, const char* tmpserver, char** argv);
+int platform_upgrade(const char* tmpserver, char** argv);
 
 /* Called when the message has been dismissed by the user.
  */

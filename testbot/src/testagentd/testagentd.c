@@ -1078,7 +1078,6 @@ static void do_setproperty(SOCKET client)
 static void do_upgrade(SOCKET client)
 {
     static const char *filename = "testagentd.tmp";
-    static const char* upgrade_script = "./replace.bat";
     int fd, success;
 
     if (!expect_list_size(client, 1)
@@ -1103,34 +1102,26 @@ static void do_upgrade(SOCKET client)
         close(fd);
     }
 
-    if (!success)
-        unlink(filename);
-    else
-        success = platform_upgrade_script(upgrade_script, filename, server_argv);
+    if (success)
+        success = platform_upgrade(filename, server_argv);
 
     if (success)
     {
-        char* args[2];
-        char* redirects[3] = {"", "", ""};
-
         send_list_size(client, 0);
 
-        args[0] = strdup(upgrade_script);
-        args[1] = NULL;
-        success = platform_run(args, RUN_DNT, redirects);
-        free(args[0]);
-        if (success)
-        {
-            /* Decrement the start count since this one is intentional */
-            start_count--;
-            save_start_count();
+        /* Decrement the start count since this one is intentional */
+        start_count--;
+        save_start_count();
 
-            broken = 1;
-            quit = 1;
-        }
+        /* Tell the main loop to quit */
+        broken = 1;
+        quit = 1;
     }
     else
+    {
         send_error(client);
+        unlink(filename);
+    }
 }
 
 static void do_getcwd(SOCKET client)

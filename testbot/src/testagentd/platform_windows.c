@@ -280,36 +280,68 @@ int platform_settime(uint64_t epoch, uint32_t leeway)
 }
 
 
-int platform_upgrade_script(const char* script, const char* tmpserver, char** argv)
+char* get_server_filename(int old)
 {
-    char testagentd[MAX_PATH];
+    char filename[MAX_PATH];
     DWORD rc;
-    FILE* fh;
 
-    rc = GetModuleFileName(NULL, testagentd, sizeof(testagentd));
-    if (!rc || rc == sizeof(testagentd))
+    rc = GetModuleFileName(NULL, filename, sizeof(filename));
+    if (!rc || rc == sizeof(filename))
+        return NULL;
+
+    if (old)
     {
-        set_status(ST_ERROR, "unable to get the current process filename (%lu, le=%lu)", rc, GetLastError());
-        return 0;
+        if (rc >= sizeof(filename) - 5)
+            return NULL;
+        strcat(filename, ".old");
+    }
+    return strdup(filename);
+}
+
+int platform_upgrade(const char* tmpserver, char** argv)
+{
+    char *testagentd = NULL, *oldtestagentd = NULL;
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
+    int success = 0;
+
+    testagentd = get_server_filename(0);
+    oldtestagentd = get_server_filename(1);
+    if (!testagentd || !oldtestagentd)
+    {
+        set_status(ST_ERROR, "unable to get the process filenames (le=%lu)", GetLastError());
+        goto done;
     }
 
-    fh = fopen(script, "w");
-    if (!fh)
+    if (!MoveFile(testagentd, oldtestagentd))
     {
-        set_status(ST_ERROR, "unable to open '%s' for writing: %s", script, strerror(errno));
-        return 0;
+        set_status(ST_ERROR, "unable to move the current server file out of the way (le=%lu)", GetLastError());
+        goto done;
     }
-    /* Allow time for the server to exit */
-    fprintf(fh, "ping -n 1 -w 1000 1.1.1.1 >/nul\r\n");
-    /* Note that preserving the server filename is necessary and sufficient
-     * in order to get through the Windows firewall.
-     */
-    fprintf(fh, "copy /y \"%s\" \"%s\"\r\n", tmpserver, testagentd);
-    fprintf(fh, "del \"%s\"\r\n", tmpserver);
-    fprintf(fh, "%s\r\n", GetCommandLine());
-    fclose(fh);
+    if (!MoveFile(tmpserver, testagentd))
+    {
+        set_status(ST_ERROR, "unable to move the new server file in place (le=%lu)", GetLastError());
+        MoveFile(oldtestagentd, testagentd);
+        goto done;
+    }
 
-    return 1;
+    memset(&si, 0, sizeof(si));
+    si.cb = sizeof(si);
+    if (!CreateProcessA(testagentd, GetCommandLineA(), NULL, NULL, TRUE,
+                        CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi))
+    {
+        set_status(ST_ERROR, "could not run '%s': %lu", GetCommandLineA(), GetLastError());
+        MoveFile(oldtestagentd, testagentd);
+        goto done;
+    }
+
+    /* The new server will delete the old server file on startup */
+    success = 1;
+
+ done:
+    free(testagentd);
+    free(oldtestagentd);
+    return success;
 }
 
 struct msg_thread_t
@@ -488,10 +520,28 @@ void platform_detach_console(void)
 
 int platform_init(void)
 {
+    char *oldtestagentd;
     HMODULE hdll;
     WORD wVersionRequested;
     WSADATA wsaData;
     int rc;
+
+    /* Delete the old server file if any */
+    oldtestagentd = get_server_filename(1);
+    if (oldtestagentd)
+    {
+        /* This also serves to ensure the old server has released the port
+         * before we attempt to open our own.
+         */
+        do
+        {
+            if (!DeleteFileA(oldtestagentd))
+                Sleep(500);
+        }
+        while (GetLastError() ==  ERROR_ACCESS_DENIED);
+        free(oldtestagentd);
+    }
+
 
     wVersionRequested = MAKEWORD(2, 2);
     rc = WSAStartup(wVersionRequested, &wsaData);

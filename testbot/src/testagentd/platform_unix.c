@@ -239,34 +239,60 @@ int platform_settime(uint64_t epoch, uint32_t leeway)
     return 1;
 }
 
-int platform_upgrade_script(const char* script, const char* tmpserver, char** argv)
-{
-    char** arg;
-    FILE* fh;
 
-    fh = fopen(script, "w");
-    if (!fh)
+int platform_upgrade(const char* tmpserver, char** argv)
+{
+    static const char* oldserver = "testagentd.old";
+    int pipefds[2];
+    pid_t pid;
+
+    if (rename(argv[0], oldserver))
     {
-        set_status(ST_ERROR, "unable to open '%s' for writing: %s", script, strerror(errno));
+        set_status(ST_ERROR, "unable to move the current server file out of the way: %s", strerror(errno));
         return 0;
     }
-    /* Allow time for the server to exit */
-    fprintf(fh, "#!/bin/sh\n");
-    fprintf(fh, "sleep 1\n");
-    fprintf(fh, "mv %s %s\n", tmpserver, argv[0]);
-    arg = argv;
-    while (*arg)
+
+    if (rename(tmpserver, argv[0]))
     {
-        fprintf(fh, "'%s' ", *arg);
-        arg++;
-    }
-    fprintf(fh, "\n");
-    fclose(fh);
-    if (chmod(script, S_IRUSR | S_IWUSR | S_IXUSR) < 0)
-    {
-        set_status(ST_ERROR, "could not make '%s' executable: %s", script, strerror(errno));
+        set_status(ST_ERROR, "unable to move the currentnew server file into place: %s", strerror(errno));
+        rename(oldserver, argv[0]);
         return 0;
     }
+    if (pipe(pipefds))
+    {
+        set_status(ST_ERROR, "could not synchronize with the new process: %s", strerror(errno));
+        rename(oldserver, argv[0]);
+        return 0;
+    }
+
+    pid = fork();
+    if (pid < 0)
+    {
+        set_status(ST_ERROR, "unable to start the new server: %s", strerror(errno));
+        close(pipefds[0]);
+        close(pipefds[1]);
+        rename(oldserver, argv[0]);
+        return 0;
+    }
+
+    unlink(oldserver);
+    if (!pid)
+    {
+        /* The child process is responsible for cleanly closing the connection
+         * to the client.
+         */
+        close(pipefds[0]);
+        return 1;
+    }
+    close(pipefds[1]);
+
+    /* Wait for the read to fail which means the child exited and released the
+     * TestAgentd port.
+     */
+    read(pipefds[0], &pid, 1);
+    close(pipefds[0]);
+
+    execvp(argv[0], argv);
     return 1;
 }
 
