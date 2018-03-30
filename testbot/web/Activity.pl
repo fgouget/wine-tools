@@ -33,7 +33,7 @@ use WineTestBot::VMs;
 
 @ActivityPage::ISA = qw(ObjectModel::CGI::FreeFormPage);
 
-my $HOURS_DEFAULT = 24;
+my $HOURS_DEFAULT = 12;
 
 sub _initialize($$$)
 {
