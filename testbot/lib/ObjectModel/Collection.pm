@@ -420,8 +420,9 @@ sub IsEmpty($)
   }
 
   # Even though scalar(hash) does not return the number of items in Perl 5.20
-  # it returns 0 for an empty hash.
-  return !$self->{Items} || scalar(%{$self->{Items}}) == 0;
+  # (and cannot generally be compared to numbers), it evaluates to true for
+  # all hashes except empty ones.
+  return !$self->{Items} || !%{$self->{Items}};
 }
 
 sub CombineKey($@)
