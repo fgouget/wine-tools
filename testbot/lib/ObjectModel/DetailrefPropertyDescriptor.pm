@@ -25,11 +25,11 @@ ObjectModel::DetailrefPropertyDescriptor - A reference to a collection of relate
 
 =cut
 
-use vars qw(@ISA @EXPORT);
+use Exporter 'import';
+use ObjectModel::PropertyDescriptor;
+our @ISA = qw(ObjectModel::PropertyDescriptor);
+our @EXPORT = qw(CreateDetailrefPropertyDescriptor SetDetailrefKeyPrefix);
 
-require Exporter;
-@ISA = qw(ObjectModel::PropertyDescriptor Exporter);
-@EXPORT = qw(&CreateDetailrefPropertyDescriptor &SetDetailrefKeyPrefix);
 
 sub _initialize($$)
 {

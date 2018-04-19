@@ -28,10 +28,6 @@ ObjectModel::CGI::FreeFormPage - Base class for unbound web forms
 =cut
 
 use ObjectModel::CGI::FormPage;
-
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(ObjectModel::CGI::FormPage Exporter);
+our @ISA = qw(ObjectModel::CGI::FormPage);
 
 1;

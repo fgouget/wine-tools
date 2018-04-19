@@ -32,10 +32,6 @@ required or not.
 
 =cut
 
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(Exporter);
 
 sub new($$$$$@)
 {

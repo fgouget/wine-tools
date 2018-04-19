@@ -30,16 +30,14 @@ ObjectModel::BackEnd
 
 =cut
 
+use Exporter 'import';
+use ObjectModel::BackEnd;
+our @ISA = qw(ObjectModel::BackEnd);
+our @EXPORT = qw(UseDBIBackEnd);
+
 use DBI;
 use Time::Local;
 
-use ObjectModel::BackEnd;
-
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(ObjectModel::BackEnd Exporter);
-@EXPORT = qw(&UseDBIBackEnd);
 
 sub GetDb($)
 {

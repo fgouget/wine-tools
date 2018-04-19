@@ -26,13 +26,11 @@ WineTestBot::StepTask - Merged Step + Task object
 
 =cut
 
-use WineTestBot::Config;
 use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotItem);
 
-use vars qw(@ISA @EXPORT);
+use WineTestBot::Config;
 
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotItem Exporter);
 
 sub GetStepDir($)
 {
@@ -82,6 +80,7 @@ sub GetTitle($)
   return $Title;
 }
 
+
 package WineTestBot::StepsTasks;
 
 =head1 NAME
@@ -97,18 +96,16 @@ a specific database table.
 
 =cut
 
+use Exporter 'import';
+use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotCollection);
+our @EXPORT = qw(CreateStepsTasks);
+
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::ItemrefPropertyDescriptor;
 use WineTestBot::Steps;
 use WineTestBot::Tasks;
 use WineTestBot::VMs;
-use WineTestBot::WineTestBotObjects;
-
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotCollection Exporter);
-@EXPORT = qw(&CreateStepsTasks);
 
 sub _initialize($$)
 {

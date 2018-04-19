@@ -28,11 +28,8 @@ ObjectModel::CGI::CollectionBlockForPage - Collection block for list pages
 =cut
 
 use ObjectModel::CGI::CollectionBlock;
+our @ISA = qw(ObjectModel::CGI::CollectionBlock);
 
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(ObjectModel::CGI::CollectionBlock Exporter);
 
 sub CallGenerateFormStart($)
 {

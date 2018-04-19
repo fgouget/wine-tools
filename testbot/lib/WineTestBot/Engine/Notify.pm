@@ -27,17 +27,15 @@ WineTestBot::Engine::Notify - Engine notification
 
 =cut
 
+use Exporter 'import';
+our $RunningInEngine;
+our @EXPORT = qw(Shutdown PingEngine JobStatusChange JobCancel
+                 JobRestart RescheduleJobs VMStatusChange
+                 WinePatchMLSubmission WinePatchWebSubmission GetScreenshot);
+our @EXPORT_OK = qw($RunningInEngine);
+
 use Socket;
 use WineTestBot::Config;
-
-use vars qw (@ISA @EXPORT @EXPORT_OK $RunningInEngine);
-
-require Exporter;
-@ISA = qw(Exporter);
-@EXPORT = qw(&Shutdown &PingEngine &JobStatusChange &JobCancel
-             &JobRestart &RescheduleJobs &VMStatusChange
-             &WinePatchMLSubmission &WinePatchWebSubmission &GetScreenshot);
-@EXPORT_OK = qw($RunningInEngine);
 
 
 sub SendCmdReceiveReply($)

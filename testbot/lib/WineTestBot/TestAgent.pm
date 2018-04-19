@@ -22,11 +22,8 @@
 package TestAgent;
 use strict;
 
-use vars qw (@ISA @EXPORT_OK $SENDFILE_EXE $RUN_DNT $RUN_DNTRUNC_OUT $RUN_DNTRUNC_ERR $RUN_DNTRUNC);
-
-require Exporter;
-@ISA = qw(Exporter);
-@EXPORT_OK = qw(new);
+use Exporter 'import';
+our @EXPORT_OK = qw(new);
 
 my $BLOCK_SIZE = 65536;
 
@@ -1097,7 +1094,7 @@ sub GetVersion($)
   return $self->{agentversion};
 }
 
-$SENDFILE_EXE = 1;
+our $SENDFILE_EXE = 1;
 
 sub _SendStringOrFile($$$$$$)
 {
@@ -1173,10 +1170,10 @@ sub GetFileToString($$)
   return $self->_GetStringOrFile($ServerPathName, undef, undef);
 }
 
-$RUN_DNT = 1;
-$RUN_DNTRUNC_OUT = 2;
-$RUN_DNTRUNC_ERR = 4;
-$RUN_DNTRUNC = $RUN_DNTRUNC_OUT | $RUN_DNTRUNC_ERR;
+our $RUN_DNT = 1;
+our $RUN_DNTRUNC_OUT = 2;
+our $RUN_DNTRUNC_ERR = 4;
+our $RUN_DNTRUNC = $RUN_DNTRUNC_OUT | $RUN_DNTRUNC_ERR;
 
 sub Run($$$;$$$)
 {

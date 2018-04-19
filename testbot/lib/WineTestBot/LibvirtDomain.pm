@@ -32,14 +32,12 @@ technologies.
 
 =cut
 
+use Exporter 'import';
+our @EXPORT_OK = qw(new);
+
 use Sys::Virt;
 use Image::Magick;
 
-use vars qw (@ISA @EXPORT_OK);
-
-require Exporter;
-@ISA = qw(Exporter);
-@EXPORT_OK = qw(new);
 
 my %_Hypervisors;
 my %_Domains;

@@ -32,11 +32,8 @@ identifying the patch series it belongs to.
 =cut
 
 use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotItem);
 
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotItem Exporter);
 
 package WineTestBot::PendingPatches;
 
@@ -46,16 +43,14 @@ WineTestBot::PendingPatches - A collection of WineTestBot::PendingPatch objects
 
 =cut
 
+use Exporter 'import';
+use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotCollection);
+our @EXPORT = qw(CreatePendingPatches);
+
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::ItemrefPropertyDescriptor;
 use WineTestBot::Patches;
-use WineTestBot::WineTestBotObjects;
-
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotCollection Exporter);
-@EXPORT = qw(&CreatePendingPatches);
 
 
 sub CreateItem($)

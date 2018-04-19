@@ -28,12 +28,10 @@ WineTestBot::CGI::Session - A web user's session
 
 =cut
 
-use WineTestBot::Utils;
 use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotItem);
 
-require Exporter;
-use vars qw(@ISA @EXPORT);
-@ISA = qw(WineTestBot::WineTestBotItem Exporter);
+use WineTestBot::Utils;
 
 sub InitializeNew($$)
 {
@@ -53,19 +51,17 @@ WineTestBot::CGI::Sessions - A Session collection
 
 =cut
 
+use Exporter 'import';
+use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotCollection);
+our @EXPORT = qw(CreateSessions DeleteSessions NewSession);
+
 use CGI::Cookie;
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::ItemrefPropertyDescriptor;
 use WineTestBot::Config;
 use WineTestBot::Users;
 use WineTestBot::Utils;
-use WineTestBot::WineTestBotObjects;
-
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotCollection Exporter);
-@EXPORT = qw(&CreateSessions &DeleteSessions &NewSession);
 
 
 sub CreateItem($)

@@ -36,16 +36,14 @@ or to reset their PreviousNo fields beforehand.
 
 =cut
 
+use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotItem);
+
 use File::Copy;
 use File::Path;
 
 use WineTestBot::Config;
-use WineTestBot::WineTestBotObjects;
 
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotItem Exporter);
 
 sub InitializeNew($$)
 {
@@ -184,17 +182,15 @@ WineTestBot::Steps - A collection of Job Steps
 
 =cut
 
+use Exporter 'import';
+use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotCollection);
+our @EXPORT = qw(CreateSteps);
+
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::EnumPropertyDescriptor;
 use ObjectModel::DetailrefPropertyDescriptor;
 use WineTestBot::Tasks;
-use WineTestBot::WineTestBotObjects;
-
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotCollection Exporter);
-@EXPORT = qw(&CreateSteps);
 
 
 sub CreateItem($)

@@ -30,13 +30,11 @@ This handles the boolean, a number and string columns.
 
 =cut
 
+use Exporter 'import';
 use ObjectModel::PropertyDescriptor;
+our @ISA = qw(ObjectModel::PropertyDescriptor);
+our @EXPORT = qw(CreateBasicPropertyDescriptor);
 
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(ObjectModel::PropertyDescriptor Exporter);
-@EXPORT = qw(&CreateBasicPropertyDescriptor);
 
 sub _initialize($$$)
 {

@@ -33,6 +33,9 @@ linked to this patch through a WineTestBot::PendingPatch object.
 
 =cut
 
+use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotItem);
+
 use Encode qw/decode/;
 use File::Basename;
 
@@ -42,13 +45,8 @@ use WineTestBot::Jobs;
 use WineTestBot::Users;
 use WineTestBot::Utils;
 use WineTestBot::VMs;
-use WineTestBot::WineTestBotObjects;
 use WineTestBot::Engine::Notify;
 
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotItem Exporter);
 
 sub InitializeNew($$)
 {
@@ -357,6 +355,7 @@ sub GetEMailRecipient($)
   return BuildEMailRecipient($self->FromEMail, $self->FromName);
 }
 
+
 package WineTestBot::Patches;
 
 =head1 NAME
@@ -365,15 +364,13 @@ WineTestBot::Patches - A collection of WineTestBot::Patch objects
 
 =cut
 
+use Exporter 'import';
+use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotCollection);
+our @EXPORT = qw(CreatePatches);
+
 use ObjectModel::BasicPropertyDescriptor;
 use WineTestBot::Config;
-use WineTestBot::WineTestBotObjects;
-
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotCollection Exporter);
-@EXPORT = qw(&CreatePatches);
 
 
 sub CreateItem($)

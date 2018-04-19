@@ -21,13 +21,12 @@ use strict;
 
 package JobStatusBlock;
 
-use URI::Escape;
 use ObjectModel::CGI::CollectionBlock;
+our @ISA = qw(ObjectModel::CGI::CollectionBlock);
+
+use URI::Escape;
 use WineTestBot::Branches;
 
-use vars qw(@ISA);
-
-@ISA = qw(ObjectModel::CGI::CollectionBlock);
 
 sub SortKeys($$)
 {
@@ -140,13 +139,12 @@ sub GenerateDataCell($$$$)
   }
 }
 
+
 package VMStatusBlock;
 
 use ObjectModel::CGI::CollectionBlock;
+our @ISA = qw(ObjectModel::CGI::CollectionBlock);
 
-use vars qw(@ISA);
-
-@ISA = qw(ObjectModel::CGI::CollectionBlock);
 
 sub SortKeys($$)
 {
@@ -183,16 +181,18 @@ sub GetDetailsPage($)
   return undef;
 }
 
+
 package StatusPage;
 
 use ObjectModel::CGI::Page;
+our @ISA = qw(ObjectModel::CGI::Page);
+
 use WineTestBot::Config;
 use WineTestBot::Engine::Notify;
 use WineTestBot::Jobs;
 use WineTestBot::Log;
 use WineTestBot::VMs;
 
-@StatusPage::ISA = qw(ObjectModel::CGI::Page);
 
 sub _initialize($$$)
 {
@@ -302,6 +302,7 @@ EOF
 
   print "<p class='GeneralFooterText'>Generated in ", Elapsed($self->{start}), " s</p>\n";
 }
+
 
 package main;
 

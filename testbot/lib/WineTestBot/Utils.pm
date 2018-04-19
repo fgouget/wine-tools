@@ -25,17 +25,15 @@ WineTestBot::Utils - Utility functions
 
 =cut
 
+use Exporter 'import';
+our @EXPORT = qw(MakeSecureURL SecureConnection GenerateRandomString
+                 OpenNewFile CreateNewFile CreateNewLink CreateNewDir
+                 DurationToString BuildEMailRecipient);
+
 use Fcntl;
 
 use WineTestBot::Config;
 
-use vars qw (@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(Exporter);
-@EXPORT = qw(&MakeSecureURL &SecureConnection &GenerateRandomString
-             &OpenNewFile &CreateNewFile &CreateNewLink &CreateNewDir
-             &DurationToString &BuildEMailRecipient);
 
 sub MakeSecureURL($)
 {

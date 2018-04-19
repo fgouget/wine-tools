@@ -27,15 +27,12 @@ ObjectModel::CGI::CollectionBlock - Base class for list blocks
 
 package ObjectModel::CGI::CollectionBlock;
 
+use Exporter 'import';
+our @EXPORT = qw(new);
+
 use POSIX qw(strftime);
 use URI::Escape;
 
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(Exporter);
-
-@EXPORT = qw(new);
 
 sub new($$$@)
 {

@@ -30,13 +30,11 @@ new value is allowed.
 
 =cut
 
+use Exporter 'import';
 use ObjectModel::PropertyDescriptor;
+our @ISA = qw(ObjectModel::PropertyDescriptor);
+our @EXPORT = qw(CreateEnumPropertyDescriptor);
 
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(ObjectModel::PropertyDescriptor Exporter);
-@EXPORT = qw(&CreateEnumPropertyDescriptor);
 
 sub _initialize($$)
 {

@@ -27,11 +27,9 @@ WineTestBot::Engine::Events - Engine events
 
 =cut
 
-use vars qw (@ISA @EXPORT);
+use Exporter 'import';
+our @EXPORT = qw(AddEvent DeleteEvent EventScheduled RunEvents);
 
-require Exporter;
-@ISA = qw(Exporter);
-@EXPORT = qw(&AddEvent &DeleteEvent &EventScheduled &RunEvents);
 
 my %Events;
 

@@ -37,11 +37,8 @@ criteria.
 
 =cut
 
-use vars qw(@ISA @EXPORT_OK);
-
-require Exporter;
-@ISA = qw(Exporter);
-@EXPORT_OK = qw(&new &ComputeMasterKey);
+use Exporter 'import';
+our @EXPORT_OK = qw(new ComputeMasterKey);
 
 use Scalar::Util qw(weaken);
 use ObjectModel::BackEnd;

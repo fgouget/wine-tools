@@ -25,14 +25,11 @@ WineTestBot::Log - Logging
 
 =cut
 
+use Exporter 'import';
+our @EXPORT = qw(LogMsg OpenLog Time Elapsed PrettyElapsed);
+
 use WineTestBot::Config;
-use WineTestBot::Utils;
 
-use vars qw (@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(Exporter);
-@EXPORT = qw(&LogMsg &OpenLog &Time &Elapsed &PrettyElapsed);
 
 my $logfile;
 my $logprefix;

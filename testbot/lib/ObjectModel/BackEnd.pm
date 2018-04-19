@@ -30,11 +30,8 @@ should provide.
 
 =cut
 
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(Exporter);
-@EXPORT = qw(&AddDBBackEnd &GetDBBackEnd &RemoveDBBackEnd &CloseAllDBBackEnds);
+use Exporter 'import';
+our @EXPORT = qw(AddDBBackEnd GetDBBackEnd RemoveDBBackEnd CloseAllDBBackEnds);
 
 sub new($@)
 {

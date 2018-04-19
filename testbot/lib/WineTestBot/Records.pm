@@ -38,13 +38,11 @@ only limited by the amount of data dumped into the Records table.
 
 =cut
 
-use WineTestBot::Config;
 use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotItem);
 
-use vars qw (@ISA @EXPORT);
+use WineTestBot::Config;
 
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotItem Exporter);
 
 sub InitializeNew($$)
 {
@@ -62,15 +60,13 @@ WineTestBot::Records - A collection of WineTestBot::Record objects
 
 =cut
 
+use Exporter 'import';
+use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotCollection);
+our @EXPORT = qw(CreateRecords);
+
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::EnumPropertyDescriptor;
-use WineTestBot::WineTestBotObjects;
-
-use vars qw (@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotCollection Exporter);
-@EXPORT = qw(&CreateRecords);
 
 
 sub CreateItem($)

@@ -31,12 +31,8 @@ or the state of the TestBot at at a given time.
 =cut
 
 use WineTestBot::WineTestBotObjects;
-use WineTestBot::Config;
+our @ISA = qw(WineTestBot::WineTestBotItem);
 
-use vars qw (@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotItem Exporter);
 
 sub InitializeNew($$)
 {
@@ -56,16 +52,14 @@ WineTestBot::RecordGroups - A collection of WineTestBot::RecordGroup objects
 
 =cut
 
+use Exporter 'import';
+use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotCollection);
+our @EXPORT = qw(CreateRecordGroups CompareRecordGroups SaveRecord);
+
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::DetailrefPropertyDescriptor;
-use WineTestBot::WineTestBotObjects;
 use WineTestBot::Records;
-
-use vars qw (@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotCollection Exporter);
-@EXPORT = qw(&CreateRecordGroups &CompareRecordGroups &SaveRecord);
 
 
 sub CreateItem($)

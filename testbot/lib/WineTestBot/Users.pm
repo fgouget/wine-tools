@@ -26,18 +26,16 @@ WineTestBot::User - A User
 
 =cut
 
+use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotItem);
+
 use Digest::SHA qw(sha1_hex);
 use URI::Escape;
 use WineTestBot::Config;
 use WineTestBot::Roles;
 use WineTestBot::UserRoles;
 use WineTestBot::Utils;
-use WineTestBot::WineTestBotObjects;
 
-use vars qw (@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotItem Exporter);
 
 sub InitializeNew($$)
 {
@@ -287,6 +285,7 @@ sub HasRole($$)
   return defined($self->Roles->GetItem($RoleName));
 }
 
+
 package WineTestBot::Users;
 
 =head1 NAME
@@ -295,19 +294,17 @@ WineTestBot::Users - A collection of WineTestBot::User objects
 
 =cut
 
+use Exporter 'import';
+use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotCollection);
+our @EXPORT = qw(CreateUsers GetBatchUser Authenticate);
+
 use Net::LDAP;
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::EnumPropertyDescriptor;
 use ObjectModel::DetailrefPropertyDescriptor;
 use WineTestBot::Config;
 use WineTestBot::UserRoles;
-use WineTestBot::WineTestBotObjects;
-
-use vars qw (@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotCollection Exporter);
-@EXPORT = qw(&CreateUsers &GetBatchUser &Authenticate);
 
 
 sub CreateItem($)

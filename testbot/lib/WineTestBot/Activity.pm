@@ -25,17 +25,14 @@ WineTestBot::Activity -  reconstruct the TestBot's activity from its history rec
 
 =cut
 
+use Exporter 'import';
+our @EXPORT = qw(GetActivity GetStatistics);
+
 use Scalar::Util qw(weaken);
 use WineTestBot::Config;
 use WineTestBot::Jobs;
 use WineTestBot::RecordGroups;
 use WineTestBot::Records;
-
-use vars qw (@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(Exporter);
-@EXPORT = qw(&GetActivity &GetStatistics);
 
 
 sub _UpdateMin($$)

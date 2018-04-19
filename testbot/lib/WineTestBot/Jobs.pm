@@ -51,17 +51,15 @@ A Job is composed of multiple WineTestBot::Step objects.
 
 =cut
 
+use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotItem);
+
 use File::Path;
 
 use WineTestBot::Config;
 use WineTestBot::Branches;
 use WineTestBot::Engine::Notify;
-use WineTestBot::WineTestBotObjects;
 
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotItem Exporter);
 
 sub _initialize($$)
 {
@@ -391,11 +389,15 @@ those that are yet to be run.
 
 =cut
 
+use Exporter 'import';
+use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotCollection);
+our @EXPORT = qw(CreateJobs ScheduleJobs CheckJobs);
+
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::EnumPropertyDescriptor;
 use ObjectModel::DetailrefPropertyDescriptor;
 use ObjectModel::ItemrefPropertyDescriptor;
-use WineTestBot::WineTestBotObjects;
 use WineTestBot::Branches;
 use WineTestBot::Config;
 use WineTestBot::Patches;
@@ -403,12 +405,6 @@ use WineTestBot::RecordGroups;
 use WineTestBot::Steps;
 use WineTestBot::Users;
 use WineTestBot::VMs;
-
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotCollection Exporter);
-@EXPORT = qw(&CreateJobs &ScheduleJobs &CheckJobs);
 
 
 sub CreateItem($)

@@ -25,14 +25,12 @@ WineTestBot::WineTestBotItem - Base item class for WineTestBot
 
 =cut
 
-use ObjectModel::BackEnd;
 use ObjectModel::Item;
+our @ISA = qw(ObjectModel::Item);
+
+use ObjectModel::BackEnd;
 use WineTestBot::Config;
 
-use vars qw (@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(ObjectModel::Item Exporter);
 
 sub GetBackEnd($)
 {
@@ -49,14 +47,12 @@ WineTestBot::WineTestBotCollection - Base collection class for WineTestBot
 
 =cut
 
+use ObjectModel::Collection;
+our @ISA = qw(ObjectModel::Collection);
+
 use ObjectModel::BackEnd;
-use ObjectModel::Item;
+use WineTestBot::Item;
 use WineTestBot::Config;
-
-use vars qw (@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(ObjectModel::Collection Exporter);
 
 sub GetBackEnd($)
 {

@@ -28,13 +28,10 @@ ObjectModel::CGI::ItemPage - Base class for bound web forms
 
 =cut
 
-use URI::Escape;
 use ObjectModel::CGI::FormPage;
+our @ISA = qw(ObjectModel::CGI::FormPage);
 
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(ObjectModel::CGI::FormPage Exporter);
+use URI::Escape;
 
 sub _initialize($$$$)
 {

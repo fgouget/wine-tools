@@ -25,11 +25,10 @@ ObjectModel::ItemrefPropertyDescriptor - A property referencing an ObjectModel::
 
 =cut
 
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(ObjectModel::PropertyDescriptor Exporter);
-@EXPORT = qw(&CreateItemrefPropertyDescriptor);
+use Exporter 'import';
+use ObjectModel::PropertyDescriptor;
+our @ISA = qw(ObjectModel::PropertyDescriptor);
+our @EXPORT = qw(CreateItemrefPropertyDescriptor);
 
 sub _initialize($$$)
 {

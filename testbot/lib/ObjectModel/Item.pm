@@ -26,15 +26,13 @@ ObjectModel::Item - Base class for items
 
 =cut
 
+use Exporter 'import';
+our @EXPORT_OK = qw(new);
+
 use Scalar::Util qw(weaken);
 use ObjectModel::BackEnd;
 use ObjectModel::Collection;
 
-use vars qw(@ISA @EXPORT_OK);
-
-require Exporter;
-@ISA = qw(Exporter);
-@EXPORT_OK = qw(&new);
 
 
 =pod

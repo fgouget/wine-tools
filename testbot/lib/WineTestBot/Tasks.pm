@@ -33,18 +33,15 @@ virtual machine that the test must be performed in.
 
 =cut
 
+use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotItem);
+
 use POSIX qw(:errno_h);
 use File::Path;
 use ObjectModel::BackEnd;
 use WineTestBot::Config;
 use WineTestBot::Jobs;
 use WineTestBot::Steps;
-use WineTestBot::WineTestBotObjects;
-
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotItem Exporter);
 
 sub InitializeNew($$)
 {
@@ -203,17 +200,15 @@ WineTestBot::Tasks - A collection of WineTestBot::Task objects
 
 =cut
 
+use Exporter 'import';
+use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotCollection);
+our @EXPORT = qw(CreateTasks);
+
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::EnumPropertyDescriptor;
 use ObjectModel::ItemrefPropertyDescriptor;
 use WineTestBot::VMs;
-use WineTestBot::WineTestBotObjects;
-
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotCollection Exporter);
-@EXPORT = qw(&CreateTasks);
 
 
 sub CreateItem($)

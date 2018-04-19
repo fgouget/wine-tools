@@ -38,15 +38,13 @@ The WineTestBot::PendingPatchSet class is where this tracking is implemented.
 
 =cut
 
+use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotItem);
+
 use WineTestBot::Config;
 use WineTestBot::Patches;
 use WineTestBot::Utils;
-use WineTestBot::WineTestBotObjects;
 
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotItem Exporter);
 
 =pod
 =over 12
@@ -153,19 +151,17 @@ WineTestBot::PendingPatchSets - A collection of WineTestBot::PendingPatchSet obj
 
 =cut
 
+use Exporter 'import';
+use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotCollection);
+our @EXPORT = qw(CreatePendingPatchSets);
+
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::DetailrefPropertyDescriptor;
 use WineTestBot::Config;
 use WineTestBot::PendingPatches;
 use WineTestBot::Patches;
 use WineTestBot::Utils;
-use WineTestBot::WineTestBotObjects;
-
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotCollection Exporter);
-@EXPORT = qw(&CreatePendingPatchSets);
 
 
 sub CreateItem($)

@@ -27,12 +27,10 @@ WineTestBot::Branch - Describes a Wine branch
 =cut
 
 use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotItem);
+
 use WineTestBot::Config;
 
-use vars qw (@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotItem Exporter);
 
 sub InitializeNew($$)
 {
@@ -42,6 +40,7 @@ sub InitializeNew($$)
   $self->SUPER::InitializeNew($Collection);
 }
 
+
 package WineTestBot::Branches;
 
 =head1 NAME
@@ -50,14 +49,13 @@ WineTestBot::Branches - A collection of WineTestBot::Branch objects
 
 =cut
 
-use ObjectModel::BasicPropertyDescriptor;
+use Exporter 'import';
 use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotCollection);
+our @EXPORT = qw(CreateBranches);
 
-use vars qw (@ISA @EXPORT);
+use ObjectModel::BasicPropertyDescriptor;
 
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotCollection Exporter);
-@EXPORT = qw(&CreateBranches);
 
 sub GetDefaultBranch($)
 {

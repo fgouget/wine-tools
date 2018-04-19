@@ -27,13 +27,13 @@ ObjectModel::CGI::Page - Base class for web pages
 
 =cut
 
+use Exporter 'import';
+our @EXPORT = qw(new SetPageBaseCreator);
+
 use CGI;
 
-use vars qw(@ISA @EXPORT $PageBaseCreator);
 
-require Exporter;
-@ISA = qw(Exporter);
-@EXPORT = qw(new SetPageBaseCreator);
+my $PageBaseCreator;
 
 sub new($$$@)
 {

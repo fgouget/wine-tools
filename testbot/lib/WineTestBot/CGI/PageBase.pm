@@ -28,6 +28,9 @@ WineTestBot::CGI::PageBase - Base class for web pages
 
 =cut
 
+use Exporter 'import';
+our @EXPORT = qw(CreatePageBase);
+
 use Apache2::Const -compile => qw(REDIRECT);
 use Apache2::ServerRec;
 use CGI::Cookie;
@@ -35,12 +38,6 @@ use URI::Escape;
 use WineTestBot::CGI::Sessions;
 use WineTestBot::Config;
 use WineTestBot::Utils;
-
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(Exporter);
-@EXPORT = qw(&CreatePageBase);
 
 sub new($$$$@)
 {

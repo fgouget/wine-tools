@@ -142,6 +142,9 @@ are undergoing maintenance.
 
 =cut
 
+use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotItem);
+
 use File::Basename;
 
 use ObjectModel::BackEnd;
@@ -150,12 +153,7 @@ use WineTestBot::Engine::Notify;
 use WineTestBot::LibvirtDomain;
 use WineTestBot::RecordGroups;
 use WineTestBot::TestAgent;
-use WineTestBot::WineTestBotObjects;
 
-use vars qw (@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotItem Exporter);
 
 sub _initialize($$)
 {
@@ -637,15 +635,13 @@ role or status.
 
 =cut
 
+use Exporter 'import';
+use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotCollection);
+our @EXPORT = qw(CreateVMs);
+
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::EnumPropertyDescriptor;
-use WineTestBot::WineTestBotObjects;
-
-use vars qw (@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotCollection Exporter);
-@EXPORT = qw(&CreateVMs);
 
 
 sub CreateItem($)

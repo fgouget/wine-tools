@@ -30,11 +30,7 @@ A Role is a class of users and defines what they can do.
 =cut
 
 use WineTestBot::WineTestBotObjects;
-
-use vars qw (@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotItem Exporter);
+our @ISA = qw(WineTestBot::WineTestBotItem);
 
 
 package WineTestBot::Roles;
@@ -45,14 +41,12 @@ WineTestBot::Roles - A collection of WineTestBot::Role objects
 
 =cut
 
-use ObjectModel::BasicPropertyDescriptor;
+use Exporter 'import';
 use WineTestBot::WineTestBotObjects;
+our @ISA = qw(WineTestBot::WineTestBotCollection);
+our @EXPORT = qw(CreateRoles);
 
-use vars qw (@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(WineTestBot::WineTestBotCollection Exporter);
-@EXPORT = qw(&CreateRoles);
+use ObjectModel::BasicPropertyDescriptor;
 
 
 sub CreateItem($)

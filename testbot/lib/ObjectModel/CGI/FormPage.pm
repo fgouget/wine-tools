@@ -29,11 +29,8 @@ ObjectModel::CGI::FormPage - Base class for web forms
 =cut
 
 use ObjectModel::CGI::Page;
+our @ISA = qw(ObjectModel::CGI::Page);
 
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw(ObjectModel::CGI::Page Exporter);
 
 sub _initialize($$$$)
 {
