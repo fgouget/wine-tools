@@ -105,7 +105,7 @@ sub ApplyPatch($$$)
       {
         $NeedImplib = 1;
       }
-      elsif ($Line =~ m=^diff.*configure\.ac=)
+      elsif ($Line =~ m=^diff.*(?:aclocal\.m4|configure\.ac)=)
       {
         $NeedAutoconf = 1;
       }
