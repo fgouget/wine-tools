@@ -51,7 +51,7 @@ use ObjectModel::Collection;
 our @ISA = qw(ObjectModel::Collection);
 
 use ObjectModel::BackEnd;
-use WineTestBot::Item;
+use ObjectModel::Item;
 use WineTestBot::Config;
 
 sub GetBackEnd($)
