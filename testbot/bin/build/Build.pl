@@ -118,7 +118,7 @@ sub ApplyPatch($$$)
       {
         $NeedMakeMakefiles = $NeedConfigure = 1;
       }
-      elsif ($Line =~ m=^diff.*tools/makedep.c=)
+      elsif ($Line =~ m=^diff.*tools/makedep\.c=)
       {
         $NeedBuildNative = $NeedMakeMakefiles = $NeedConfigure = 1;
       }
