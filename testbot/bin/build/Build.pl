@@ -138,16 +138,7 @@ sub ApplyPatch($$$)
   if ($? != 0)
   {
     LogMsg "Patch failed to apply\n";
-    return (-1, $NeedMakeInclude, $NeedBuildDeps, $NeedImplib, $NeedConfigure);
-  }
-
-  if ($NeedBuildNative)
-  {
-    InfoMsg "Building tools\n";
-    if (!BuildNative())
-    {
-      return (-1, $NeedMakeInclude, $NeedBuildDeps, $NeedImplib, $NeedConfigure);
-    }
+    return (-1, $NeedMakeInclude, $NeedBuildDeps, $NeedImplib, $NeedConfigure, $NeedBuildNative);
   }
 
   if ($NeedMakeMakefiles)
@@ -159,7 +150,7 @@ sub ApplyPatch($$$)
     if ($? != 0)
     {
       LogMsg "make_makefiles failed\n";
-      return (-1, $NeedMakeInclude, $NeedBuildDeps, $NeedImplib, $NeedConfigure);
+      return (-1, $NeedMakeInclude, $NeedBuildDeps, $NeedImplib, $NeedConfigure, $NeedBuildNative);
     }
   }
 
@@ -173,7 +164,7 @@ sub ApplyPatch($$$)
     {
        LogMsg "Autoconf failed\n";
        return (-1, $NeedMakeInclude, $NeedBuildDeps, $NeedImplib,
-               $NeedConfigure);
+               $NeedConfigure, $NeedBuildNative);
     }
     $NeedConfigure = 1;
   }
@@ -193,7 +184,7 @@ sub ApplyPatch($$$)
   }
 
   return ($NeedMakefile, $NeedMakeInclude, $NeedBuildDeps, $NeedImplib,
-          $NeedConfigure);
+          $NeedConfigure, $NeedBuildNative);
 }
 
 my $ncpus;
@@ -418,13 +409,22 @@ else
 }
 
 my ($NeedMakefile, $NeedMakeInclude, $NeedBuildDeps, $NeedImplib,
-    $NeedConfigure) = ApplyPatch($PatchFile, $PatchType, $BaseName);
+    $NeedConfigure, $NeedBuildNative) = ApplyPatch($PatchFile, $PatchType, $BaseName);
 if ($NeedMakefile < 0)
 {
   exit(1);
 }
 
 CountCPUs();
+
+if ($NeedBuildNative)
+{
+  InfoMsg "Building tools\n";
+  if (!BuildNative())
+  {
+    exit(1);
+  }
+}
 
 if ($Run32 && ! BuildTestExecutable($BaseName, $PatchType, 32,
                                     $NeedConfigure, 0 < $NeedMakefile,
