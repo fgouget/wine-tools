@@ -515,26 +515,18 @@ sub SaveItem($$)
 {
   my ($self, $Item) = @_;
 
-  my $Query;
-  my ($MasterColNames, $MasterColValues) = $Item->GetMasterCols();
-  if ($Item->GetIsModified())
-  {
-    $Query = $self->BuildUpdateStatement($Item->GetTableName(),
-                                         $Item->GetPropertyDescriptors(),
-                                         $MasterColNames);
-  }
-  elsif ($Item->GetIsNew())
+  if ($Item->GetIsNew())
   {
     die "Internal error: Need to save new items via collection";
   }
-  else
-  {
-    return;
-  }
+  if (!$Item->GetIsModified());
 
+  my ($MasterColNames, $MasterColValues) = $Item->GetMasterCols();
+  my $Query = $self->BuildUpdateStatement($Item->GetTableName(),
+                                          $Item->GetPropertyDescriptors(),
+                                          $MasterColNames);
   my $Statement = $self->GetDb()->prepare($Query);
   $Statement->execute(@{$self->GetUpdateData($MasterColValues, $Item)});
-
   $Statement->finish();
 }
 
