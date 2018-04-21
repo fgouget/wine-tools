@@ -109,7 +109,8 @@ sub Elapsed($)
 sub PrettyElapsed($)
 {
     my ($Start) = @_;
-    return DurationToString(Time()-$Start);
+    require WineTestBot::Utils;
+    return WineTestBot::Utils::DurationToString(Time()-$Start);
 }
 
 1;
