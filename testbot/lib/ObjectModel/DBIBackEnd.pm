@@ -519,7 +519,7 @@ sub SaveItem($$)
   {
     die "Internal error: Need to save new items via collection";
   }
-  if (!$Item->GetIsModified());
+  return if (!$Item->GetIsModified());
 
   my ($MasterColNames, $MasterColValues) = $Item->GetMasterCols();
   my $Query = $self->BuildUpdateStatement($Item->GetTableName(),
