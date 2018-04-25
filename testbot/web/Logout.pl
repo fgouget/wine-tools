@@ -22,10 +22,11 @@ use strict;
 package LogoutPage;
 
 use ObjectModel::CGI::Page;
-use WineTestBot::CGI::Sessions;
-use CGI qw(:standard);
+our @ISA = qw(ObjectModel::CGI::Page);
 
-@LogoutPage::ISA = qw(ObjectModel::CGI::Page);
+use CGI qw(:standard);
+use WineTestBot::CGI::Sessions;
+
 
 sub _initialize($$$)
 {
@@ -71,6 +72,7 @@ sub GeneratePage($)
 
   $self->SUPER::GeneratePage();
 }
+
 
 package main;
 

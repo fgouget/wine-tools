@@ -21,13 +21,14 @@ use strict;
 
 package ResetPasswordPage;
 
-use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::CGI::FreeFormPage;
+our @ISA = qw(ObjectModel::CGI::FreeFormPage);
+
+use ObjectModel::BasicPropertyDescriptor;
 use WineTestBot::Users;
 use WineTestBot::Utils;
 use WineTestBot::CGI::Sessions;
 
-@ResetPasswordPage::ISA = qw(ObjectModel::CGI::FreeFormPage);
 
 sub _initialize($$$)
 {
@@ -182,6 +183,7 @@ sub GenerateBody($)
 
   $self->SUPER::GenerateBody();
 }
+
 
 package main;
 

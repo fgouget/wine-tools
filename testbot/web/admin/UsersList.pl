@@ -23,11 +23,12 @@ use strict;
 package UsersListPage;
 
 use ObjectModel::CGI::CollectionPage;
+our @ISA = qw(ObjectModel::CGI::CollectionPage);
+
 use WineTestBot::CGI::Sessions;
 use WineTestBot::Config;
 use WineTestBot::Users;
 
-@UsersListPage::ISA = qw(ObjectModel::CGI::CollectionPage);
 
 sub _initialize($$$)
 {

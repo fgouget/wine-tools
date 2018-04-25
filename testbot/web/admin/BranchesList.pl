@@ -22,10 +22,11 @@ use strict;
 package BranchesListPage;
 
 use ObjectModel::CGI::CollectionPage;
+our @ISA = qw(ObjectModel::CGI::CollectionPage);
+
 use WineTestBot::Config;
 use WineTestBot::Branches;
 
-@BranchesListPage::ISA = qw(ObjectModel::CGI::CollectionPage);
 
 sub _initialize($$$)
 {
@@ -41,6 +42,7 @@ sub SortKeys($$$)
   my @SortedKeys = sort { $a cmp $b } @$Keys;
   return \@SortedKeys;
 }
+
 
 package main;
 

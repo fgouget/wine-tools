@@ -23,11 +23,12 @@ use strict;
 package UserDetailsPage;
 
 use ObjectModel::CGI::ItemPage;
+our @ISA = qw(ObjectModel::CGI::ItemPage);
+
 use WineTestBot::CGI::Sessions;
 use WineTestBot::Config;
 use WineTestBot::Users;
 
-@UserDetailsPage::ISA = qw(ObjectModel::CGI::ItemPage);
 
 sub _initialize($$$)
 {
@@ -123,6 +124,7 @@ sub OnAction($$)
 
   return $self->SUPER::OnAction($Action);
 }
+
 
 package main;
 

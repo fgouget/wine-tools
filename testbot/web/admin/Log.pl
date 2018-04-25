@@ -21,12 +21,13 @@ use strict;
 
 package LogPage;
 
-use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::CGI::FreeFormPage;
+our @ISA = qw(ObjectModel::CGI::FreeFormPage);
+
+use ObjectModel::BasicPropertyDescriptor;
 use WineTestBot::Config;
 use WineTestBot::Log;
 
-@LogPage::ISA = qw(ObjectModel::CGI::FreeFormPage);
 
 sub _initialize($$$)
 {

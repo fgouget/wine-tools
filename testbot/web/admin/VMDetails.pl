@@ -23,9 +23,10 @@ use strict;
 package VMDetailsPage;
 
 use ObjectModel::CGI::ItemPage;
+our @ISA = qw(ObjectModel::CGI::ItemPage);
+
 use WineTestBot::VMs;
 
-@VMDetailsPage::ISA = qw(ObjectModel::CGI::ItemPage);
 
 sub _initialize($$$)
 {
@@ -61,6 +62,7 @@ sub Save($)
   ($self->{ErrField}, $self->{ErrMessage}) = $self->{Item}->Save();
   return ! defined($self->{ErrMessage});
 }
+
 
 package main;
 

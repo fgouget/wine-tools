@@ -21,14 +21,15 @@ use strict;
 
 package LoginPage;
 
-use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::CGI::FreeFormPage;
+our @ISA = qw(ObjectModel::CGI::FreeFormPage);
+
+use ObjectModel::BasicPropertyDescriptor;
 use WineTestBot::Config;
 use WineTestBot::Users;
 use WineTestBot::Utils;
 use WineTestBot::CGI::Sessions;
 
-@LoginPage::ISA = qw(ObjectModel::CGI::FreeFormPage);
 
 sub _initialize($$$)
 {
@@ -152,6 +153,7 @@ sub OnAction($$)
 
   return $self->SUPER::OnAction($Action);
 }
+
 
 package main;
 

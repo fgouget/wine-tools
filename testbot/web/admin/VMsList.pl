@@ -22,9 +22,10 @@ use strict;
 package VMsListPage;
 
 use ObjectModel::CGI::CollectionPage;
+our @ISA = qw(ObjectModel::CGI::CollectionPage);
+
 use WineTestBot::VMs;
 
-@VMsListPage::ISA = qw(ObjectModel::CGI::CollectionPage);
 
 sub _initialize($$$)
 {
@@ -64,6 +65,7 @@ sub OnItemAction($$$$)
 
   return $self->SUPER::OnItemAction($CollectionBlock, $Item, $Action);
 }
+
 
 package main;
 

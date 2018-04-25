@@ -21,17 +21,18 @@ use strict;
 
 package ActivityPage;
 
+use ObjectModel::CGI::FreeFormPage;
+our @ISA = qw(ObjectModel::CGI::FreeFormPage);
+
 use POSIX qw(strftime);
 use URI::Escape;
 
-use ObjectModel::CGI::FreeFormPage;
 use WineTestBot::Config;
 use WineTestBot::Activity;
 use WineTestBot::Log;
 use WineTestBot::Utils;
 use WineTestBot::VMs;
 
-@ActivityPage::ISA = qw(ObjectModel::CGI::FreeFormPage);
 
 my $HOURS_DEFAULT = 12;
 
@@ -296,6 +297,7 @@ sub GenerateFooter($)
   print "</tbody></table></div>\n";
   print "<p class='GeneralFooterText'>Generated in ", Elapsed($self->{start}), " s</p>\n";
 }
+
 
 package main;
 

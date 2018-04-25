@@ -21,11 +21,12 @@ use strict;
 
 package PatchesListPage;
 
-use URI::Escape;
 use ObjectModel::CGI::CollectionPage;
+our @ISA = qw(ObjectModel::CGI::CollectionPage);
+
+use URI::Escape;
 use WineTestBot::Patches;
 
-@PatchesListPage::ISA = qw(ObjectModel::CGI::CollectionPage);
 
 sub _initialize($$$)
 {
@@ -90,6 +91,7 @@ sub GenerateDataCell($$$$$)
     $self->SUPER::GenerateDataCell($CollectionBlock, $Item, $PropertyDescriptor, $DetailsPage);
   }
 }
+
 
 package main;
 

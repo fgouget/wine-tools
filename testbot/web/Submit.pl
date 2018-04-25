@@ -21,6 +21,9 @@ use strict;
 
 package SubmitPage;
 
+use ObjectModel::CGI::FreeFormPage;
+our @ISA = qw(ObjectModel::CGI::FreeFormPage);
+
 use CGI qw(:standard);
 use Fcntl; # For O_XXX
 use IO::Handle;
@@ -28,7 +31,6 @@ use POSIX qw(:fcntl_h); # For SEEK_XXX
 use File::Basename;
 
 use ObjectModel::BasicPropertyDescriptor;
-use ObjectModel::CGI::FreeFormPage;
 use WineTestBot::Branches;
 use WineTestBot::Config;
 use WineTestBot::Jobs;
@@ -36,7 +38,6 @@ use WineTestBot::Engine::Notify;
 use WineTestBot::Utils;
 use WineTestBot::VMs;
 
-@SubmitPage::ISA = qw(ObjectModel::CGI::FreeFormPage);
 
 sub _initialize($$$)
 {
@@ -1005,6 +1006,7 @@ sub OnAction($$)
 
   return $self->SUPER::OnAction($Action);
 }
+
 
 package main;
 

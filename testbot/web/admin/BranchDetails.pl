@@ -22,10 +22,10 @@ use strict;
 package BranchDetailsPage;
 
 use ObjectModel::CGI::ItemPage;
-use WineTestBot::Config;
+our @ISA = qw(ObjectModel::CGI::ItemPage);
+
 use WineTestBot::Branches;
 
-@BranchDetailsPage::ISA = qw(ObjectModel::CGI::ItemPage);
 
 sub _initialize($$$)
 {
@@ -33,6 +33,7 @@ sub _initialize($$$)
 
   $self->SUPER::_initialize($Request, $RequiredRole, CreateBranches());
 }
+
 
 package main;
 

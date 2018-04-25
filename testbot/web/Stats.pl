@@ -22,6 +22,8 @@ use strict;
 package StatsPage;
 
 use ObjectModel::CGI::Page;
+our @ISA = qw(ObjectModel::CGI::Page);
+
 use ObjectModel::Collection;
 use WineTestBot::Config;
 use WineTestBot::Activity;
@@ -29,7 +31,6 @@ use WineTestBot::Log;
 use WineTestBot::Utils;
 use WineTestBot::VMs;
 
-@StatsPage::ISA = qw(ObjectModel::CGI::Page);
 
 sub _initialize($$$)
 {
@@ -335,6 +336,7 @@ sub GenerateBody($)
   print "</tbody></table></div>\n";
   print "<p class='GeneralFooterText'>Generated in ", Elapsed($self->{start}), " s</p>\n";
 }
+
 
 package main;
 

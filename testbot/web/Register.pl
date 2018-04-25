@@ -21,15 +21,16 @@ use strict;
 
 package RegisterPage;
 
+use ObjectModel::CGI::ItemPage;
+our @ISA = qw(ObjectModel::CGI::ItemPage);
+
 use URI::Escape;
 
 use ObjectModel::BasicPropertyDescriptor;
-use ObjectModel::CGI::ItemPage;
 use WineTestBot::Config;
 use WineTestBot::Users;
 use WineTestBot::Utils;
 
-@RegisterPage::ISA = qw(ObjectModel::CGI::ItemPage);
 
 sub _initialize($$$)
 {
@@ -186,6 +187,7 @@ EOF
 
   $self->SUPER::GenerateBody();
 }
+
 
 package main;
 

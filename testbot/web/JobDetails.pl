@@ -21,14 +21,16 @@ use strict;
 
 package JobDetailsPage;
 
-use URI::Escape;
 use ObjectModel::CGI::CollectionPage;
+our @ISA = qw(ObjectModel::CGI::CollectionPage);
+
+use URI::Escape;
+
 use WineTestBot::Config;
 use WineTestBot::Jobs;
 use WineTestBot::StepsTasks;
 use WineTestBot::Engine::Notify;
 
-@JobDetailsPage::ISA = qw(ObjectModel::CGI::CollectionPage);
 
 sub _initialize($$$)
 {
@@ -484,6 +486,7 @@ sub GenerateDataCell($$$$$)
     $self->SUPER::GenerateDataCell($CollectionBlock, $StepTask, $PropertyDescriptor, $DetailsPage);
   }
 }
+
 
 package main;
 
