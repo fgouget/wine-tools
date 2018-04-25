@@ -179,21 +179,26 @@ sub UpdateStatus($)
   my $Status = $self->Status;
   return $Status if ($Status ne "queued" && $Status ne "running");
 
-  my (%Has, $Skip);
-  my @SortedSteps = sort { $a->No <=> $b->No } @{$self->Steps->GetItems()};
+  my %Has;
+  my $Steps = $self->Steps;
+  my @SortedSteps = sort { $a->No <=> $b->No } @{$Steps->GetItems()};
   foreach my $Step (@SortedSteps)
   {
+    my $Skip;
+    if ($Step->PreviousNo)
+    {
+      my $PrevStatus = $Steps->GetItem($Step->PreviousNo)->Status;
+      if ($PrevStatus ne "queued" && $PrevStatus ne "running" &&
+          $PrevStatus ne "completed")
+      {
+        # The previous step was supposed to provide binaries but it failed
+        # or was canceled. So skip this one.
+        $Skip = 1;
+      }
+    }
+
     my $StepStatus = $Step->UpdateStatus($Skip);
     $Has{$StepStatus} = 1;
-
-    if ($StepStatus ne "queued" && $StepStatus ne "running" &&
-        $StepStatus ne "completed" &&
-        ($Step->Type eq "build" || $Step->Type eq "reconfig"))
-    {
-      # The following steps need binaries that this one was supposed to
-      # produce. So skip them.
-      $Skip = 1;
-    }
   }
 
   # Inherit the steps most significant status.
