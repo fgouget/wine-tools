@@ -625,7 +625,7 @@ sub SafetyNet()
   ScheduleJobs();
   HandleWinePatchWebSubmission();
 
-  my $Set = WineTestBot::PendingPatchSets::CreatePendingPatchSets();
+  my $Set = CreatePendingPatchSets();
   my $ErrMessage = $Set->CheckForCompleteSet();
   if (defined($ErrMessage))
   {
