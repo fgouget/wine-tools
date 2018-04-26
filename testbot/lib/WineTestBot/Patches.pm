@@ -40,7 +40,6 @@ use Encode qw/decode/;
 use File::Basename;
 
 use WineTestBot::Config;
-use WineTestBot::PendingPatchSets;
 use WineTestBot::Jobs;
 use WineTestBot::Users;
 use WineTestBot::Utils;
@@ -374,6 +373,7 @@ BEGIN
 
 use ObjectModel::BasicPropertyDescriptor;
 use WineTestBot::Config;
+use WineTestBot::PendingPatchSets;
 
 
 sub CreateItem($)
@@ -510,7 +510,7 @@ sub NewPatch($$$)
       link($PatchBodies[0]->path, "$DataDir/patches/" . $Patch->Id);
       if (! defined($ErrMessage))
       {
-        $ErrMessage = WineTestBot::PendingPatchSets::CreatePendingPatchSets()->NewSubmission($Patch);
+        $ErrMessage = CreatePendingPatchSets()->NewSubmission($Patch);
       }
     }
     else
