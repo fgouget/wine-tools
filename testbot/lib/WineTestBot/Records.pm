@@ -62,8 +62,11 @@ WineTestBot::Records - A collection of WineTestBot::Record objects
 
 use Exporter 'import';
 use WineTestBot::WineTestBotObjects;
-our @ISA = qw(WineTestBot::WineTestBotCollection);
-our @EXPORT = qw(CreateRecords);
+BEGIN
+{
+  our @ISA = qw(WineTestBot::WineTestBotCollection);
+  our @EXPORT = qw(CreateRecords);
+}
 
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::EnumPropertyDescriptor;

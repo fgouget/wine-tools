@@ -396,8 +396,11 @@ those that are yet to be run.
 
 use Exporter 'import';
 use WineTestBot::WineTestBotObjects;
-our @ISA = qw(WineTestBot::WineTestBotCollection);
-our @EXPORT = qw(CreateJobs ScheduleJobs CheckJobs);
+BEGIN
+{
+  our @ISA = qw(WineTestBot::WineTestBotCollection);
+  our @EXPORT = qw(CreateJobs ScheduleJobs CheckJobs);
+}
 
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::EnumPropertyDescriptor;

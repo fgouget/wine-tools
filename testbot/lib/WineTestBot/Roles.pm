@@ -43,8 +43,11 @@ WineTestBot::Roles - A collection of WineTestBot::Role objects
 
 use Exporter 'import';
 use WineTestBot::WineTestBotObjects;
-our @ISA = qw(WineTestBot::WineTestBotCollection);
-our @EXPORT = qw(CreateRoles);
+BEGIN
+{
+  our @ISA = qw(WineTestBot::WineTestBotCollection);
+  our @EXPORT = qw(CreateRoles);
+}
 
 use ObjectModel::BasicPropertyDescriptor;
 

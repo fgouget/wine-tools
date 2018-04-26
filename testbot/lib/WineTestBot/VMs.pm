@@ -637,8 +637,11 @@ role or status.
 
 use Exporter 'import';
 use WineTestBot::WineTestBotObjects;
-our @ISA = qw(WineTestBot::WineTestBotCollection);
-our @EXPORT = qw(CreateVMs);
+BEGIN
+{
+  our @ISA = qw(WineTestBot::WineTestBotCollection);
+  our @EXPORT = qw(CreateVMs);
+}
 
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::EnumPropertyDescriptor;

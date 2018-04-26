@@ -98,8 +98,11 @@ a specific database table.
 
 use Exporter 'import';
 use WineTestBot::WineTestBotObjects;
-our @ISA = qw(WineTestBot::WineTestBotCollection);
-our @EXPORT = qw(CreateStepsTasks);
+BEGIN
+{
+  our @ISA = qw(WineTestBot::WineTestBotCollection);
+  our @EXPORT = qw(CreateStepsTasks);
+}
 
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::ItemrefPropertyDescriptor;

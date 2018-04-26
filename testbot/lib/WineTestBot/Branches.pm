@@ -51,8 +51,11 @@ WineTestBot::Branches - A collection of WineTestBot::Branch objects
 
 use Exporter 'import';
 use WineTestBot::WineTestBotObjects;
-our @ISA = qw(WineTestBot::WineTestBotCollection);
-our @EXPORT = qw(CreateBranches);
+BEGIN
+{
+  our @ISA = qw(WineTestBot::WineTestBotCollection);
+  our @EXPORT = qw(CreateBranches);
+}
 
 use ObjectModel::BasicPropertyDescriptor;
 

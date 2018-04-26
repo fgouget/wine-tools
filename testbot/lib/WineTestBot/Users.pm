@@ -296,8 +296,11 @@ WineTestBot::Users - A collection of WineTestBot::User objects
 
 use Exporter 'import';
 use WineTestBot::WineTestBotObjects;
-our @ISA = qw(WineTestBot::WineTestBotCollection);
-our @EXPORT = qw(CreateUsers GetBatchUser Authenticate);
+BEGIN
+{
+  our @ISA = qw(WineTestBot::WineTestBotCollection);
+  our @EXPORT = qw(CreateUsers GetBatchUser Authenticate);
+}
 
 use Net::LDAP;
 use ObjectModel::BasicPropertyDescriptor;

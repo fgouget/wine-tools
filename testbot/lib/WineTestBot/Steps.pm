@@ -184,8 +184,11 @@ WineTestBot::Steps - A collection of Job Steps
 
 use Exporter 'import';
 use WineTestBot::WineTestBotObjects;
-our @ISA = qw(WineTestBot::WineTestBotCollection);
-our @EXPORT = qw(CreateSteps);
+BEGIN
+{
+  our @ISA = qw(WineTestBot::WineTestBotCollection);
+  our @EXPORT = qw(CreateSteps);
+}
 
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::EnumPropertyDescriptor;

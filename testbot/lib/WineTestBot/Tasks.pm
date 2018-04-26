@@ -202,8 +202,11 @@ WineTestBot::Tasks - A collection of WineTestBot::Task objects
 
 use Exporter 'import';
 use WineTestBot::WineTestBotObjects;
-our @ISA = qw(WineTestBot::WineTestBotCollection);
-our @EXPORT = qw(CreateTasks);
+BEGIN
+{
+  our @ISA = qw(WineTestBot::WineTestBotCollection);
+  our @EXPORT = qw(CreateTasks);
+}
 
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::EnumPropertyDescriptor;

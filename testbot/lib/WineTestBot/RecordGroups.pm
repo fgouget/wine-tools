@@ -54,8 +54,11 @@ WineTestBot::RecordGroups - A collection of WineTestBot::RecordGroup objects
 
 use Exporter 'import';
 use WineTestBot::WineTestBotObjects;
-our @ISA = qw(WineTestBot::WineTestBotCollection);
-our @EXPORT = qw(CreateRecordGroups CompareRecordGroups SaveRecord);
+BEGIN
+{
+  our @ISA = qw(WineTestBot::WineTestBotCollection);
+  our @EXPORT = qw(CreateRecordGroups CompareRecordGroups SaveRecord);
+}
 
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::DetailrefPropertyDescriptor;

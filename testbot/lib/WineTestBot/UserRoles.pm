@@ -39,8 +39,11 @@ WineTestBot::UserRoles - A collection of WineTestBot::UserRole objects
 
 use Exporter 'import';
 use WineTestBot::WineTestBotObjects;
-our @ISA = qw(WineTestBot::WineTestBotCollection);
-our @EXPORT = qw(CreateUserRoles);
+BEGIN
+{
+  our @ISA = qw(WineTestBot::WineTestBotCollection);
+  our @EXPORT = qw(CreateUserRoles);
+}
 
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::ItemrefPropertyDescriptor;

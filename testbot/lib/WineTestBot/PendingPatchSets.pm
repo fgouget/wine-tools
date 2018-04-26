@@ -153,8 +153,11 @@ WineTestBot::PendingPatchSets - A collection of WineTestBot::PendingPatchSet obj
 
 use Exporter 'import';
 use WineTestBot::WineTestBotObjects;
-our @ISA = qw(WineTestBot::WineTestBotCollection);
-our @EXPORT = qw(CreatePendingPatchSets);
+BEGIN
+{
+  our @ISA = qw(WineTestBot::WineTestBotCollection);
+  our @EXPORT = qw(CreatePendingPatchSets);
+}
 
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::DetailrefPropertyDescriptor;

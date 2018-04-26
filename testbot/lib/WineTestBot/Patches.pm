@@ -366,8 +366,11 @@ WineTestBot::Patches - A collection of WineTestBot::Patch objects
 
 use Exporter 'import';
 use WineTestBot::WineTestBotObjects;
-our @ISA = qw(WineTestBot::WineTestBotCollection);
-our @EXPORT = qw(CreatePatches);
+BEGIN
+{
+  our @ISA = qw(WineTestBot::WineTestBotCollection);
+  our @EXPORT = qw(CreatePatches);
+}
 
 use ObjectModel::BasicPropertyDescriptor;
 use WineTestBot::Config;
