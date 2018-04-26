@@ -244,7 +244,7 @@ sub Submit($$$)
   my $First = 1;
   foreach my $Module (keys %Modules)
   {
-    my $Jobs = WineTestBot::Jobs::CreateJobs();
+    my $Jobs = CreateJobs();
 
     # Create a new job for this patch
     my $NewJob = $Jobs->Add();
@@ -343,7 +343,7 @@ sub Submit($$$)
   }
   $self->Disposition($Disposition);
 
-  WineTestBot::Jobs::ScheduleJobs();
+  ScheduleJobs();
 
   return undef;
 }
