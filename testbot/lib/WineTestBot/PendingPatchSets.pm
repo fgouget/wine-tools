@@ -42,7 +42,6 @@ use WineTestBot::WineTestBotObjects;
 our @ISA = qw(WineTestBot::WineTestBotItem);
 
 use WineTestBot::Config;
-use WineTestBot::Patches;
 use WineTestBot::Utils;
 
 
@@ -163,7 +162,6 @@ use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::DetailrefPropertyDescriptor;
 use WineTestBot::Config;
 use WineTestBot::PendingPatches;
-use WineTestBot::Patches;
 use WineTestBot::Utils;
 
 
