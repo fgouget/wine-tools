@@ -25,7 +25,10 @@ use ObjectModel::CGI::CollectionBlock;
 our @ISA = qw(ObjectModel::CGI::CollectionBlock);
 
 use URI::Escape;
+
 use WineTestBot::Branches;
+use WineTestBot::Users;
+
 
 
 sub SortKeys($$)
@@ -70,7 +73,7 @@ sub GetDisplayValue($$$)
 
   if ($PropertyDescriptor->GetName() eq "User" &&
       defined($Item->Patch) &&
-      $Item->User->GetKey() eq WineTestBot::Users->GetBatchUser()->GetKey() &&
+      $Item->User->GetKey() eq GetBatchUser()->GetKey() &&
       defined($Item->Patch->FromName))
   {
     return $Item->Patch->FromName;
