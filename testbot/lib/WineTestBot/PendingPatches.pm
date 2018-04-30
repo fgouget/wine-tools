@@ -65,7 +65,7 @@ sub CreateItem($)
 
 my @PropertyDescriptors = (
   CreateBasicPropertyDescriptor("No", "Part no", 1, 1, "N", 2),
-  CreateItemrefPropertyDescriptor("Patch", "Submitted via patch", !1, 1, \&WineTestBot::Patches::CreatePatches, ["PatchId"]),
+  CreateItemrefPropertyDescriptor("Patch", "Submitted via patch", !1, 1, \&CreatePatches, ["PatchId"]),
 );
 my @FlatPropertyDescriptors = (
   CreateBasicPropertyDescriptor("PendingPatchSetEMail", "EMail of series author", 1, 1, "A", 40),
