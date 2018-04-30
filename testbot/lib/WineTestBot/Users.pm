@@ -33,7 +33,6 @@ use Digest::SHA qw(sha1_hex);
 use URI::Escape;
 use WineTestBot::Config;
 use WineTestBot::Roles;
-use WineTestBot::UserRoles;
 use WineTestBot::Utils;
 
 
