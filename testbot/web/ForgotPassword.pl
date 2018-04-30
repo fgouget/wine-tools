@@ -27,7 +27,6 @@ our @ISA = qw(ObjectModel::CGI::FreeFormPage);
 use ObjectModel::BasicPropertyDescriptor;
 use WineTestBot::Users;
 use WineTestBot::Utils;
-use WineTestBot::CGI::Sessions;
 
 
 sub _initialize($$$)
