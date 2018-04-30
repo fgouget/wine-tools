@@ -29,8 +29,6 @@ WineTestBot::Branch - Describes a Wine branch
 use WineTestBot::WineTestBotObjects;
 our @ISA = qw(WineTestBot::WineTestBotItem);
 
-use WineTestBot::Config;
-
 
 sub InitializeNew($$)
 {

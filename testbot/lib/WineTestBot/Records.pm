@@ -41,8 +41,6 @@ only limited by the amount of data dumped into the Records table.
 use WineTestBot::WineTestBotObjects;
 our @ISA = qw(WineTestBot::WineTestBotItem);
 
-use WineTestBot::Config;
-
 
 sub InitializeNew($$)
 {

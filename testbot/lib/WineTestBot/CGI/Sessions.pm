@@ -59,7 +59,6 @@ our @EXPORT = qw(CreateSessions DeleteSessions NewSession);
 use CGI::Cookie;
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::ItemrefPropertyDescriptor;
-use WineTestBot::Config;
 use WineTestBot::Users;
 use WineTestBot::Utils;
 

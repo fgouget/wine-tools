@@ -20,12 +20,11 @@
 use strict;
 
 use HTTP::Date;
-
 use Apache2::Const -compile => qw(REDIRECT);
 use CGI;
 use CGI::Cookie;
 use URI::Escape;
-use WineTestBot::Config;
+
 use WineTestBot::CGI::Sessions;
 use WineTestBot::Log;
 

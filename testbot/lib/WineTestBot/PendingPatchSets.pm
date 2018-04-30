@@ -160,7 +160,6 @@ BEGIN
 
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::DetailrefPropertyDescriptor;
-use WineTestBot::Config;
 use WineTestBot::PendingPatches;
 use WineTestBot::Utils;
 

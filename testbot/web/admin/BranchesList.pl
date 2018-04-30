@@ -24,7 +24,6 @@ package BranchesListPage;
 use ObjectModel::CGI::CollectionPage;
 our @ISA = qw(ObjectModel::CGI::CollectionPage);
 
-use WineTestBot::Config;
 use WineTestBot::Branches;
 
 
