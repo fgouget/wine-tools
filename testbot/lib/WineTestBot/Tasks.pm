@@ -40,8 +40,7 @@ use POSIX qw(:errno_h);
 use File::Path;
 use ObjectModel::BackEnd;
 use WineTestBot::Config;
-use WineTestBot::Jobs;
-use WineTestBot::Steps;
+
 
 sub InitializeNew($$)
 {

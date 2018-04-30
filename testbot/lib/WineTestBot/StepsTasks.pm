@@ -106,8 +106,6 @@ BEGIN
 
 use ObjectModel::BasicPropertyDescriptor;
 use ObjectModel::ItemrefPropertyDescriptor;
-use WineTestBot::Steps;
-use WineTestBot::Tasks;
 use WineTestBot::VMs;
 
 sub _initialize($$)

@@ -24,7 +24,7 @@ use CGI;
 use Fcntl; # For O_XXX
 use WineTestBot::Config;
 use WineTestBot::Jobs;
-use WineTestBot::Steps;
+
 
 sub GetFile($$$)
 {
