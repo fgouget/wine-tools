@@ -3,7 +3,7 @@
 body {
     background-color: #000000;
     color: #000000;
-    background-image: url("//winehq.org/images/bg.jpg");
+    background-image: url("https://dl.winehq.org/share/images/bg.jpg");
     background-repeat: no-repeat;
     font-family: "bitstream vera sans", "verdana", "arial", "helvetica", sans-serif;
     margin: 0;
@@ -43,52 +43,38 @@ a:hover   { text-decoration: underline; }
     z-index: 4;
 }
 
-#tabs {
-    margin: 0px;
-    padding: 0px;
-    position: absolute;
-    right: 10px;
-    top: 0px;
-    z-index: 6;
+/* top tabs */
+#whq-tabs {
+    float: right;
+    margin-right: 1em;
 }
 
-#tabs ul {
+#whq-tabs .whq-tabs-menu { display: none; }
+
+#whq-tabs UL {
     list-style: none;
-    margin: 0;
     padding: 0;
+    margin: 0;
 }
-
-#tabs li {
-    background-image: url("//winehq.org/images/tab_u.png");
-    background-repeat: no-repeat;
+#whq-tabs LI {
     float: left;
     height: 28px;
     margin: 0px 2px 0px 2px;
-    padding: 0;
+    padding: 0px;
     text-align: center;
-    width: 112px;
+    background-color: #848484;
+    border-bottom-right-radius: 6px;
+    border-bottom-left-radius: 6px;
 }
-
-#tabs li.s {
-    background-image: url("//winehq.org/images/tab_s.png");
-}
-
-#tabs li.s a {
-    font-weight: bold;
-}
-
-#tabs li:hover {
-    background-image: url("//winehq.org/images/tab_h.png");
-}
-
-#tabs a {
-    color: white;
+#whq-tabs LI.s          { background-color: #cf3939; }
+#whq-tabs LI.s A        { font-weight: bold; }
+#whq-tabs LI:hover      { background-color: #832c2c; }
+#whq-tabs LI A {
     display: block;
-    font-size: 16px;
+    min-width: 110px;
     height: 23px;
-    padding-top: 3px;
-    text-decoration: none;
-    width: 108px;
+    padding: 3px 5px 3px 5px;
+    font-size: 16px; color: white; text-decoration: none;
 }
 
 #main_content {

@@ -123,7 +123,7 @@ print OUTPUT start_html(-title=>"Regressions",
 
 print OUTPUT "<div id=\"logo_glass\"><a href=\"/regressions\"><img src=\"https://dl.winehq.org/share/images/winehq_logo_glass_sm.png\" alt=\"\"></a></div>\n";
 print OUTPUT "<div id=\"logo_text\"><a href=\"/regressions\"><img src=\"https://dl.winehq.org/share/images/winehq_logo_text.png\" alt=\"WineHQ\" title=\"WineHQ\"></a></div>\n";
-print OUTPUT "<div id=\"tabs\"><ul>",
+print OUTPUT "<div id=\"whq-tabs\"><ul>",
     "<li><a href=\"//www.winehq.org/\">WineHQ</a></li>",
     "<li><a href=\"//wiki.winehq.org/\">Wiki</a></li>",
     "<li><a href=\"//appdb.winehq.org/\">AppDB</a></li>",
