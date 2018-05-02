@@ -340,14 +340,14 @@ sub Run($$$$$)
   #   We cannot leave setting ChildPid to the child process because then it
   #   may still not be set by the time the next ScheduleJobs() call happens,
   #   which would result in a new child being started.
-  #   Note that the status is not guaranteed to change in _RunVMTool() so it
-  #   cannot be relied on to avoid this race.
-  # - Between _RunVMTool() and the exit of the child process.
-  #   The child process may exit before _RunVMTool() gets around to setting
-  #   ChildPid after the fork(). This would result in ChildPid remaining set
+  #   Note that the status is not guaranteed to change in Run() so it cannot
+  #   be relied on to avoid this race.
+  # - Between Run() and the exit of the child process.
+  #   The child process may exit before Run() gets around to setting ChildPid
+  #   after the fork(). This would result in ChildPid remaining set
   #   indefinitely.
   # So set ChildPid in the parent and synchronize with the child so it only
-  # starts once this is done.
+  # execs once this is done.
 
   use Fcntl;
   my ($fd_read, $fd_write);
@@ -362,6 +362,7 @@ sub Run($$$$$)
   }
   if ($Pid)
   {
+    ### Parent process
     close($fd_read);
 
     # Set the Status and ChildPid
@@ -379,6 +380,8 @@ sub Run($$$$$)
 
     return undef;
   }
+
+  ### Child process
 
   # Close the database connections
   CloseAllDBBackEnds();
