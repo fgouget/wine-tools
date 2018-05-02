@@ -481,13 +481,6 @@ sub CheckJobs()
   return undef;
 }
 
-sub min(@)
-{
-  my $m = shift @_;
-  map { $m = $_ if ($_ < $m) } (@_);
-  return $m;
-}
-
 sub _GetSchedHost($$)
 {
   my ($Sched, $VM) = @_;
