@@ -414,7 +414,6 @@ sub HandleVMStatusChange($$$)
   if (defined($ErrMessage))
   {
     LogMsg "Scheduling problem in HandleVMStatusChange: $ErrMessage\n";
-    return "0$ErrMessage";
   }
 
   return "1OK";
