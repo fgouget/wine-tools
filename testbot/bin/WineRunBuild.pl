@@ -332,7 +332,10 @@ foreach my $OtherStep (@{$Job->Steps->GetItems()})
   if ($OtherFileName =~ m/^([\w_.]+)_test(?:64)?\.exe$/)
   {
     my $OtherBaseName = $1;
-    $OtherBaseName =~ s/\.exe$//;
+    if ($Step->FileType eq "patchprograms")
+    {
+      $OtherBaseName =~ s/\.exe$//;
+    }
     if (defined $BaseName and $BaseName ne $OtherBaseName)
     {
       FatalError("$OtherBaseName doesn't match previously found $BaseName\n");
