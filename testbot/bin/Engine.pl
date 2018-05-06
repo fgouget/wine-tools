@@ -516,6 +516,7 @@ sub HandleWinePatchWebSubmission()
 
   # Add the patches in increasing WebPatchId order so that next time
   # $LatestWebPatchId still makes sense in case something goes wrong now
+  my $NewPatch;
   foreach my $WebPatchId (sort { $a <=> $b } @WebPatchIds)
   {
     # Create a working dir
@@ -526,9 +527,14 @@ sub HandleWinePatchWebSubmission()
     $Parser->output_dir($WorkDir);
     my $Entity = $Parser->parse_open("$DataDir/webpatches/$WebPatchId");
     my $ErrMessage = $Patches->NewPatch($Entity, $WebPatchId);
-    push @ErrMessages, $ErrMessage if (defined $ErrMessage);
-
-    ScheduleJobs();
+    if (defined $ErrMessage)
+    {
+      push @ErrMessages, $ErrMessage;
+    }
+    else
+    {
+      $NewPatch = 1;
+    }
 
     # Clean up
     if (!rmtree($WorkDir))
@@ -537,6 +543,7 @@ sub HandleWinePatchWebSubmission()
       LogMsg "Unable to delete '$WorkDir': $!\n";
     }
   }
+  ScheduleJobs() if ($NewPatch);
 
   return @ErrMessages ? "0". join("; ", @ErrMessages) : "1OK";
 }
