@@ -448,6 +448,8 @@ sub HandleWinePatchMLSubmission()
     my $ErrMessage = CreatePatches()->NewPatch($Entity);
     push @ErrMessages, $ErrMessage if (defined $ErrMessage);
 
+    ScheduleJobs();
+
     # Clean up
     if (!rmtree($WorkDir))
     {
@@ -519,6 +521,8 @@ sub HandleWinePatchWebSubmission()
     my $Entity = $Parser->parse_open("$DataDir/webpatches/$WebPatchId");
     my $ErrMessage = $Patches->NewPatch($Entity, $WebPatchId);
     push @ErrMessages, $ErrMessage if (defined $ErrMessage);
+
+    ScheduleJobs();
 
     # Clean up
     if (!rmtree($WorkDir))
@@ -621,7 +625,6 @@ checks whether any pending patchsets are now complete and thus can be scheduled.
 sub SafetyNet()
 {
   CheckJobs();
-  ScheduleJobs();
   HandleWinePatchWebSubmission();
 
   my $Set = CreatePendingPatchSets();
@@ -630,6 +633,7 @@ sub SafetyNet()
   {
     LogMsg "Failed to check completeness of patch series: $ErrMessage\n";
   }
+  ScheduleJobs();
 }
 
 sub PrepareSocket($)

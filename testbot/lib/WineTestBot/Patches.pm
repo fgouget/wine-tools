@@ -147,8 +147,8 @@ sub GetTestList()
 Analyzes the current patch to determine which Wine tests are impacted. Then for
 each impacted test it creates a high priority WineTestBot::Job to run that test.
 This also creates the WineTestBot::Step objects for that Job, as well as the
-WineTestBot::Task objects to run the test on each 'base' VM. Finally it calls
-C<WineTestBot::Jobs::ScheduleJobs()> to run the new Jobs.
+WineTestBot::Task objects to run the test on each 'base' VM. It is the
+responsibility of the caller to arrange for rescheduling of the jobs.
 
 Note that the path to the file containing the actual patch is passed as a
 parameter. This is used to apply a combined patch for patch series. See
@@ -341,9 +341,6 @@ sub Submit($$$)
     $Disposition .= $NewJob->Id;
   }
   $self->Disposition($Disposition);
-
-  ScheduleJobs();
-
   return undef;
 }
 
