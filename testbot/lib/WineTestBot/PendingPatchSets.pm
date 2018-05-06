@@ -94,7 +94,7 @@ sub CheckComplete($)
 =item C<SubmitSubset()>
 
 Combines the patches leading to the specified part in the patchset, and then
-calls WineTestBot::Patch::Submit() so it gets scheduled for testing.
+calls WineTestBot::Patch::Submit() to create the corresponding job.
 
 =back
 =cut
@@ -307,29 +307,27 @@ sub CheckForCompleteSet($)
 {
   my ($self) = @_;
 
-  my $ErrMessage;
+  my ($Submitted, @ErrMessages);
   foreach my $Set (@{$self->GetItems()})
   {
     if ($Set->CheckComplete())
     {
       my $Patch = $Set->Parts->GetItem($Set->TotalParts)->Patch;
       my $SetErrMessage = $Set->Submit($Patch);
-      if (defined($SetErrMessage))
+      if (defined $SetErrMessage)
       {
-        if (! defined($ErrMessage))
-        {
-          $ErrMessage = $SetErrMessage;
-        }
+        push @ErrMessages, $SetErrMessage;
       }
       else
       {
         $Patch->Save();
+        $Submitted = 1;
       }
       $self->DeleteItem($Set);
     }
   }
 
-  return $ErrMessage;
+  return ($Submitted, @ErrMessages ? join("; ", @ErrMessages) : undef);
 }
 
 1;

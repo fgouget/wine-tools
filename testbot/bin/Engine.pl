@@ -638,15 +638,16 @@ checks whether any pending patchsets are now complete and thus can be scheduled.
 sub SafetyNet()
 {
   CheckJobs();
+  ScheduleJobs();
   HandleWinePatchWebSubmission();
 
   my $Set = CreatePendingPatchSets();
-  my $ErrMessage = $Set->CheckForCompleteSet();
-  if (defined($ErrMessage))
+  my ($Submitted, $ErrMessage) = $Set->CheckForCompleteSet();
+  if (defined $ErrMessage)
   {
     LogMsg "Failed to check completeness of patch series: $ErrMessage\n";
   }
-  ScheduleJobs();
+  ScheduleJobs() if ($Submitted);
 }
 
 sub PrepareSocket($)
