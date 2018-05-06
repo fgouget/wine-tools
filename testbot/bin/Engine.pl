@@ -431,7 +431,7 @@ sub HandleWinePatchMLSubmission()
   my @Entries = readdir($dh);
   closedir($dh);
 
-  my @ErrMessages;
+  my ($NewPatch, @ErrMessages);
   foreach my $Entry (@Entries)
   {
     # Validate file name
@@ -446,9 +446,14 @@ sub HandleWinePatchMLSubmission()
     $Parser->output_dir($WorkDir);
     my $Entity = $Parser->parse_open($FullMessageFileName);
     my $ErrMessage = CreatePatches()->NewPatch($Entity);
-    push @ErrMessages, $ErrMessage if (defined $ErrMessage);
-
-    ScheduleJobs();
+    if (defined $ErrMessage)
+    {
+      push @ErrMessages, $ErrMessage;
+    }
+    else
+    {
+      $NewPatch = 1;
+    }
 
     # Clean up
     if (!rmtree($WorkDir))
@@ -463,6 +468,7 @@ sub HandleWinePatchMLSubmission()
       LogMsg "Unable to delete '$FullMessageFileName': $!\n";
     }
   }
+  ScheduleJobs() if ($NewPatch);
 
   return @ErrMessages ? "0". join("; ", @ErrMessages) : "1OK";
 }
