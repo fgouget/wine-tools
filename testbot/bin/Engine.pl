@@ -48,6 +48,7 @@ use ObjectModel::BackEnd;
 use WineTestBot::Config;
 use WineTestBot::Engine::Events;
 use WineTestBot::Engine::Notify;
+use WineTestBot::Engine::Scheduler;
 use WineTestBot::Jobs;
 use WineTestBot::Log;
 use WineTestBot::Patches;
