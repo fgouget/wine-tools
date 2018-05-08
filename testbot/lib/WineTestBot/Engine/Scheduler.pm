@@ -32,6 +32,7 @@ our @EXPORT = qw(ScheduleJobs CheckJobs);
 
 use WineTestBot::Config;
 use WineTestBot::Jobs;
+use WineTestBot::Log;
 use WineTestBot::RecordGroups;
 use WineTestBot::VMs;
 
@@ -306,8 +307,7 @@ sub _CheckAndClassifyVMs()
       }
       else
       {
-        require WineTestBot::Log;
-        WineTestBot::Log::LogMsg("Unexpected $VMKey status ". $VM->Status ."\n");
+        LogMsg "Unexpected $VMKey status ". $VM->Status ."\n";
         $FoundVMErrors = 1;
         # Don't interfere with this VM
         $Sched->{busyvms}->{$VMKey} = 1;
@@ -352,8 +352,7 @@ sub _CheckAndClassifyVMs()
       }
       elsif ($VM->Status ne "off")
       {
-        require WineTestBot::Log;
-        WineTestBot::Log::LogMsg("Unexpected $VMKey status ". $VM->Status ."\n");
+        LogMsg "Unexpected $VMKey status ". $VM->Status ."\n";
         $FoundVMErrors = 1;
         # Don't interfere with this VM
         $Sched->{busyvms}->{$VMKey} = 1;
@@ -738,8 +737,7 @@ sub _DumpHostCounters($$)
   my $HostKey = $VM->GetHost();
   my $PrettyHost = ($PrettyHostNames ? $PrettyHostNames->{$HostKey} : "") ||
                    $HostKey;
-  require WineTestBot::Log;
-  WineTestBot::Log::LogMsg("$PrettyHost:$Counters\n") if ($Counters);
+  LogMsg "$PrettyHost:$Counters\n" if ($Counters);
 
   $Host->{dumpedcounters} = 1;
 }
@@ -778,8 +776,7 @@ sub _DumpHostVMs($$$$)
   }
   my $PrettyHost = ($PrettyHostNames ? $PrettyHostNames->{$HostKey} : "") ||
                    $HostKey;
-  require WineTestBot::Log;
-  WineTestBot::Log::LogMsg("$PrettyHost: @VMInfo\n");
+  LogMsg "$PrettyHost: @VMInfo\n";
 
   $Host->{dumpedvms} = 1;
 }
