@@ -127,7 +127,9 @@ sub Run($$)
   my $Args = ["$BinDir/${ProjectName}Run$Script.pl", "--log-only",
               $JobId, $StepNo, $TaskNo];
 
-  my $ErrMessage = $self->VM->Run("running", $Args, \&_SetupTask, $self);
+  my $ErrMessage = $self->VM->Run("running", $Args,
+                                  $self->Timeout + $TimeoutMargin,
+                                  \&_SetupTask, $self);
   if (!$ErrMessage)
   {
     $self->Status("running");
@@ -159,7 +161,7 @@ sub UpdateStatus($$)
     my $TaskDir = $self->CreateDir();
     if (open TASKLOG, ">>$TaskDir/err")
     {
-      print TASKLOG "TestBot process died unexpectedly\n";
+      print TASKLOG "TestBot process got stuck or died unexpectedly\n";
       close TASKLOG;
     }
     umask($OldUMask);
@@ -173,6 +175,7 @@ sub UpdateStatus($$)
     if ($VM->Status eq "running")
     {
       $VM->Status('dirty');
+      $VM->ChildDeadline(undef);
       $VM->ChildPid(undef);
       $VM->Save();
       $VM->RecordResult(undef, "boterror process died");

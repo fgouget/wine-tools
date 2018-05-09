@@ -39,7 +39,8 @@ sub DisplayProperty($$)
 {
   my ($self, $PropertyDescriptor) = @_;
 
-  return "" if ($PropertyDescriptor->GetName() eq "ChildPid");
+  my $PropertyName = $PropertyDescriptor->GetName();
+  return "" if ($PropertyName =~ /^(?:ChildPid|ChildDeadline)$/);
   return $self->SUPER::DisplayProperty($PropertyDescriptor);
 }
 

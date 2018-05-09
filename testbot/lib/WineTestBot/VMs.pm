@@ -298,6 +298,7 @@ sub KillChild($)
     WineTestBot::Log::LogMsg("Killing child ". $self->ChildPid ."\n");
     kill("TERM", $self->ChildPid);
   }
+  $self->ChildDeadline(undef);
   $self->ChildPid(undef);
 }
 
@@ -329,9 +330,9 @@ sub OnSaved($)
   }
 }
 
-sub Run($$$$$)
+sub Run($$$$$$)
 {
-  my ($self, $NewStatus, $Args, $ChildSetup, $SetupData) = @_;
+  my ($self, $NewStatus, $Args, $ChildTimeout, $ChildSetup, $SetupData) = @_;
 
   my $Tool = basename($Args->[0]);
 
@@ -368,6 +369,7 @@ sub Run($$$$$)
     # Set the Status and ChildPid
     $self->Status($NewStatus);
     $self->ChildPid($Pid);
+    $self->ChildDeadline(time() + $ChildTimeout);
     my ($ErrProperty, $ErrMessage) = $self->Save();
     if ($ErrMessage)
     {
@@ -410,6 +412,7 @@ sub Run($$$$$)
 
   # Reset the Status and ChildPid since the exec failed
   $self->Status("offline");
+  $self->ChildDeadline(undef);
   $self->ChildPid(undef);
   my ($ErrProperty, $ErrMessage) = $self->Save();
   if ($ErrMessage)
@@ -433,7 +436,8 @@ sub _RunVMTool($$$)
 
   my $Tool = "LibvirtTool.pl";
   unshift @$Args, "$BinDir/$Tool";
-  return $self->Run($NewStatus, $Args, \&_SetupChild, undef);
+  my $Timeout = $NewStatus eq "offline" ? 3600 : $VMToolTimeout;
+  return $self->Run($NewStatus, $Args, $Timeout, \&_SetupChild, undef);
 }
 
 =pod
@@ -664,6 +668,7 @@ my @PropertyDescriptors = (
   CreateEnumPropertyDescriptor("Role", "VM Role", !1, 1, ['extra', 'base', 'winetest', 'retired', 'deleted']),
   CreateEnumPropertyDescriptor("Status", "Current status", !1, 1, ['dirty', 'reverting', 'sleeping', 'idle', 'running', 'off', 'offline', 'maintenance']),
   CreateBasicPropertyDescriptor("ChildPid", "Child process id", !1, !1, "N", 5),
+  CreateBasicPropertyDescriptor("ChildDeadline", "Child Deadline", !1, !1, "DT", 19),
   CreateBasicPropertyDescriptor("VirtURI", "LibVirt URI of the VM", !1, 1, "A", 64),
   CreateBasicPropertyDescriptor("VirtDomain", "LibVirt Domain for the VM", !1, 1, "A", 32),
   CreateBasicPropertyDescriptor("IdleSnapshot", "Name of idle snapshot", !1, 1, "A", 32),

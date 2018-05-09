@@ -244,6 +244,7 @@ sub _CheckAndClassifyVMs()
   # created by the scripts called from the scheduler.
   $Sched->{recordgroups}->Save();
 
+  my $Now = time();
   my $FoundVMErrors;
   # Count the VMs that are 'active', that is, that use resources on the host,
   # and those that are reverting. Also build a prioritized list of those that
@@ -261,7 +262,19 @@ sub _CheckAndClassifyVMs()
     my $Host = _GetSchedHost($Sched, $VM);
     if ($VM->HasRunningChild())
     {
-      if ($VM->Status =~ /^(?:dirty|running|reverting)$/)
+      if (defined $VM->ChildDeadline and $VM->ChildDeadline < $Now)
+      {
+        # The child process got stuck!
+        $FoundVMErrors = 1;
+        $VM->KillChild();
+        $VM->Status("dirty");
+        $VM->Save();
+        $VM->RecordResult($Sched->{records}, "boterror stuck process");
+        $Sched->{lambvms}->{$VMKey} = 1;
+        $Host->{dirty}++;
+        $Host->{active}++;
+      }
+      elsif ($VM->Status =~ /^(?:dirty|running|reverting)$/)
       {
         $Sched->{busyvms}->{$VMKey} = 1;
         $Host->{$VM->Status}++;
@@ -321,6 +334,7 @@ sub _CheckAndClassifyVMs()
         # The VM is missing its child process or it died unexpectedly. Mark
         # the VM dirty so a revert or shutdown brings it back to a known state.
         $FoundVMErrors = 1;
+        $VM->ChildDeadline(undef);
         $VM->ChildPid(undef);
         $VM->Status("dirty");
         $VM->Save();

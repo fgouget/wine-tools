@@ -28,12 +28,11 @@ WineTestBot::Config - Site-independent configuration settings
 use vars qw (@ISA @EXPORT @EXPORT_OK $UseSSL $LogDir $DataDir $BinDir
              $DbDataSource $DbUsername $DbPassword $MaxRevertingVMs
              $MaxRevertsWhileRunningVMs $MaxActiveVMs $MaxRunningVMs
-             $MaxVMsWhenIdle
-             $SleepAfterRevert $WaitForToolsInVM $MaxTaskTries $AdminEMail
-             $RobotEMail
+             $MaxVMsWhenIdle $SleepAfterRevert $WaitForToolsInVM
+             $VMToolTimeout $MaxTaskTries $AdminEMail $RobotEMail
              $WinePatchToOverride $WinePatchCc $SuiteTimeout $SingleTimeout
-             $BuildTimeout $ReconfigTimeout $TagPrefix $MaxUnitSize
-             $ProjectName $PatchesMailingList $LDAPServer
+             $BuildTimeout $ReconfigTimeout $TimeoutMargin $TagPrefix
+             $MaxUnitSize $ProjectName $PatchesMailingList $LDAPServer
              $LDAPBindDN $LDAPSearchBase $LDAPSearchFilter
              $LDAPRealNameAttribute $LDAPEMailAttribute $AgentPort $Tunnel
              $TunnelDefaults $PrettyHostNames $JobPurgeDays $JobArchiveDays
@@ -44,9 +43,9 @@ require Exporter;
 @EXPORT = qw($UseSSL $LogDir $DataDir $BinDir
              $MaxRevertingVMs $MaxRevertsWhileRunningVMs $MaxActiveVMs
              $MaxRunningVMs $MaxVMsWhenIdle $SleepAfterRevert $WaitForToolsInVM
-             $MaxTaskTries $AdminEMail
+             $VMToolTimeout $MaxTaskTries $AdminEMail
              $RobotEMail $WinePatchToOverride $WinePatchCc $SuiteTimeout
-             $SingleTimeout $BuildTimeout $ReconfigTimeout
+             $SingleTimeout $BuildTimeout $ReconfigTimeout $TimeoutMargin
              $TagPrefix $MaxUnitSize $ProjectName $PatchesMailingList
              $LDAPServer $LDAPBindDN $LDAPSearchBase $LDAPSearchFilter
              $LDAPRealNameAttribute $LDAPEMailAttribute $AgentPort $Tunnel
@@ -80,6 +79,8 @@ $WaitForToolsInVM = 30;
 # How long to let the VM settle down after the revert before starting a task on
 # it (in seconds).
 $SleepAfterRevert = 0;
+# Take into account $WaitForToolsInVM and $SleepAfterRevert
+$VMToolTimeout = 6 * 60;
 
 # How many times to run a test that fails before giving up.
 $MaxTaskTries = 3;
@@ -96,6 +97,8 @@ $BuildTimeout = 5 * 60;
 # How long to let a full recompilation run before forcibly shutting it down
 # (in seconds).
 $ReconfigTimeout = 45 * 60;
+# How much to add to the task timeout to account for file transfers, etc.
+$TimeoutMargin = 2 * 60;
 # Maximum amount of traces for a test unit.
 $MaxUnitSize = 32 * 1024;
 

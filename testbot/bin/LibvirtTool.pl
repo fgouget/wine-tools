@@ -196,6 +196,7 @@ sub FatalError($)
   # Put the VM offline if nobody else modified its status before us
   $VM = CreateVMs()->GetItem($VMKey);
   $VM->Status("offline") if ($VM->Status eq $CurrentStatus);
+  $VM->ChildDeadline(undef);
   $VM->ChildPid(undef);
   my ($ErrProperty, $SaveErrMessage) = $VM->Save();
   if (defined $SaveErrMessage)
@@ -241,7 +242,11 @@ sub ChangeStatus($$;$)
   }
 
   $VM->Status($To);
-  $VM->ChildPid(undef) if ($Done);
+  if ($Done)
+  {
+    $VM->ChildDeadline(undef);
+    $VM->ChildPid(undef);
+  }
   my ($ErrProperty, $ErrMessage) = $VM->Save();
   if (defined $ErrMessage)
   {

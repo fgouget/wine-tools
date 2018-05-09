@@ -44,18 +44,19 @@ ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE VMs
 (
-  Name         VARCHAR(20)      NOT NULL,
-  SortOrder    INT(3)           NOT NULL,
-  Type         ENUM('win32', 'win64', 'build') NOT NULL,
-  Role         ENUM('extra', 'base', 'winetest', 'retired', 'deleted') NOT NULL,
-  Status       ENUM('dirty', 'reverting', 'sleeping', 'idle', 'running', 'off', 'offline', 'maintenance') NOT NULL,
-  ChildPid     INT(5)           NULL,
-  VirtURI      VARCHAR(64)      NOT NULL,
-  VirtDomain   VARCHAR(32)      NOT NULL,
-  IdleSnapshot VARCHAR(32)      NOT NULL,
-  Hostname     VARCHAR(64)      NOT NULL,
-  Description  VARCHAR(40)      NULL,
-  Details      VARCHAR(512)     NULL,
+  Name          VARCHAR(20)      NOT NULL,
+  SortOrder     INT(3)           NOT NULL,
+  Type          ENUM('win32', 'win64', 'build') NOT NULL,
+  Role          ENUM('extra', 'base', 'winetest', 'retired', 'deleted') NOT NULL,
+  Status        ENUM('dirty', 'reverting', 'sleeping', 'idle', 'running', 'off', 'offline', 'maintenance') NOT NULL,
+  ChildPid      INT(5)           NULL,
+  ChildDeadline DATETIME         NULL,
+  VirtURI       VARCHAR(64)      NOT NULL,
+  VirtDomain    VARCHAR(32)      NOT NULL,
+  IdleSnapshot  VARCHAR(32)      NOT NULL,
+  Hostname      VARCHAR(64)      NOT NULL,
+  Description   VARCHAR(40)      NULL,
+  Details       VARCHAR(512)     NULL,
   PRIMARY KEY (Name)
 )
 ENGINE=InnoDB DEFAULT CHARSET=utf8;

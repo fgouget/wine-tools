@@ -251,6 +251,7 @@ sub WrapUpAndExit($;$$)
   if ($VM->Status eq 'running')
   {
     $VM->Status($NewVMStatus);
+    $VM->ChildDeadline(undef);
     $VM->ChildPid(undef);
     $VM->Save();
   }
