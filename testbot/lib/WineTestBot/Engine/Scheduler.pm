@@ -31,6 +31,7 @@ use Exporter 'import';
 our @EXPORT = qw(ScheduleJobs CheckJobs);
 
 use WineTestBot::Config;
+use WineTestBot::Engine::Events;
 use WineTestBot::Jobs;
 use WineTestBot::Log;
 use WineTestBot::RecordGroups;
@@ -971,6 +972,29 @@ sub ScheduleJobs()
   {
     $Sched->{recordgroups}->DeleteItem($Sched->{recordgroup});
   }
+
+  # Reschedule at the latest when the next task times out
+  my $FirstDeadline;
+  foreach my $VM (@{$Sched->{VMs}->GetItems()})
+  {
+    if (defined $VM->ChildDeadline and
+        (!defined $FirstDeadline or $VM->ChildDeadline < $FirstDeadline))
+    {
+      $FirstDeadline = $VM->ChildDeadline;
+    }
+  }
+  my $Timeout;
+  if ($FirstDeadline)
+  {
+    $Timeout = $FirstDeadline - time();
+    $Timeout = 1 if ($Timeout <= 0);
+  }
+  if (!$Timeout or $Timeout > 600)
+  {
+    # Reschedule regularly as a safety net
+    $Timeout = 600;
+  }
+  AddEvent("ScheduleJobs", $Timeout, 0, \&ScheduleJobs);
 }
 
 

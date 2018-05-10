@@ -611,11 +611,10 @@ sub ClientRead($)
 
 This is called on startup and regularly after that to catch things that fall
 through the cracks, possibly because of an Engine restart.
-Specifically it updates the status of all the current Jobs, Steps and
-Tasks, then schedules Tasks to be run, checks the staging directory for
-wine-patches emails dropped by WinePatchesMLSubmit.pl, for notifications of
-changes on Wine's Patches web site dropped by WinePatchesWebSubmit.pl, and
-checks whether any pending patchsets are now complete and thus can be scheduled.
+Specifically it checks the staging directory for wine-patches emails dropped
+by WinePatchesMLSubmit.pl, for notifications of changes on Wine's Patches web
+site dropped by WinePatchesWebSubmit.pl, and checks whether any pending
+patchsets are now complete and thus can be scheduled.
 
 =back
 =cut
@@ -623,7 +622,6 @@ checks whether any pending patchsets are now complete and thus can be scheduled.
 sub SafetyNet()
 {
   CheckJobs();
-  ScheduleJobs();
   HandleWinePatchWebSubmission();
 
   my $Set = CreatePendingPatchSets();
@@ -759,6 +757,10 @@ sub main()
   $MaxVMsWhenIdle = $MaxActiveVMs if (!defined $MaxVMsWhenIdle);
   SaveRecord('engine', 'start');
   Cleanup(1);
+
+  # Cleanup starts processes to update the VMs. Run ScheduleJobs() now so it
+  # can detect if these processes get stuck.
+  ScheduleJobs();
 
   # Check for patches that arrived while the server was off.
   HandleWinePatchMLSubmission();
