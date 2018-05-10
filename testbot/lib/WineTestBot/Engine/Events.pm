@@ -37,10 +37,11 @@ sub AddEvent($$$$)
 {
   my ($Name, $Timeout, $Repeat, $HandlerFunc) = @_;
 
-  $Events{$Name} = {Expires => time() + $Timeout,
-                    Timeout => $Timeout,
-                    Repeat => $Repeat,
-                    HandlerFunc => $HandlerFunc};
+  $Events{$Name} = { Name => $Name,
+                     Expires => time() + $Timeout,
+                     Timeout => $Timeout,
+                     Repeat => $Repeat,
+                     HandlerFunc => $HandlerFunc };
 }
 
 sub DeleteEvent($)
@@ -54,42 +55,51 @@ sub EventScheduled($)
 {
   my ($Name) = @_;
 
-  return defined($Events{$Name});
+  return exists $Events{$Name};
 }
 
 sub RunEvents()
 {
   my $Now = time();
-  my $Next = undef;
-  foreach my $Name (keys %Events)
+  # Run expired events in their expiration order.
+  # Note that callbacks may add / remove events.
+  my @SortedEvents = sort { $a->{Expires} <=> $b->{Expires} } values %Events;
+  foreach my $Event (@SortedEvents)
   {
-    my $Event = $Events{$Name};
-    if (defined($Event))
+    if (!exists $Events{$Event->{Name}})
     {
-      if ($Event->{Expires} <= $Now)
-      {
-        if ($Event->{Repeat})
-        {
-          $Event->{Expires} += $Event->{Timeout};
-          if (! defined($Next) || $Event->{Expires} - $Now < $Next)
-          {
-            $Next = $Event->{Expires} - $Now;
-          }
-        }
-        else
-        {
-          delete $Events{$Name};
-        }
-        &{$Event->{HandlerFunc}}();
-      }
-      elsif (! defined($Next) || $Event->{Expires} - $Now < $Next)
-      {
-        $Next = $Event->{Expires} - $Now;
-      }
+      # This event got removed by a callback
+      next;
     }
+
+    if ($Event->{Expires} > $Now)
+    {
+      # Since the events are sorted by expiration order,
+      # there is no other event to run.
+      last;
+    }
+
+    if ($Event->{Repeat})
+    {
+      $Event->{Expires} += $Event->{Timeout};
+    }
+    else
+    {
+      delete $Events{$Event->{Name}};
+    }
+    &{$Event->{HandlerFunc}}();
   }
 
-  return $Next;
+  # Determine when the next event is due
+  my $Next = undef;
+  foreach my $Event (values %Events)
+  {
+    if (!defined $Next or $Event->{Expires} - $Now < $Next)
+    {
+      $Next = $Event->{Expires} - $Now;
+    }
+  }
+  return $Next <= 0 ? 1 : $Next;
 }
 
 1;
