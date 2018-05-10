@@ -354,7 +354,7 @@ sub _CheckAndClassifyVMs()
         if (_CanScheduleOnVM($Sched, $VM))
         {
           my $ErrMessage = $VM->RunMonitor();
-          return ($ErrMessage, undef) if (defined $ErrMessage);
+          LogMsg "$ErrMessage\n" if (defined $ErrMessage);
         }
         # Ignore the VM for this round since we cannot use it
         $Sched->{busyvms}->{$VMKey} = 1;
@@ -389,7 +389,7 @@ sub _CheckAndClassifyVMs()
   # continuing with the scheduling.
   CheckJobs() if ($FoundVMErrors);
 
-  return (undef, $Sched);
+  return $Sched;
 }
 
 =pod
@@ -627,7 +627,7 @@ sub _ScheduleTasks($)
             $Sched->{busyvms}->{$VMKey} = 1;
             $VM->RecordStatus($Sched->{records}, join(" ", "running", $Job->Id, $Step->No, $Task->No));
             my $ErrMessage = $Task->Run($Step);
-            return ($ErrMessage, undef) if (defined $ErrMessage);
+            LogMsg "$ErrMessage\n" if (defined $ErrMessage);
 
             $Job->UpdateStatus();
             $Host->{idle}--;
@@ -660,7 +660,7 @@ sub _ScheduleTasks($)
     _AddNeededVM($NeededVMs, $VM, $Niceness);
   }
 
-  return (undef, $NeededVMs);
+  return $NeededVMs;
 }
 
 =pod
@@ -865,12 +865,11 @@ sub _RevertVMs($$)
       delete $Sched->{lambvms}->{$VMKey};
       $Sched->{busyvms}->{$VMKey} = 1;
       my $ErrMessage = $VM->RunRevert();
-      return $ErrMessage if (defined $ErrMessage);
+      LogMsg "$ErrMessage\n" if (defined $ErrMessage);
       $Host->{active}++ if ($VMStatus eq "off");
       $Host->{reverting}++;
     }
   }
-  return undef;
 }
 
 sub _PowerOffDirtyVMs($)
@@ -886,9 +885,8 @@ sub _PowerOffDirtyVMs($)
 
     $VM->RecordStatus($Sched->{records}, "dirty poweroff");
     my $ErrMessage = $VM->RunPowerOff();
-    return $ErrMessage if (defined $ErrMessage);
+    LogMsg "$ErrMessage\n" if (defined $ErrMessage);
   }
-  return undef;
 }
 
 my $_LastTaskCounts = "";
@@ -949,18 +947,10 @@ kept on standby so they are ready when their turn comes.
 
 sub ScheduleJobs()
 {
-  my ($ErrMessage, $Sched) = _CheckAndClassifyVMs();
-  return $ErrMessage if ($ErrMessage);
-
-  my $NeededVMs;
-  ($ErrMessage, $NeededVMs) = _ScheduleTasks($Sched);
-  return $ErrMessage if ($ErrMessage);
-
-  $ErrMessage = _RevertVMs($Sched, $NeededVMs);
-  return $ErrMessage if ($ErrMessage);
-
-  $ErrMessage = _PowerOffDirtyVMs($Sched);
-  return $ErrMessage if ($ErrMessage);
+  my $Sched = _CheckAndClassifyVMs();
+  my $NeededVMs = _ScheduleTasks($Sched);
+  _RevertVMs($Sched, $NeededVMs);
+  _PowerOffDirtyVMs($Sched);
 
   # Note that any VM Status or Role change will trigger ScheduleJobs() so this
   # records all not yet recorded VM state changes, even those not initiated by
@@ -981,8 +971,6 @@ sub ScheduleJobs()
   {
     $Sched->{recordgroups}->DeleteItem($Sched->{recordgroup});
   }
-
-  return undef;
 }
 
 

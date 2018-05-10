@@ -351,11 +351,7 @@ sub HandleJobCancel($)
     return "0$ErrMessage";
   }
 
-  $ErrMessage = ScheduleJobs();
-  if (defined($ErrMessage))
-  {
-    LogMsg "Scheduling problem in HandleJobCancel: $ErrMessage\n";
-  }
+  ScheduleJobs();
 
   return "1OK";
 }
@@ -381,22 +377,14 @@ sub HandleJobRestart($)
     return "0$ErrMessage";
   }
 
-  $ErrMessage = ScheduleJobs();
-  if (defined($ErrMessage))
-  {
-    LogMsg "Scheduling problem in HandleJobRestart: $ErrMessage\n";
-  }
+  ScheduleJobs();
 
   return "1OK";
 }
 
 sub HandleRescheduleJobs()
 {
-  my $ErrMessage = ScheduleJobs();
-  if (defined($ErrMessage))
-  {
-    LogMsg "Scheduling problem in HandleRescheduleJobs: $ErrMessage\n";
-  }
+  ScheduleJobs();
 
   return "1OK";
 }
@@ -411,11 +399,7 @@ sub HandleVMStatusChange($$$)
     return "0Invalid status";
   }
 
-  my $ErrMessage = ScheduleJobs();
-  if (defined($ErrMessage))
-  {
-    LogMsg "Scheduling problem in HandleVMStatusChange: $ErrMessage\n";
-  }
+  ScheduleJobs();
 
   return "1OK";
 }
