@@ -208,7 +208,7 @@ sub FatalError($)
     NotifyAdministrator("Putting the $VMKey VM offline",
                         "Could not perform the $Action operation on the $VMKey VM:\n".
                         "\n$ErrMessage\n".
-                        "The VM has been put offline.");
+                        "The VM has been put offline and the TestBot will try to regain access to it.");
   }
   exit 1;
 }
