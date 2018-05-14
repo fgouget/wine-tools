@@ -165,11 +165,25 @@ sub UpdateStatus($$)
       close TASKLOG;
     }
     umask($OldUMask);
-    # This probably indicates a bug in the task script.
-    # Don't requeue the task to avoid an infinite loop.
+
     require WineTestBot::Log;
     WineTestBot::Log::LogMsg("Child process for task $JobId/$StepNo/$TaskNo died unexpectedly\n");
-    $self->Status("boterror");
+
+    # A crash probably indicates a bug in the task script but getting stuck
+    # could happen due to network issues. So requeue the task like its script
+    # would and count attempts to avoid getting into an infinite loop.
+    if ($self->CanRetry())
+    {
+      $Status = "queued";
+      $self->TestFailures(($self->TestFailures || 0) + 1);
+      $self->Started(undef);
+      $self->Ended(undef);
+    }
+    else
+    {
+      $Status = "boterror";
+    }
+    $self->Status($Status);
     $self->Save();
 
     if ($VM->Status eq "running")
@@ -181,8 +195,6 @@ sub UpdateStatus($$)
       $VM->RecordResult(undef, "boterror process died");
     }
     # else it looks like this is not our VM anymore
-
-    $Status = "boterror";
   }
   elsif ($Skip && $Status eq "queued")
   {
