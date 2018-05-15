@@ -143,7 +143,6 @@ sub Cleanup($;$$)
         if ($Requeue)
         {
           LogMsg "Requeuing $TaskKey\n";
-          $Task->RmTree();
           $Task->Status("queued");
           $Task->Started(undef);
           $Task->Ended(undef);
