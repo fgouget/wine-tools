@@ -83,7 +83,32 @@ sub _SetupTask($$)
   my ($VM, $self) = @_;
 
   # Remove the previous run's files if any
-  $self->RmTree();
+  my $Dir = $self->GetDir();
+  if (-d $Dir)
+  {
+    mkpath("$Dir.new", 0, 0775);
+    rename "$Dir/log.old", "$Dir.new/log.old" if (-f "$Dir/log.old");
+    rename "$Dir/err.old", "$Dir.new/err.old" if (-f "$Dir/err.old");
+    foreach my $Filename ("log", "err")
+    {
+      if (open(my $Src, "<", "$Dir/$Filename"))
+      {
+        if (open(my $Dst, ">>", "$Dir.new/$Filename.old"))
+        {
+          print $Dst "----- Run ", ($self->TestFailures || 0), " $Filename\n";
+          while (my $Line = <$Src>)
+          {
+            print $Dst $Line;
+          }
+          close($Dst);
+        }
+        close($Src);
+      }
+    }
+
+    $self->RmTree();
+    rename("$Dir.new", $Dir);
+  }
 
   # Capture Perl errors in the task's generic error log
   my $TaskDir = $self->CreateDir();

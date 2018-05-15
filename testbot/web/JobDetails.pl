@@ -249,16 +249,21 @@ sub GenerateBody($)
           $self->CGI->escapeHTML($VM->Details || "No details!"),
           "</details>\n";
 
-    my $ScreenshotParamName = "scrshot_$Key";
     my $FullLogParamName = "log_$Key";
-    my $LogName = "$TaskDir/log";
-    my $ErrName = "$TaskDir/err";
+    my $FullLog = $self->GetParam($FullLogParamName);
+    $FullLog = "" if ($FullLog !~ /^[12]$/);
+
+    my $ScreenshotParamName = "scrshot_$Key";
+    my $Screenshot = $self->GetParam($ScreenshotParamName);
+    $Screenshot = "" if ($Screenshot ne "1");
+
+
     print "<div class='TaskMoreInfoLinks'>\n";
     # FIXME: Disable live screenshots for now
     if (0 && $StepTask->Status eq "running" &&
         ($StepTask->Type eq "single" || $StepTask->Type eq "suite"))
     {
-      if (defined($self->GetParam($ScreenshotParamName)))
+      if ($Screenshot)
       {
         my $URI = "/Screenshot.pl?VMName=" . uri_escape($VM->Name);
         print "<div class='Screenshot'><img src='" .
@@ -277,7 +282,7 @@ sub GenerateBody($)
     }
     elsif (-r "$TaskDir/screenshot.png")
     {
-      if (defined($self->GetParam($ScreenshotParamName)))
+      if ($Screenshot)
       {
         my $URI = "/Screenshot.pl?JobKey=" . uri_escape($self->{JobId}) .
                   "&StepKey=" . uri_escape($StepTask->StepNo) .
@@ -289,10 +294,7 @@ sub GenerateBody($)
       {
         my $URI = $ENV{"SCRIPT_NAME"} . "?Key=" . uri_escape($self->{JobId}) .
                   "&$ScreenshotParamName=1";
-        if (defined($self->GetParam($FullLogParamName)))
-        {
-          $URI .= "&$FullLogParamName=1";
-        }
+        $URI .= "&$FullLogParamName=$FullLog";
         $URI .= "#k" . uri_escape($Key);
         print "<div class='TaskMoreInfoLink'><a href='" .
               $self->CGI->escapeHTML($URI) .
@@ -300,28 +302,45 @@ sub GenerateBody($)
         print "\n";
       }
     }
-    my $FullLog = !1;
-    if (-r $LogName)
+
+    my $LogName = "$TaskDir/log";
+    my $ErrName = "$TaskDir/err";
+    if (-r $LogName and $FullLog != "1")
     {
-      if (defined($self->GetParam($FullLogParamName)))
-      {
-        $FullLog = 1;
-      }
-      else
-      {
-        my $URI = $ENV{"SCRIPT_NAME"} . "?Key=" . uri_escape($self->{JobId}) .
-                  "&$FullLogParamName=1";
-        if (defined($self->GetParam($ScreenshotParamName)))
-        {
-          $URI .= "&$ScreenshotParamName=1";
-        }
-        $URI .= "#k" . uri_escape($Key);
-        print "<div class='TaskMoreInfoLink'><a href='" .
-              $self->CGI->escapeHTML($URI) .
-              "'>Show full log</a></div>\n";
-      }
+      my $URI = $ENV{"SCRIPT_NAME"} . "?Key=" . uri_escape($self->{JobId}) .
+                "&$FullLogParamName=1";
+      $URI .= "&$ScreenshotParamName=$Screenshot";
+      $URI .= "#k" . uri_escape($Key);
+      print "<div class='TaskMoreInfoLink'><a href='" .
+            $self->CGI->escapeHTML($URI) .
+            "'>Show full log</a></div>\n";
+    }
+    if ((-r $LogName or -r $ErrName) and $FullLog == "2")
+    {
+      my $URI = $ENV{"SCRIPT_NAME"} . "?Key=" . uri_escape($self->{JobId});
+      $URI .= "&$ScreenshotParamName=$Screenshot";
+      $URI .= "#k" . uri_escape($Key);
+      print "<div class='TaskMoreInfoLink'><a href='" .
+            $self->CGI->escapeHTML($URI) .
+            "'>Show latest log</a></div>\n";
+    }
+    if ((-r "$LogName.old" or -r "$ErrName.old") and $FullLog != "2")
+    {
+      my $URI = $ENV{"SCRIPT_NAME"} . "?Key=" . uri_escape($self->{JobId}) .
+                "&$FullLogParamName=2";
+      $URI .= "&$ScreenshotParamName=$Screenshot";
+      $URI .= "#k" . uri_escape($Key);
+      print "<div class='TaskMoreInfoLink'><a href='" .
+            $self->CGI->escapeHTML($URI) .
+            "'>Show old logs</a></div>\n";
     }
     print "</div>\n";
+
+    if ($FullLog eq "2")
+    {
+      $LogName .= ".old";
+      $ErrName .= ".old";
+    }
 
     if (open LOGFILE, "<$LogName")
     {
