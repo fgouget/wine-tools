@@ -29,7 +29,7 @@ use vars qw (@ISA @EXPORT @EXPORT_OK $UseSSL $LogDir $DataDir $BinDir
              $DbDataSource $DbUsername $DbPassword $MaxRevertingVMs
              $MaxRevertsWhileRunningVMs $MaxActiveVMs $MaxRunningVMs
              $MaxVMsWhenIdle $SleepAfterRevert $WaitForToolsInVM
-             $VMToolTimeout $MaxTaskTries $AdminEMail $RobotEMail
+             $VMToolTimeout $MaxVMErrors $MaxTaskTries $AdminEMail $RobotEMail
              $WinePatchToOverride $WinePatchCc $SuiteTimeout $SingleTimeout
              $BuildTimeout $ReconfigTimeout $TimeoutMargin $TagPrefix
              $MaxUnitSize $ProjectName $PatchesMailingList $LDAPServer
@@ -43,7 +43,7 @@ require Exporter;
 @EXPORT = qw($UseSSL $LogDir $DataDir $BinDir
              $MaxRevertingVMs $MaxRevertsWhileRunningVMs $MaxActiveVMs
              $MaxRunningVMs $MaxVMsWhenIdle $SleepAfterRevert $WaitForToolsInVM
-             $VMToolTimeout $MaxTaskTries $AdminEMail
+             $VMToolTimeout $MaxVMErrors $MaxTaskTries $AdminEMail
              $RobotEMail $WinePatchToOverride $WinePatchCc $SuiteTimeout
              $SingleTimeout $BuildTimeout $ReconfigTimeout $TimeoutMargin
              $TagPrefix $MaxUnitSize $ProjectName $PatchesMailingList
@@ -81,6 +81,9 @@ $WaitForToolsInVM = 30;
 $SleepAfterRevert = 0;
 # Take into account $WaitForToolsInVM and $SleepAfterRevert
 $VMToolTimeout = 6 * 60;
+
+# After three consecutive failures to revert a VM, put it in maintenance mode.
+$MaxVMErrors = 3;
 
 # How many times to run a test that fails before giving up.
 $MaxTaskTries = 3;

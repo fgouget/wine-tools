@@ -193,22 +193,41 @@ sub FatalError($)
   my ($ErrMessage) = @_;
   Error $ErrMessage;
 
-  # Put the VM offline if nobody else modified its status before us
+  # Put the VM offline or mark it for maintenance
+  my $Errors = ($VM->Errors || 0) + 1;
+  my $NewStatus = $Errors < $MaxVMErrors ? "offline" : "maintenance";
+
   $VM = CreateVMs()->GetItem($VMKey);
-  $VM->Status("offline") if ($VM->Status eq $CurrentStatus);
-  $VM->ChildDeadline(undef);
-  $VM->ChildPid(undef);
+  # Put the VM offline if nobody else modified its status before us
+  if ($VM->Status eq $CurrentStatus)
+  {
+    $VM->Status($NewStatus);
+    $VM->ChildDeadline(undef);
+    $VM->ChildPid(undef);
+    $VM->Errors($Errors);
+  }
+  else
+  {
+    $NewStatus = "";
+  }
   my ($ErrProperty, $SaveErrMessage) = $VM->Save();
   if (defined $SaveErrMessage)
   {
     LogMsg "Could not put the $VMKey VM offline: $SaveErrMessage ($ErrProperty)\n";
   }
-  elsif ($VM->Status eq "offline")
+  elsif ($NewStatus eq "offline")
   {
     NotifyAdministrator("Putting the $VMKey VM offline",
                         "Could not perform the $Action operation on the $VMKey VM:\n".
                         "\n$ErrMessage\n".
                         "The VM has been put offline and the TestBot will try to regain access to it.");
+  }
+  elsif ($NewStatus eq "maintenance")
+  {
+    NotifyAdministrator("The $VMKey VM needs maintenance",
+                        "Got ". $VM->Errors ." consecutive errors working on the $VMKey VM:\n".
+                        "\n$ErrMessage\n".
+                        "An administrator needs to look at it and to put it back online.");
   }
   exit 1;
 }
@@ -244,6 +263,7 @@ sub ChangeStatus($$;$)
   $VM->Status($To);
   if ($Done)
   {
+    $VM->Errors(undef) if ($To eq "idle");
     $VM->ChildDeadline(undef);
     $VM->ChildPid(undef);
   }

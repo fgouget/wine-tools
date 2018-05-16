@@ -667,6 +667,7 @@ my @PropertyDescriptors = (
   CreateEnumPropertyDescriptor("Type", "Type of VM", !1, 1, ['win32', 'win64', 'build']),
   CreateEnumPropertyDescriptor("Role", "VM Role", !1, 1, ['extra', 'base', 'winetest', 'retired', 'deleted']),
   CreateEnumPropertyDescriptor("Status", "Current status", !1, 1, ['dirty', 'reverting', 'sleeping', 'idle', 'running', 'off', 'offline', 'maintenance']),
+  CreateBasicPropertyDescriptor("Errors", "Errors", !1, !1, "N", 2),
   CreateBasicPropertyDescriptor("ChildPid", "Child process id", !1, !1, "N", 5),
   CreateBasicPropertyDescriptor("ChildDeadline", "Child Deadline", !1, !1, "DT", 19),
   CreateBasicPropertyDescriptor("VirtURI", "LibVirt URI of the VM", !1, 1, "A", 64),

@@ -40,7 +40,7 @@ sub DisplayProperty($$)
   my ($self, $PropertyDescriptor) = @_;
 
   my $PropertyName = $PropertyDescriptor->GetName();
-  return "" if ($PropertyName =~ /^(?:ChildPid|ChildDeadline)$/);
+  return "" if ($PropertyName =~ /^(?:ChildPid|ChildDeadline|Errors)$/);
   return $self->SUPER::DisplayProperty($PropertyDescriptor);
 }
 
@@ -53,6 +53,8 @@ sub Save($)
 
   if ($OldStatus ne $self->{Item}->Status)
   {
+    # The administrator action resets the consecutive error count
+    $self->{Item}->Errors(undef);
     my ($ErrProperty, $ErrMessage) = $self->{Item}->Validate();
     if (!defined $ErrMessage)
     {
