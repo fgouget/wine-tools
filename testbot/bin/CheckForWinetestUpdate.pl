@@ -238,6 +238,8 @@ mkdir "$DataDir/latest";
 if (!move($StagingFileName, $LatestFileName))
 {
   LogMsg "Could not move '$StagingFileName' to '$LatestFileName': $!\n";
+  unlink($StagingFileName);
+  exit 1;
 }
 utime time, $Response->last_modified, $LatestFileName;
 
