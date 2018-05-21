@@ -65,21 +65,10 @@ sub AddJob($$$)
 {
   my ($BaseJob, $LatestBaseName, $Bits) = @_;
 
-  # Create a copy in staging so it can then be moved into the job directory
-  my ($fh, $StagingFileName) = OpenNewFile("$DataDir/staging", "_$LatestBaseName");
-  if (!$fh)
-  {
-    LogMsg "Could not create the staging file: $!\n";
-    return 0;
-  }
-  if (!copy("$DataDir/latest/$LatestBaseName", $fh))
-  {
-    LogMsg "Could not copy '$DataDir/latest/$LatestBaseName' to '$StagingFileName': $!\n";
-    close($fh);
-    unlink($StagingFileName);
-    return 0;
-  }
-  close($fh);
+  # Create a hard link in staging so it can then be moved into the job
+  # directory. This is ok because the latest file is never overwritten.
+  my $StagingFileName = CreateNewLink("$DataDir/latest/$LatestBaseName",
+                                      "$DataDir/staging", "_$LatestBaseName");
 
   # First create a new job
   my $Jobs = CreateJobs();
