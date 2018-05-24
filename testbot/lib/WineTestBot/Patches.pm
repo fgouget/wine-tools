@@ -241,7 +241,7 @@ sub Submit($$$)
 
   my $Disposition = "Submitted job ";
   my $First = 1;
-  foreach my $Module (keys %Modules)
+  foreach my $Module (sort keys %Modules)
   {
     my $Jobs = CreateJobs();
 
@@ -287,7 +287,7 @@ sub Submit($$$)
       return $ErrMessage;
     }
 
-    foreach my $Unit (keys %{$Modules{$Module}})
+    foreach my $Unit (sort keys %{$Modules{$Module}})
     {
       # Add 32 and 64-bit tasks
       foreach my $Bits ("32", "64")
