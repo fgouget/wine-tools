@@ -110,7 +110,6 @@ ENGINE=InnoDB DEFAULT CHARSET=utf8;
 CREATE TABLE Jobs
 (
   Id         INT(5)      NOT NULL AUTO_INCREMENT,
-  Archived   ENUM('Y', 'N') NOT NULL,
   BranchName VARCHAR(20) NOT NULL,
   UserName   VARCHAR(40) NOT NULL,
   Priority   INT(1)      NOT NULL,
@@ -123,7 +122,6 @@ CREATE TABLE Jobs
   FOREIGN KEY (UserName) REFERENCES Users(Name),
   FOREIGN KEY (PatchId) REFERENCES Patches(Id),
   PRIMARY KEY (Id),
-  INDEX JobsArchived (Archived)
 )
 ENGINE=InnoDB DEFAULT CHARSET=utf8;
 

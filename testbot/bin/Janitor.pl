@@ -2,7 +2,7 @@
 # -*- Mode: Perl; perl-indent-level: 2; indent-tabs-mode: nil -*-
 #
 # This script performs janitorial tasks. It removes incomplete patch series,
-# archives old jobs and purges older jobs and patches.
+# purges older jobs and patches, etc.
 #
 # Copyright 2009 Ge van Geldorp
 # Copyright 2017 Francois Gouget
@@ -168,30 +168,6 @@ if ($JobPurgeDays != 0)
       unlink("$DataDir/patches/" . $Patch->Id);
       my $ErrMessage = $Patches->DeleteItem($Patch);
       Error "$ErrMessage\n" if (defined $ErrMessage);
-    }
-  }
-}
-
-# Archive old Jobs, that is remove all their associated files
-if ($JobArchiveDays != 0)
-{
-  my $ArchiveBefore = time() - $JobArchiveDays * 86400;
-  my $Jobs = CreateJobs();
-  $Jobs->FilterNotArchived();
-  foreach my $Job (@{$Jobs->GetItems()})
-  {
-    if (defined($Job->Ended) && $Job->Ended < $ArchiveBefore)
-    {
-      Trace "Archiving job ", $Job->Id, "\n";
-      next if ($DryRun);
-
-      foreach my $Step (@{$Job->Steps->GetItems()})
-      {
-        unlink $Step->GetDir() . "/" . $Step->FileName;
-      }
-
-      $Job->Archived(1);
-      $Job->Save();
     }
   }
 }

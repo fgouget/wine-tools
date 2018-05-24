@@ -35,7 +35,7 @@ use vars qw (@ISA @EXPORT @EXPORT_OK $UseSSL $LogDir $DataDir $BinDir
              $MaxUnitSize $ProjectName $PatchesMailingList $LDAPServer
              $LDAPBindDN $LDAPSearchBase $LDAPSearchFilter
              $LDAPRealNameAttribute $LDAPEMailAttribute $AgentPort $Tunnel
-             $TunnelDefaults $PrettyHostNames $JobPurgeDays $JobArchiveDays
+             $TunnelDefaults $PrettyHostNames $JobPurgeDays
              $WebHostName $RegistrationQ $RegistrationARE $MuninAPIKey);
 
 require Exporter;
@@ -49,7 +49,7 @@ require Exporter;
              $TagPrefix $MaxUnitSize $ProjectName $PatchesMailingList
              $LDAPServer $LDAPBindDN $LDAPSearchBase $LDAPSearchFilter
              $LDAPRealNameAttribute $LDAPEMailAttribute $AgentPort $Tunnel
-             $TunnelDefaults $PrettyHostNames $JobPurgeDays $JobArchiveDays
+             $TunnelDefaults $PrettyHostNames $JobPurgeDays
              $WebHostName $RegistrationQ $RegistrationARE $MuninAPIKey);
 @EXPORT_OK = qw($DbDataSource $DbUsername $DbPassword);
 
@@ -116,7 +116,6 @@ $LDAPRealNameAttribute = undef;
 $LDAPEMailAttribute = undef;
 
 $JobPurgeDays = 7;
-$JobArchiveDays = 0;
 
 if (!$::BuildEnv)
 {

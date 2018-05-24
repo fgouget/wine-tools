@@ -74,7 +74,6 @@ sub InitializeNew($$)
 {
   my ($self, $Collection) = @_;
 
-  $self->Archived(!1);
   $self->Branch(CreateBranches()->GetDefaultBranch());
   $self->Status("queued");
   $self->Submitted(time());
@@ -421,7 +420,6 @@ sub CreateItem($)
 
 my @PropertyDescriptors = (
   CreateBasicPropertyDescriptor("Id", "Job id", 1, 1, "S",  5),
-  CreateBasicPropertyDescriptor("Archived", "Job is archived", !1, 1, "B", 1),
   CreateItemrefPropertyDescriptor("Branch", "Branch", !1, 1, \&CreateBranches, ["BranchName"]),
   CreateItemrefPropertyDescriptor("User", "Author", !1, 1, \&CreateUsers, ["UserName"]),
   CreateBasicPropertyDescriptor("Priority", "Priority", !1, 1, "N", 1),
@@ -449,13 +447,6 @@ sub CreateJobs(;$)
   my ($ScopeObject) = @_;
   return WineTestBot::Jobs->new("Jobs", "Jobs", "Job", \@PropertyDescriptors,
                                 $ScopeObject);
-}
-
-sub FilterNotArchived($)
-{
-  my ($self) = @_;
-
-  $self->AddFilter("Archived", [!1]);
 }
 
 1;
