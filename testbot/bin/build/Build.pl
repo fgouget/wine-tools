@@ -122,7 +122,7 @@ sub ApplyPatch($$$)
       {
         $NeedBuildNative = $NeedMakeMakefiles = $NeedConfigure = 1;
       }
-      elsif ($Line =~ m=^diff.*tools/(?:winebuild|wrc)=)
+      elsif ($Line =~ m=^diff.*tools/(?:makedep\.c|make_xftmpl\.c|sfnt2fon|winebuild|winegcc|widl|wmc|wrc)=)
       {
         $NeedBuildNative = 1;
       }
