@@ -41,6 +41,7 @@ use File::Basename;
 
 use WineTestBot::Config;
 use WineTestBot::Jobs;
+use WineTestBot::PatchUtils;
 use WineTestBot::Users;
 use WineTestBot::Utils;
 use WineTestBot::VMs;
@@ -112,36 +113,6 @@ sub FromSubmission($$)
 =pod
 =over 12
 
-=item C<GetTestList()>
-
-Returns a hashtable containing the list of the source files for a given module.
-This structure is built from the latest/testlist.txt file.
-
-=back
-=cut
-
-sub GetTestList()
-{
-  my $TestList = {};
-  if (open(my $File, "<", "$DataDir/latest/testlist.txt"))
-  {
-    while (my $TestFileName = <$File>)
-    {
-      chomp $TestFileName;
-      if ($TestFileName =~ m~^(?:dlls|programs)/([^/]+)/tests/[^/]+\.c$~)
-      {
-        my $Module = $1;
-        push @{$TestList->{$Module}}, $TestFileName;
-      }
-    }
-    close($File);
-  }
-  return $TestList;
-}
-
-=pod
-=over 12
-
 =item C<Submit()>
 
 Analyzes the current patch to determine which Wine tests are impacted. Then for
@@ -161,38 +132,8 @@ sub Submit($$$)
 {
   my ($self, $PatchFileName, $IsSet) = @_;
 
-  # See also OnSubmit() in web/Submit.pl
-  my (%Modules, %Deleted);
-  if (open(BODY, "<$DataDir/patches/" . $self->Id))
-  {
-    my ($Line, $Modified);
-    while (defined($Line = <BODY>))
-    {
-      if ($Line =~ m~^\-\-\- .*/((?:dlls|programs)/[^/]+/tests/[^/\s]+)~)
-      {
-        $Modified = $1;
-      }
-      elsif ($Line =~ m~^\+\+\+ .*/(dlls|programs)/([^/]+)/tests/([^/\s]+)~)
-      {
-        my ($FileType, $Module, $Unit) = ("patch$1", $2, $3);
-        # Assume makefile modifications may break the build but not the tests
-        next if ($Unit eq "Makefile.in");
-        $Unit = "" if ($Unit !~ s/\.c$//);
-        $Modules{$Module}{$Unit} = $FileType;
-      }
-      elsif ($Line =~ m~^\+\+\+ /dev/null~ and defined $Modified)
-      {
-        $Deleted{$Modified} = 1;
-      }
-      else
-      {
-        $Modified = undef;
-      }
-    }
-    close BODY;
-  }
-
-  if (! scalar(%Modules))
+  my $Impacts = GetPatchImpact("$DataDir/patches/" . $self->Id);
+  if (!$Impacts->{UnitCount})
   {
     $self->Disposition(($IsSet ? "Set" : "Patch") .
                        " doesn't affect tests");
@@ -214,35 +155,11 @@ sub Submit($$$)
     $User = GetBatchUser();
   }
 
-  my $TestList;
-  foreach my $Module (keys %Modules)
-  {
-    next if (!defined $Modules{$Module}{""});
-
-    # The patch modifies non-C files so rerun all that module's test units
-    $TestList = GetTestList() if (!$TestList);
-    next if (!defined $TestList->{$Module});
-
-    # If we don't find which tests to rerun then run the module test
-    # executable without argument. It probably won't work but will make the
-    # issue clearer to the developer.
-    my $FileType = $Modules{$Module}{""};
-    foreach my $TestFileName (@{$TestList->{$Module}})
-    {
-      if (!$Deleted{$TestFileName} and
-          $TestFileName =~ m~^(?:dlls|programs)/\Q$Module\E/tests/([^/]+)\.c$~)
-      {
-        my $Unit = $1;
-        $Modules{$Module}{$Unit} = $FileType;
-        delete $Modules{$Module}{""};
-      }
-    }
-  }
-
   my $Disposition = "Submitted job ";
   my $First = 1;
-  foreach my $Module (sort keys %Modules)
+  foreach my $Module (sort keys %{$Impacts->{Tests}})
   {
+    my $TestInfo = $Impacts->{Tests}->{$Module};
     my $Jobs = CreateJobs();
 
     # Create a new job for this patch
@@ -264,8 +181,7 @@ sub Submit($$$)
     # Create a link to the patch file in the staging dir
     my $StagingFileName = CreateNewLink($PatchFileName, "$DataDir/staging", "_patch.diff");
     $NewStep->FileName(basename($StagingFileName));
-    my @Keys = keys %{$Modules{$Module}};
-    $NewStep->FileType($Modules{$Module}{$Keys[0]});
+    $NewStep->FileType($TestInfo->{Type});
     $NewStep->InStaging(1);
     $NewStep->Type("build");
     $NewStep->DebugLevel(0);
@@ -287,7 +203,7 @@ sub Submit($$$)
       return $ErrMessage;
     }
 
-    foreach my $Unit (sort keys %{$Modules{$Module}})
+    foreach my $Unit (sort keys %{$TestInfo->{Units}})
     {
       # Add 32 and 64-bit tasks
       foreach my $Bits ("32", "64")
@@ -300,9 +216,7 @@ sub Submit($$$)
           # Create the corresponding Step
           $NewStep = $Steps->Add();
           $NewStep->PreviousNo(1);
-          my $FileName = $Module;
-          $FileName .= ".exe" if ($Modules{$Module}{$Unit} eq "patchprograms");
-          $FileName .= "_test";
+          my $FileName = $TestInfo->{ExeBase};
           $FileName .= "64" if ($Bits eq "64");
           $NewStep->FileName("$FileName.exe");
           $NewStep->FileType("exe$Bits");

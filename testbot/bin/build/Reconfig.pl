@@ -68,10 +68,21 @@ sub GitPull()
     return !1;
   }
 
-  system("( cd $DataDir/wine && ".
-         "  ls dlls/*/tests/*.c programs/*/tests/*.c | ".
-         "      egrep -v '/testlist.c\$' >../testlist.txt ".
-         ") >>$LogDir/Reconfig.log 2>&1");
+  if (open(my $fh, ">", "$DataDir/testlist.txt"))
+  {
+    foreach my $TestFile (glob("$DataDir/wine/*/*/tests/*.c"),
+                          glob("$DataDir/wine/*/*/tests/*.spec"))
+    {
+      next if ($TestFile =~ m=/testlist\.c$=);
+      $TestFile =~ s=^$DataDir/wine/==;
+      print $fh "$TestFile\n";
+    }
+    close($fh);
+  }
+  else
+  {
+    LogMsg "Could not open 'testlist.txt' for writing: $!\n";
+  }
 
   return 1;
 }
