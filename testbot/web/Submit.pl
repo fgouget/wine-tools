@@ -35,6 +35,7 @@ use WineTestBot::Branches;
 use WineTestBot::Config;
 use WineTestBot::Jobs;
 use WineTestBot::Engine::Notify;
+use WineTestBot::PatchUtils;
 use WineTestBot::Utils;
 use WineTestBot::VMs;
 
@@ -510,7 +511,7 @@ sub DetermineFileType($$)
   my $ErrMessage = undef;
   my $FileType = "unknown";
   my $DllBaseName = undef;
-  my $TestSet = undef;
+  my $TestUnit = undef;
   if (! sysopen(FH, $FileName, O_RDONLY))
   {
     return ("Unable to open $FileName", "unknown", undef, undef);
@@ -563,76 +564,21 @@ sub DetermineFileType($$)
 
   if ($FileType eq "unknown")
   {
-    if (open (FH, "<$FileName"))
+    my $Impacts = GetPatchImpact($FileName);
+    if ($Impacts->{UnitCount} == 0)
     {
-      my $Line;
-      my $PatchFound = !1;
-      my $PrevPlus = !1;
-      my $PrevMinus = !1;
-      while (defined($Line = <FH>))
-      {
-        if ($Line =~ m~^\+\+\+ .*/(dlls|programs)/([^/]+)/tests/([^/\s]+)~)
-        {
-          $FileType = "patch$1";
-          my $ThisDllBaseName = $2;
-          my $ThisTestSet = $3;
-          if ($ThisTestSet =~ m/^(.*)\.c$/)
-          {
-            $ThisTestSet = $1;
-          }
-          else
-          {
-            $ThisTestSet = undef;
-          }
-
-          if ((defined($DllBaseName) && $DllBaseName ne $ThisDllBaseName) ||
-              (defined($TestSet) && defined($ThisTestSet) &&
-               $TestSet ne $ThisTestSet))
-          {
-            $ErrMessage = "Patch contains changes to multiple tests";
-          }
-          else
-          {
-            if (defined($ThisDllBaseName))
-            {
-              $DllBaseName = $ThisDllBaseName;
-            }
-            if (defined($ThisTestSet))
-            {
-              $TestSet = $ThisTestSet;
-            }
-          }
-        }
-        elsif ($Line =~ m/^\+\+\+ /)
-        {
-          if ($PrevMinus)
-          {
-            $PatchFound = 1;
-            $PrevMinus = !1;
-          }
-          $PrevPlus = 1;
-        }
-        elsif ($Line =~ m/^--- /)
-        {
-          if ($PrevPlus)
-          {
-            $PatchFound = 1;
-            $PrevPlus = !1;
-          }
-          $PrevMinus = 1;
-        }
-        else
-        {
-          $PrevPlus = !1;
-          $PrevMinus = !1;
-        }
-      }
-      close FH;
-
-      if ($FileType eq "unknown" && $PatchFound)
-      {
-        $ErrMessage = "Patch doesn't affect tests";
-      }
+      $ErrMessage = "Patch doesn't affect tests";
+    }
+    elsif ($Impacts->{UnitCount} > 1)
+    {
+      $ErrMessage = "Patch contains changes to multiple tests";
+    }
+    else
+    {
+      my $TestInfo = (values %{$Impacts->{Tests}})[0];
+      $FileType = $TestInfo->{Type};
+      $DllBaseName = $TestInfo->{Module};
+      $TestUnit = (keys %{$TestInfo->{Units}})[0];
     }
   }
   elsif ($FileType eq "dll32" || $FileType eq "dll64" || $FileType eq "zip")
@@ -641,7 +587,7 @@ sub DetermineFileType($$)
     $FileType = "unknown";
   }
 
-  return ($ErrMessage, $FileType, $DllBaseName, $TestSet);
+  return ($ErrMessage, $FileType, $DllBaseName, $TestUnit);
 }
 
 sub OnPage1Next($)
@@ -686,7 +632,7 @@ sub OnPage1Next($)
     }
     close OUTFILE;
 
-    my ($ErrMessage, $FileType, $DllBaseName, $TestSet) = $self->DetermineFileType($StagingFile);
+    my ($ErrMessage, $FileType, $DllBaseName, $TestUnit) = $self->DetermineFileType($StagingFile);
     if (defined($ErrMessage))
     {
       $self->{ErrField} = "File";
@@ -712,9 +658,9 @@ sub OnPage1Next($)
       }
       $self->{TestExecutable} .= "_test.exe";
     }
-    if (defined($TestSet))
+    if (defined($TestUnit))
     {
-      $self->{CmdLineArg} = $TestSet;
+      $self->{CmdLineArg} = $TestUnit;
     }
   }
   else
