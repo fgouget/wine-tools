@@ -40,6 +40,7 @@ sub BEGIN
 }
 
 use WineTestBot::Config;
+use WineTestBot::PatchUtils;
 
 sub InfoMsg(@)
 {
@@ -74,39 +75,6 @@ sub ApplyPatch($)
 {
   my ($PatchFile) = @_;
 
-  my ($NeedMakeMakefiles, $NeedAutoconf, $HasConfigure, $NeedBuildNative);
-  if (open (FH, "<$PatchFile"))
-  {
-    my $Line;
-    while (defined($Line = <FH>) &&
-           (!$NeedMakeMakefiles || !$NeedAutoconf || !$HasConfigure ||
-            !$NeedBuildNative))
-    {
-      if ($Line =~ m=^diff.*(?:aclocal\.m4|configure\.ac)=)
-      {
-        $NeedAutoconf = 1;
-      }
-      elsif ($Line =~ m=^diff.*configure=)
-      {
-        $HasConfigure = 1;
-      }
-      elsif ($Line =~ m=^new file= || $Line =~ m=^deleted file= || $Line =~ m=^rename= ||
-             $Line =~ m=diff.*tools/make_makefiles=)
-      {
-        $NeedMakeMakefiles = 1;
-      }
-      elsif ($Line =~ m=^diff.*tools/makedep\.c=)
-      {
-        $NeedMakeMakefiles = $NeedBuildNative = 1;
-      }
-      elsif ($Line =~ m=^diff.*tools/(?:makedep\.c|make_xftmpl\.c|sfnt2fon|winebuild|winegcc|widl|wmc|wrc)=)
-      {
-        $NeedBuildNative = 1;
-      }
-    }
-    close FH;
-  }
-
   InfoMsg "Applying patch\n";
   system("( cd $DataDir/wine && set -x && " .
          "  git apply --verbose $PatchFile && " .
@@ -118,7 +86,8 @@ sub ApplyPatch($)
     return -1;
   }
 
-  if ($NeedMakeMakefiles)
+  my $Impacts = GetPatchImpact($PatchFile, "nounits");
+  if ($Impacts->{Makefiles})
   {
     InfoMsg "Running make_makefiles\n";
     system("( cd $DataDir/wine && set -x && " .
@@ -131,7 +100,7 @@ sub ApplyPatch($)
     }
   }
 
-  if ($NeedAutoconf && !$HasConfigure)
+  if ($Impacts->{Autoconf} && !$Impacts->{HasConfigure})
   {
     InfoMsg "Running autoconf\n";
     system("( cd $DataDir/wine && set -x && " .
@@ -144,7 +113,7 @@ sub ApplyPatch($)
     }
   }
 
-  return $NeedBuildNative;
+  return $Impacts->{Tools};
 }
 
 my $ncpus;

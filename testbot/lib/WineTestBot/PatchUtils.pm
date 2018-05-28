@@ -86,8 +86,8 @@ sub _AddTest($$$)
     };
   }
 
-  # Assume makefile modifications may break the build but not the tests.
-  return if ($File eq "Makefile.in");
+  # Assume makefile modifications may break the build but not the tests
+  return if ($File eq "Makefile.in" or $Impacts->{NoUnits});
 
   if (!$Tests->{$Module}->{Files})
   {
@@ -118,18 +118,37 @@ configure, whether it impacts the tests, etc.
 =back
 =cut
 
-sub GetPatchImpact($)
+sub GetPatchImpact($;$)
 {
-  my ($PatchFileName) = @_;
+  my ($PatchFileName, $NoUnits) = @_;
 
   my $fh;
   return undef if (!open($fh, "<", $PatchFileName));
 
-  my $Impacts = { Tests => {} };
+  my $Impacts = {
+    NoUnits => $NoUnits,
+    Tests => {},
+  };
   my ($Path, $Change);
   while (my $Line = <$fh>)
   {
-    if ($Line =~ m=^--- /dev/null$=)
+    if ($Line =~ m=^--- \w+/(?:aclocal\.m4|configure\.ac)$=)
+    {
+      $Impacts->{Autoconf} = 1;
+    }
+    elsif ($Line =~ m=^--- \w+/configure$=)
+    {
+      $Impacts->{HasConfigure} = 1;
+    }
+    elsif ($Line =~ m=^--- \w+/tools/make_makefiles$=)
+    {
+      $Impacts->{Makefiles} = $Impacts->{Tools} = 1;
+    }
+    elsif ($Line =~ m=^--- \w+/tools/(?:makedep\.c|make_xftmpl\.c|sfnt2fon|winebuild|winegcc|widl|wmc|wrc)$=)
+    {
+      $Impacts->{Tools} = 1;
+    }
+    elsif ($Line =~ m=^--- /dev/null$=)
     {
       $Change = "new";
     }
