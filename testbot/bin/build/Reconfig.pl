@@ -144,10 +144,11 @@ sub BuildTestLauncher()
 sub BuildNative()
 {
   mkdir "$DataDir/build-native" if (! -d "$DataDir/build-native");
+
+  # Rebuild from scratch to make sure cruft will not accumulate
   system("( cd $DataDir/build-native && set -x && " .
          "  rm -rf * && " .
          "  time ../wine/configure --enable-win64 --without-x --without-freetype && " .
-         "  time make -j$ncpus depend && " .
          "  time make -j$ncpus __tooldeps__ " .
          ") >>$LogDir/Reconfig.log 2>&1");
 
@@ -166,10 +167,11 @@ sub BuildCross($)
 
   my $Host = ($Bits == 64 ? "x86_64-w64-mingw32" : "i686-w64-mingw32");
   mkdir "$DataDir/build-mingw$Bits" if (! -d "$DataDir/build-mingw$Bits");
+
+  # Rebuild from scratch to make sure cruft will not accumulate
   system("( cd $DataDir/build-mingw$Bits && set -x && " .
          "  rm -rf * && " .
          "  time ../wine/configure --host=$Host --with-wine-tools=../build-native --without-x --without-freetype && " .
-         "  time make -j$ncpus depend  && " .
          "  time make -j$ncpus programs/winetest " .
          ") >>$LogDir/Reconfig.log 2>&1");
   if ($? != 0)
