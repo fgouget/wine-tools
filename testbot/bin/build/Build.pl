@@ -70,57 +70,34 @@ sub FatalError(@)
   exit 1;
 }
 
-sub ApplyPatch($$$)
+sub ApplyPatch($)
 {
-  my ($PatchFile, $PatchType, $BaseName) = @_;
+  my ($PatchFile) = @_;
 
-  my $NeedBuildNative = !1;
-  my $NeedMakeMakefiles = !1;
-  my $NeedMakefile = 0;
-  my $NeedMakeInclude = !1;
-  my $NeedBuildDeps = !1;
-  my $NeedImplib = !1;
-  my $NeedAutoconf = !1;
-  my $NeedConfigure = !1;
+  my ($NeedMakeMakefiles, $NeedAutoconf, $HasConfigure, $NeedBuildNative);
   if (open (FH, "<$PatchFile"))
   {
     my $Line;
     while (defined($Line = <FH>) &&
-           (! $NeedBuildNative || ! $NeedMakeMakefiles || $NeedMakefile == 0 || ! $NeedMakeInclude ||
-            ! $NeedBuildDeps || ! $NeedImplib || ! $NeedAutoconf || ! $NeedConfigure))
+           (!$NeedMakeMakefiles || !$NeedAutoconf || !$HasConfigure ||
+            !$NeedBuildNative))
     {
-      if ($Line =~ m=^diff.*(?:tests/Makefile\.in|Make\.vars\.in|Make\.rules\.in|Maketest\.rules\.in)$=)
-      {
-        $NeedMakefile = 1;
-      }
-      elsif ($Line =~ m=^diff.*include/.*\.idl=)
-      {
-        $NeedMakeInclude = 1;
-      }
-      elsif ($Line =~ m=^diff.*\.spec=)
-      {
-        $NeedBuildDeps = 1;
-      }
-      elsif ($PatchType eq "dlls" && $Line =~ m=^diff.*$BaseName/Makefile\.in=)
-      {
-        $NeedImplib = 1;
-      }
-      elsif ($Line =~ m=^diff.*(?:aclocal\.m4|configure\.ac)=)
+      if ($Line =~ m=^diff.*(?:aclocal\.m4|configure\.ac)=)
       {
         $NeedAutoconf = 1;
       }
       elsif ($Line =~ m=^diff.*configure=)
       {
-        $NeedConfigure = 1;
+        $HasConfigure = 1;
       }
       elsif ($Line =~ m=^new file= || $Line =~ m=^deleted file= || $Line =~ m=^rename= ||
              $Line =~ m=diff.*tools/make_makefiles=)
       {
-        $NeedMakeMakefiles = $NeedConfigure = 1;
+        $NeedMakeMakefiles = 1;
       }
       elsif ($Line =~ m=^diff.*tools/makedep\.c=)
       {
-        $NeedBuildNative = $NeedMakeMakefiles = $NeedConfigure = 1;
+        $NeedMakeMakefiles = $NeedBuildNative = 1;
       }
       elsif ($Line =~ m=^diff.*tools/(?:makedep\.c|make_xftmpl\.c|sfnt2fon|winebuild|winegcc|widl|wmc|wrc)=)
       {
@@ -138,7 +115,7 @@ sub ApplyPatch($$$)
   if ($? != 0)
   {
     LogMsg "Patch failed to apply\n";
-    return (-1, $NeedMakeInclude, $NeedBuildDeps, $NeedImplib, $NeedConfigure, $NeedBuildNative);
+    return -1;
   }
 
   if ($NeedMakeMakefiles)
@@ -150,41 +127,24 @@ sub ApplyPatch($$$)
     if ($? != 0)
     {
       LogMsg "make_makefiles failed\n";
-      return (-1, $NeedMakeInclude, $NeedBuildDeps, $NeedImplib, $NeedConfigure, $NeedBuildNative);
+      return -1;
     }
   }
 
-  if ($NeedAutoconf && ! $NeedConfigure)
+  if ($NeedAutoconf && !$HasConfigure)
   {
     InfoMsg "Running autoconf\n";
     system("( cd $DataDir/wine && set -x && " .
-           "  autoconf --output configure configure.ac " .
+           "  autoconf " .
            ") >>$LogDir/Build.log 2>&1");
     if ($? != 0)
     {
        LogMsg "Autoconf failed\n";
-       return (-1, $NeedMakeInclude, $NeedBuildDeps, $NeedImplib,
-               $NeedConfigure, $NeedBuildNative);
-    }
-    $NeedConfigure = 1;
-  }
-
-  if ($NeedImplib)
-  {
-    if (open (FH, "<$DataDir/wine/$PatchType/$BaseName/Makefile.in"))
-    {
-      $NeedImplib = !1;
-      my $Line;
-      while (defined($Line = <FH>) && ! $NeedImplib)
-      {
-        $NeedImplib = ($Line =~ m/^\s*IMPORTLIB\s*=.*$BaseName/)
-      }
-      close FH;
+       return -1;
     }
   }
 
-  return ($NeedMakefile, $NeedMakeInclude, $NeedBuildDeps, $NeedImplib,
-          $NeedConfigure, $NeedBuildNative);
+  return $NeedBuildNative;
 }
 
 my $ncpus;
@@ -203,9 +163,6 @@ sub BuildNative()
 {
   mkdir "$DataDir/build-native" if (! -d "$DataDir/build-native");
   system("( cd $DataDir/build-native && set -x && " .
-         "  rm -rf * && " .
-         "  time ../wine/configure --enable-win64 --without-x --without-freetype && " .
-         "  time make -j$ncpus depend && " .
          "  time make -j$ncpus __tooldeps__ " .
          ") >>$LogDir/Build.log 2>&1");
 
@@ -218,94 +175,9 @@ sub BuildNative()
   return 1;
 }
 
-sub BuildTestExecutable($$$$$$$$)
+sub BuildTestExecutable($$$)
 {
-  my ($BaseName, $PatchType, $Bits, $NeedConfigure, $NeedMakefile,
-      $NeedMakeInclude, $NeedBuildDeps, $NeedImplib) = @_;
-
-  if ($NeedConfigure)
-  {
-    InfoMsg "Reconfigure $Bits-bit crossbuild\n";
-    my $Host = ($Bits == 64 ? "x86_64-w64-mingw32" : "i686-w64-mingw32");
-    system("( cd $DataDir/build-mingw$Bits && set -x && " .
-           "  time ../wine/configure --host=$Host --with-wine-tools=../build-native --without-x --without-freetype " .
-           ") >>$LogDir/Build.log 2>&1");
-    if ($? != 0)
-    {
-      LogMsg "Reconfigure of $Bits-bit crossbuild failed\n";
-      return !1;
-    }
-  }
-
-  if ($NeedMakeInclude || $NeedConfigure)
-  {
-    InfoMsg "Recreating include/Makefile\n";
-    system("( cd $DataDir/build-mingw$Bits && set -x && " .
-           "  time make -j$ncpus include/Makefile " .
-           ") >>$LogDir/Build.log 2>&1");
-    if ($? != 0)
-    {
-      LogMsg "Recreation of include/Makefile failed\n";
-      return !1;
-    }
-
-    system("( cd $DataDir/build-mingw$Bits && set -x && " .
-           "  time make -j$ncpus include " .
-           ") >> $LogDir/Build.log 2>&1");
-    if ($? != 0)
-    {
-      LogMsg "Make in include dir failed\n";
-      return !1;
-    }
-  }
-
-  if ($NeedImplib || $NeedConfigure)
-  {
-    InfoMsg "Rebuilding $BaseName import lib\n";
-    system("( cd $DataDir/build-mingw$Bits && set -x && " .
-           "  time make -j$ncpus $PatchType/$BaseName/Makefile " .
-           ") >>$LogDir/Build.log 2>&1");
-    if ($? != 0)
-    {
-      LogMsg "Unable to regenerate $PatchType/$BaseName/Makefile\n";
-    }
-    else
-    {
-      system("( cd $DataDir/build-mingw$Bits && set -x && " .
-             "  time make -j$ncpus -C $PatchType/$BaseName lib$BaseName.a " .
-             ") >>$LogDir/Build.log 2>&1");
-      if ($? != 0)
-      {
-        InfoMsg "Make of import library failed\n";
-      }
-    }
-  }
-
-  if ($NeedMakefile || $NeedConfigure)
-  {
-    InfoMsg "Recreating tests/Makefile\n";
-    system("( cd $DataDir/build-mingw$Bits && set -x && " .
-           "  time make -j$ncpus $PatchType/$BaseName/tests/Makefile " .
-           ") >>$LogDir/Build.log 2>&1");
-    if ($? != 0)
-    {
-      LogMsg "Recreation of tests/Makefile failed\n";
-      return !1;
-    }
-  }
-
-  if ($NeedBuildDeps)
-  {
-    InfoMsg "Making build dependencies\n";
-    system("( cd $DataDir/build-mingw$Bits && set -x && " .
-           "  time make -j$ncpus __builddeps__ " .
-           ") >>$LogDir/Build.log 2>&1");
-    if ($? != 0)
-    {
-      LogMsg "Making build dependencies failed\n";
-      return !1;
-    }
-  }
+  my ($BaseName, $PatchType, $Bits) = @_;
 
   my $TestsDir = "$PatchType/$BaseName/tests";
   my $TestExecutable = "$TestsDir/$BaseName";
@@ -316,13 +188,13 @@ sub BuildTestExecutable($$$$$$$$)
   $TestExecutable .= "_test.exe";
   unlink("$DataDir/build-mingw${Bits}/$TestExecutable");
 
-  InfoMsg "Making test executable\n";
+  InfoMsg "Building the $Bits-bit test executable\n";
   system("( cd $DataDir/build-mingw$Bits && set -x && " .
-         "  time make -j$ncpus -C $TestsDir " .
+         "  time make -j$ncpus $TestsDir " .
          ") >>$LogDir/Build.log 2>&1");
   if ($? != 0)
   {
-    LogMsg "Make failed\n";
+    LogMsg "Rebuild of $Bits-bit crossbuild failed\n";
     return !1;
   }
   if (! -f "$DataDir/build-mingw${Bits}/$TestExecutable")
@@ -408,9 +280,8 @@ else
   FatalError "Invalid number of bits $BitIndicators\n";
 }
 
-my ($NeedMakefile, $NeedMakeInclude, $NeedBuildDeps, $NeedImplib,
-    $NeedConfigure, $NeedBuildNative) = ApplyPatch($PatchFile, $PatchType, $BaseName);
-if ($NeedMakefile < 0)
+my $NeedBuildNative = ApplyPatch($PatchFile);
+if ($NeedBuildNative < 0)
 {
   exit(1);
 }
@@ -426,17 +297,11 @@ if ($NeedBuildNative)
   }
 }
 
-if ($Run32 && ! BuildTestExecutable($BaseName, $PatchType, 32,
-                                    $NeedConfigure, 0 < $NeedMakefile,
-                                    $NeedMakeInclude, $NeedBuildDeps,
-                                    $NeedImplib))
+if ($Run32 && ! BuildTestExecutable($BaseName, $PatchType, 32))
 {
   exit(1);
 }
-if ($Run64 && ! BuildTestExecutable($BaseName, $PatchType, 64,
-                                    $NeedConfigure, 0 < $NeedMakefile,
-                                    $NeedMakeInclude, $NeedBuildDeps,
-                                    $NeedImplib))
+if ($Run64 && ! BuildTestExecutable($BaseName, $PatchType, 64))
 {
   exit(1);
 }
