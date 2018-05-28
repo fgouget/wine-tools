@@ -218,12 +218,7 @@ sub GetPatchImpact($;$)
       # Helper dlls are not test units
       next if (exists $TestInfo->{Files}->{"$Base.spec"});
 
-      if ($AllUnits)
-      {
-        # All test units are impacted indirectly and must be rerun
-        $TestInfo->{Units}->{$Base} = 1;
-      }
-      elsif ($TestInfo->{Files}->{$File} and
+      if (($AllUnits or $TestInfo->{Files}->{$File}) and
              $TestInfo->{Files}->{$File} ne "rm")
       {
         # Only new/modified test units are impacted
