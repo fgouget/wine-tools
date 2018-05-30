@@ -142,11 +142,7 @@ sub GetPatchImpact($;$)
     }
     elsif ($Line =~ m=^--- \w+/tools/make_makefiles$=)
     {
-      $Impacts->{Makefiles} = $Impacts->{Tools} = 1;
-    }
-    elsif ($Line =~ m=^--- \w+/tools/(?:makedep\.c|make_xftmpl\.c|sfnt2fon|winebuild|winegcc|widl|wmc|wrc)$=)
-    {
-      $Impacts->{Tools} = 1;
+      $Impacts->{Makefiles} = 1;
     }
     elsif ($Line =~ m=^--- /dev/null$=)
     {

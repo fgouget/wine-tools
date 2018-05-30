@@ -83,7 +83,7 @@ sub ApplyPatch($)
   if ($? != 0)
   {
     LogMsg "Patch failed to apply\n";
-    return -1;
+    return 0;
   }
 
   my $Impacts = GetPatchImpact($PatchFile, "nounits");
@@ -96,7 +96,7 @@ sub ApplyPatch($)
     if ($? != 0)
     {
       LogMsg "make_makefiles failed\n";
-      return -1;
+      return 0;
     }
   }
 
@@ -109,11 +109,11 @@ sub ApplyPatch($)
     if ($? != 0)
     {
        LogMsg "Autoconf failed\n";
-       return -1;
+       return 0;
     }
   }
 
-  return $Impacts->{Tools};
+  return 1;
 }
 
 my $ncpus;
@@ -249,21 +249,17 @@ else
   FatalError "Invalid number of bits $BitIndicators\n";
 }
 
-my $NeedBuildNative = ApplyPatch($PatchFile);
-if ($NeedBuildNative < 0)
+if (!ApplyPatch($PatchFile))
 {
   exit(1);
 }
 
 CountCPUs();
 
-if ($NeedBuildNative)
+InfoMsg "Building tools\n";
+if (!BuildNative())
 {
-  InfoMsg "Building tools\n";
-  if (!BuildNative())
-  {
-    exit(1);
-  }
+  exit(1);
 }
 
 if ($Run32 && ! BuildTestExecutable($BaseName, $PatchType, 32))
