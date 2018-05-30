@@ -87,7 +87,16 @@ sub _AddTest($$$)
   }
 
   # Assume makefile modifications may break the build but not the tests
-  return if ($File eq "Makefile.in" or $Impacts->{NoUnits});
+  if ($File eq "Makefile.in")
+  {
+    if ($Change eq "new" or $Change eq "rm")
+    {
+      # This adds / removes a directory
+      $Impacts->{Makefiles} = 1;
+    }
+    return;
+  }
+  return if ($Impacts->{NoUnits});
 
   if (!$Tests->{$Module}->{Files})
   {
