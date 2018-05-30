@@ -98,7 +98,7 @@ sub OnDelete($)
 
   my $Steps = $self->Steps;
   map { $_->PreviousNo(undef) } @{$Steps->GetItems()};
-  my ($_ErrProperty, $ErrMessage) = $Steps->Save();
+  my ($_ErrKey, $_ErrProperty, $ErrMessage) = $Steps->Save();
 
   return $ErrMessage || $self->SUPER::OnDelete();
 }
