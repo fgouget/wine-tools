@@ -509,15 +509,12 @@ sub DetermineFileType($$)
 {
   my ($self, $FileName) = @_;
 
-  my $ErrMessage = undef;
-  my $FileType = "unknown";
-  my $DllBaseName = undef;
-  my $TestUnit = undef;
   if (! sysopen(FH, $FileName, O_RDONLY))
   {
     return ("Unable to open $FileName", "unknown", undef, undef);
   }
 
+  my $FileType = "unknown";
   my $Buffer;
   if (sysread(FH, $Buffer, 0x40))
   {
@@ -563,6 +560,7 @@ sub DetermineFileType($$)
 
   close FH;
 
+  my ($ErrMessage, $DllBaseName, $TestUnit);
   if ($FileType eq "unknown")
   {
     my $Impacts = GetPatchImpact($FileName);
