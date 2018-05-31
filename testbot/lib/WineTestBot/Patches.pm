@@ -132,7 +132,9 @@ sub Submit($$$)
 {
   my ($self, $PatchFileName, $IsSet) = @_;
 
-  my $Impacts = GetPatchImpact("$DataDir/patches/" . $self->Id);
+  my $PastImpacts;
+  $PastImpacts = GetPatchImpact($PatchFileName) if ($IsSet);
+  my $Impacts = GetPatchImpact("$DataDir/patches/" . $self->Id, undef, $PastImpacts);
   if (!$Impacts->{UnitCount})
   {
     $self->Disposition(($IsSet ? "Set" : "Patch") .

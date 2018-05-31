@@ -127,9 +127,9 @@ configure, whether it impacts the tests, etc.
 =back
 =cut
 
-sub GetPatchImpact($;$)
+sub GetPatchImpact($;$$)
 {
-  my ($PatchFileName, $NoUnits) = @_;
+  my ($PatchFileName, $NoUnits, $PastImpacts) = @_;
 
   my $fh;
   return undef if (!open($fh, "<", $PatchFileName));
@@ -138,6 +138,21 @@ sub GetPatchImpact($;$)
     NoUnits => $NoUnits,
     Tests => {},
   };
+
+  if ($PastImpacts)
+  {
+    foreach my $PastInfo (values %{$PastImpacts->{Tests}})
+    {
+      if ($PastInfo->{Files})
+      {
+        foreach my $File (keys %{$PastInfo->{Files}})
+        {
+          _AddTest($Impacts, "$PastInfo->{Path}/$File",
+                   $PastInfo->{Files}->{$File} eq "rm" ? "rm" : 0);
+        }
+      }
+    }
+  }
   my ($Path, $Change);
   while (my $Line = <$fh>)
   {
