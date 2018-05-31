@@ -162,20 +162,21 @@ sub CreateItem($)
   return WineTestBot::StepTask->new($self);
 }
 
+# Note: To simplify maintenance replace enums with simple string fields.
 my @PropertyDescriptors = (
-  CreateBasicPropertyDescriptor("Id", "Id", 1,  1, "N", 4),
-  CreateBasicPropertyDescriptor("StepNo", "Step no", !1,  1, "N", 2),
-  CreateBasicPropertyDescriptor("TaskNo", "Task no", ! 1,  1, "N", 2),
-  CreateBasicPropertyDescriptor("Type", "Step type", !1, 1, "A", 6),
-  CreateBasicPropertyDescriptor("Status", "Status",  !1,  1, "A", 9),
-  CreateItemrefPropertyDescriptor("VM", "VM", !1,  1, \&CreateVMs, ["VMName"]),
+  CreateBasicPropertyDescriptor("Id", "Id", 1, 1, "N", 4),
+  CreateBasicPropertyDescriptor("StepNo", "Step no", !1, 1, "N", 2),
+  CreateBasicPropertyDescriptor("TaskNo", "Task no", !1, 1, "N", 2),
+  CreateBasicPropertyDescriptor("Type", "Step type", !1, 1, "A", 32),
+  CreateBasicPropertyDescriptor("Status", "Status", !1, 1, "A", 32),
+  CreateItemrefPropertyDescriptor("VM", "VM", !1, 1, \&CreateVMs, ["VMName"]),
   CreateBasicPropertyDescriptor("Timeout", "Timeout", !1, 1, "N", 4),
-  CreateBasicPropertyDescriptor("FileName", "File name",  !1,  1, "A", 64),
-  CreateBasicPropertyDescriptor("FileType", "File Type",  !1,  1, "A", 64),
+  CreateBasicPropertyDescriptor("FileName", "File name", !1, 1, "A", 100),
+  CreateBasicPropertyDescriptor("FileType", "File Type", !1, 1, "A", 32),
   CreateBasicPropertyDescriptor("CmdLineArg", "Command line args", !1, !1, "A", 256),
   CreateBasicPropertyDescriptor("Started", "Execution started", !1, !1, "DT", 19),
   CreateBasicPropertyDescriptor("Ended", "Execution ended", !1, !1, "DT", 19),
-  CreateBasicPropertyDescriptor("TestFailures", "Number of test failures", !1, !1, "N", 5),
+  CreateBasicPropertyDescriptor("TestFailures", "Number of test failures", !1, !1, "N", 6),
 );
 
 sub CreateStepsTasks(;$$)
