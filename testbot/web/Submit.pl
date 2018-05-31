@@ -873,21 +873,17 @@ sub OnSubmit($)
     return !1;
   }
 
-  # Clean up, but save the key of the new job
-  my $JobKey = $NewJob->GetKey();
-  $Jobs = undef;
-
   # Notify engine
   my $ErrMessage = RescheduleJobs();
   if (defined $ErrMessage)
   {
     $self->{ErrMessage} = $ErrMessage;
     $self->{Page} = 4;
-    $self->{JobKey} = $JobKey;
+    $self->{JobKey} = $NewJob->GetKey();
     return !1;
   }
 
-  $self->Redirect("/JobDetails.pl?Key=$JobKey"); # does not return
+  $self->Redirect("/JobDetails.pl?Key=". $NewJob->GetKey()); # does not return
   exit;
 }
 
