@@ -137,7 +137,7 @@ sub Submit($$$)
   my $Impacts = GetPatchImpact("$DataDir/patches/" . $self->Id, undef, $PastImpacts);
   if (!$Impacts->{UnitCount})
   {
-    $self->Disposition(($IsSet ? "Set" : "Patch") .
+    $self->Disposition(($IsSet ? "Part" : "Patch") .
                        " doesn't affect tests");
     return undef;
   }
