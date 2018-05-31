@@ -33,9 +33,10 @@ use File::Basename;
 use ObjectModel::BasicPropertyDescriptor;
 use WineTestBot::Branches;
 use WineTestBot::Config;
-use WineTestBot::Jobs;
 use WineTestBot::Engine::Notify;
+use WineTestBot::Jobs;
 use WineTestBot::PatchUtils;
+use WineTestBot::Steps;
 use WineTestBot::Utils;
 use WineTestBot::VMs;
 
@@ -609,10 +610,11 @@ sub OnPage1Next($)
       $FileName =~ m/^.*(\\|\/)(.*)/;
       $FileName = $2;
     }
-    if (100 - 32 - 1 < length($FileName))
+    my $PropertyDescriptor = CreateSteps()->GetPropertyDescriptorByName("FileName");
+    if ($PropertyDescriptor->GetMaxLength() - 32 - 1 < length($FileName))
     {
       $self->{ErrField} = "File";
-      $self->{ErrMessage} = "File: Name is too long";
+      $self->{ErrMessage} = "The filename is too long";
       return !1;
     }
     my $StagingFile = $self->GetTmpStagingFullPath($FileName);
