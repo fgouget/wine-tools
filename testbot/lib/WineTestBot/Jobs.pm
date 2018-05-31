@@ -28,13 +28,14 @@ WineTestBot::Job - A job submitted by a user
 =head1 DESCRIPTION
 
 A Job is created when a WineTestBot::User asks for something to be tested
-(for automatically generated Jobs this would be the batch user). There are many
+(for automatically generated Jobs this would be the batch user). A Job is
+composed of one or more WineTestBot::Step objects. There are many
 paths that can result in the creation of a job:
 
 =over
 
 =item *
-A use submits a patch or binary to test.
+A user submits a patch or binary to test.
 
 =item *
 WineTestBot finds a patch to test on the mailing list (and has all the pieces
@@ -47,7 +48,24 @@ Job.
 
 =back
 
-A Job is composed of multiple WineTestBot::Step objects.
+A Job's lifecycle is as follows:
+=over
+
+=item *
+A Job is created with Status set to queued which means it is ready to run.
+
+=item *
+As soon as one of the Step starts running, the Job's Status field is set to
+running.
+
+=item *
+Once all the Steps have completed the Job's Status is updated to reflect the
+overall result: completed, badpatch, etc.
+
+=item *
+If the Job is canceled by the user, then the Status field is set to canceled.
+
+=back
 
 =cut
 

@@ -31,6 +31,37 @@ performing that Step in a WineTestBot::VM virtual machine. For instance a Step
 responsible for running a given test would have one Task object for each
 virtual machine that the test must be performed in.
 
+A Task's lifecyle is as follows:
+=over
+
+=item *
+A Task is created with Status set to queued which means it is ready to be run
+as soon as long as the Step itself is runnable (see the WineTestBot::Step
+documentation).
+
+=item *
+Once the Task is running on the corresponding VM the Status field is set to
+running.
+
+=item *
+If running the Task fails due to a transient error the TestFailure field
+is checked. If it is lower than a configurable threshold the Status is
+reset to queued and the TestFailure field is incremented. Otherwise the
+Status is set to boterror and the Task is considered to have completed.
+
+=item *
+If the Task completes normally the Status field is set to the appropriate
+value based on the result: completed, badpatch, etc.
+
+=item *
+If the Task is canceled by the user its Status is set to canceled.
+
+=item *
+If the Task's Step cannot be run because the Step it depends on failed, then
+Status is set to skipped.
+
+=back
+
 =cut
 
 use WineTestBot::WineTestBotObjects;

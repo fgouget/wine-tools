@@ -26,9 +26,36 @@ WineTestBot::Step - A Job's Step
 
 =head1 DESCRIPTION
 
-A Job is composed of multiple Steps that each do a specific operation: build
-the test executable, or run a given test, etc. A Step is in turn composed of
-a WineTestBot::Task object for each VM it should be run on.
+A Job is composed of one or more Steps that each perform one operation. A
+Step is in turn composed of one WineTestBot::Task object for each VM that the
+Step should be run on.
+
+A Step's lifecyle is as follows:
+=over
+
+=item *
+A Step is created with Status set to queued which means it is ready to be run
+as soon as the PreviousNo Step has completed, or immediately if PreviousNo is
+not set.
+
+=item *
+Once one of the Step's Task is running the Step's Status is changed to
+running.
+
+=item *
+Once all the Tasks in the Step have completed, the Step's Status is set to one
+of the "completion" Status values according to the overall success of its
+Tasks: completed, badpatch, etc.
+
+=item *
+If the PreviousNo Step failed then the Status field and that of all its Tasks
+is set to skip; and the Step will not be run.
+
+=item *
+If a Step is canceled by the user, then the Status field is set to canceled if
+the Step was running, and to skipped if it was queued.
+
+=back
 
 Note that the PreviousNo relation will prevent the deletion of the target Step.
 It is the responsibility of the caller to delete the Steps in a suitable order,
