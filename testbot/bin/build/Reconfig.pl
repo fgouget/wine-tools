@@ -41,6 +41,17 @@ sub BEGIN
 
 use WineTestBot::Config;
 
+sub InfoMsg(@)
+{
+  my $OldUMask = umask(002);
+  if (open LOGFILE, ">>$LogDir/Reconfig.log")
+  {
+    print LOGFILE @_;
+    close LOGFILE;
+  }
+  umask($OldUMask);
+}
+
 sub LogMsg(@)
 {
   my $OldUMask = umask(002);
@@ -61,6 +72,7 @@ sub FatalError(@)
 
 sub GitPull()
 {
+  InfoMsg "Updating the Wine source\n";
   system("cd $DataDir/wine && git pull >> $LogDir/Reconfig.log 2>&1");
   if ($? != 0)
   {
@@ -105,6 +117,7 @@ sub BuildTestAgentd()
   # so don't rebuild it.
   if (! -x "$BinDir/build/testagentd")
   {
+    InfoMsg "\nBuilding the native testagentd\n";
     system("( cd $::RootDir/src/testagentd && set -x && " .
            "  time make -j$ncpus build " .
            ") >>$LogDir/Reconfig.log 2>&1");
@@ -115,6 +128,7 @@ sub BuildTestAgentd()
     }
   }
 
+  InfoMsg "\nRebuilding the Windows TestAgentd\n";
   system("( cd $::RootDir/src/testagentd && set -x && " .
          "  time make -j$ncpus iso " .
          ") >>$LogDir/Reconfig.log 2>&1");
@@ -129,6 +143,7 @@ sub BuildTestAgentd()
 
 sub BuildTestLauncher()
 {
+  InfoMsg "\nRebuilding TestLauncher\n";
   system("( cd $::RootDir/src/TestLauncher && set -x && " .
          "  time make -j$ncpus" .
          ") >>$LogDir/Reconfig.log 2>&1");
@@ -146,6 +161,7 @@ sub BuildNative()
   mkdir "$DataDir/build-native" if (! -d "$DataDir/build-native");
 
   # Rebuild from scratch to make sure cruft will not accumulate
+  InfoMsg "\nRebuilding native tools\n";
   system("( cd $DataDir/build-native && set -x && " .
          "  rm -rf * && " .
          "  time ../wine/configure --enable-win64 --without-x --without-freetype --disable-winetest && " .
@@ -169,6 +185,7 @@ sub BuildCross($)
   mkdir "$DataDir/build-mingw$Bits" if (! -d "$DataDir/build-mingw$Bits");
 
   # Rebuild from scratch to make sure cruft will not accumulate
+  InfoMsg "\nRebuilding the $Bits-bit test executables\n";
   system("( cd $DataDir/build-mingw$Bits && set -x && " .
          "  rm -rf * && " .
          "  time ../wine/configure --host=$Host --with-wine-tools=../build-native --without-x --without-freetype --disable-winetest && " .
