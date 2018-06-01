@@ -109,12 +109,6 @@ sub _AddTest($$$)
   $Tests->{$Module}->{Files}->{$File} = $Change;
 }
 
-sub dumpstr($)
-{
-  my ($Str) = @_;
-  return defined $Str ? "[$Str]" : "<undef>";
-}
-
 =pod
 =over 12
 
