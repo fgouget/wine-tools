@@ -62,7 +62,8 @@ sub Save($)
     }
   }
 
-  ($self->{ErrField}, $self->{ErrMessage}) = $self->{Item}->Save();
+  my $ErrKey;
+  ($ErrKey, $self->{ErrField}, $self->{ErrMessage}) = $self->{Collection}->Save();
   return ! defined($self->{ErrMessage});
 }
 
