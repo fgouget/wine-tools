@@ -505,6 +505,33 @@ sub Validate($)
   return $self->SUPER::Validate();
 }
 
+sub ValidateAndGetFileName($$)
+{
+  my ($self, $FieldName) = @_;
+
+  my $FileName = $self->GetParam($FieldName);
+  if (!$FileName)
+  {
+    $self->{ErrField} = $FieldName;
+    $self->{ErrMessage} = "You must provide a file to test";
+    return undef;
+  }
+  if ($FileName =~ m=[/\\]=)
+  {
+    $self->{ErrField} = $FieldName;
+    $self->{ErrMessage} = "The filename is invalid";
+    return undef;
+  }
+  my $PropertyDescriptor = CreateSteps()->GetPropertyDescriptorByName("FileName");
+  if ($PropertyDescriptor->GetMaxLength() - 32 - 1 < length($FileName))
+  {
+    $self->{ErrField} = $FieldName;
+    $self->{ErrMessage} = "The filename is too long";
+    return undef;
+  }
+  return $FileName;
+}
+
 sub DetermineFileType($$)
 {
   my ($self, $FileName) = @_;
@@ -593,29 +620,13 @@ sub OnPage1Next($)
 {
   my ($self) = @_;
 
-  my $FileName = $self->GetParam("File");
-  if (! $FileName)
-  {
-    $self->{ErrField} = "File";
-    $self->{ErrMessage} = "File: Must be entered";
-    return !1;
-  }
+  my $BaseName = $self->ValidateAndGetFileName("File");
+  return !1 if (!$BaseName);
+
   my $Fh = $self->CGI->upload("File");
   if (defined($Fh))
   {
-    if ($FileName =~ /(\\|\/)/)
-    {
-      $FileName =~ m/^.*(\\|\/)(.*)/;
-      $FileName = $2;
-    }
-    my $PropertyDescriptor = CreateSteps()->GetPropertyDescriptorByName("FileName");
-    if ($PropertyDescriptor->GetMaxLength() - 32 - 1 < length($FileName))
-    {
-      $self->{ErrField} = "File";
-      $self->{ErrMessage} = "The filename is too long";
-      return !1;
-    }
-    my $StagingFile = $self->GetTmpStagingFullPath($FileName);
+    my $StagingFile = $self->GetTmpStagingFullPath($BaseName);
     my $OldUMask = umask(002);
     if (! open (OUTFILE,">$StagingFile"))
     {
@@ -647,7 +658,7 @@ sub OnPage1Next($)
       return !1;
     }
 
-    $self->{FileName} = $FileName;
+    $self->{FileName} = $BaseName;
     $self->{FileType} = $FileType;
     if (defined($DllBaseName))
     {
@@ -705,10 +716,11 @@ sub OnPage2Prev($)
 {
   my ($self) = @_;
 
-  my $StagingFileName = $self->GetTmpStagingFullPath($self->GetParam("FileName"));
-  if ($StagingFileName)
+  my $FileName = $self->GetParam("File");
+  if ($FileName)
   {
-    unlink($StagingFileName);
+    my $StagingFileName = $self->GetTmpStagingFullPath(basename($FileName));
+    unlink($StagingFileName) if ($StagingFileName);
   }
 
   $self->{Page} = 1;
@@ -736,16 +748,14 @@ sub OnSubmit($)
 {
   my ($self) = @_;
 
-  if (! $self->Validate())
-  {
-    return !1;
-  }
+  return !1 if (!$self->Validate());
+  my $BaseName = $self->ValidateAndGetFileName("FileName");
+  return !1 if (!$BaseName);
 
   # Store the file in the staging directory until the relevant Job and Step
   # IDs are known and it can be moved to the jobs directory tree. But rename
   # it so it does not get overwritten if the user submits another one before
   # the Engine gets around to doing so.
-  my $BaseName = $self->GetParam("FileName");
   my $StagingFileName = CreateNewFile("$DataDir/staging", "_$BaseName");
 
   my $TmpStagingFullPath = $self->GetTmpStagingFullPath($BaseName);
