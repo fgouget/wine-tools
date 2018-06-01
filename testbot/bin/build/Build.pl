@@ -89,7 +89,7 @@ sub ApplyPatch($)
   my $Impacts = GetPatchImpact($PatchFile, "nounits");
   if ($Impacts->{Makefiles})
   {
-    InfoMsg "Running make_makefiles\n";
+    InfoMsg "\nRunning make_makefiles\n";
     system("( cd $DataDir/wine && set -x && " .
            " ./tools/make_makefiles " .
            ") >> $LogDir/Build.log 2>&1");
@@ -102,7 +102,7 @@ sub ApplyPatch($)
 
   if ($Impacts->{Autoconf} && !$Impacts->{HasConfigure})
   {
-    InfoMsg "Running autoconf\n";
+    InfoMsg "\nRunning autoconf\n";
     system("( cd $DataDir/wine && set -x && " .
            "  autoconf " .
            ") >>$LogDir/Build.log 2>&1");
@@ -131,6 +131,8 @@ sub CountCPUs()
 sub BuildNative()
 {
   mkdir "$DataDir/build-native" if (! -d "$DataDir/build-native");
+
+  InfoMsg "\nRebuilding native tools\n";
   system("( cd $DataDir/build-native && set -x && " .
          "  time make -j$ncpus __tooldeps__ " .
          ") >>$LogDir/Build.log 2>&1");
@@ -157,7 +159,7 @@ sub BuildTestExecutable($$$)
   $TestExecutable .= "_test.exe";
   unlink("$DataDir/build-mingw${Bits}/$TestExecutable");
 
-  InfoMsg "Building the $Bits-bit test executable\n";
+  InfoMsg "\nBuilding the $Bits-bit test executable\n";
   system("( cd $DataDir/build-mingw$Bits && set -x && " .
          "  time make -j$ncpus $TestsDir " .
          ") >>$LogDir/Build.log 2>&1");
@@ -256,7 +258,6 @@ if (!ApplyPatch($PatchFile))
 
 CountCPUs();
 
-InfoMsg "Building tools\n";
 if (!BuildNative())
 {
   exit(1);
