@@ -476,12 +476,13 @@ sub Validate($)
   elsif ($self->{Page} == 3 && $self->GetParam("Page") == 3)
   {
     if (($self->GetParam("FileType") eq "patchdlls" &&
-         ! ($self->GetParam("TestExecutable") =~ m/^[\w_.]+_test\.exe/)) ||
-        ($self->GetParam("FileType") eq "patchprograms") &&
-         ! ($self->GetParam("TestExecutable") =~ m/^[\w_.]+\.exe_test\.exe/))
+         $self->GetParam("TestExecutable") !~ m/^[\w_.]+_test\.exe$/) ||
+        ($self->GetParam("FileType") eq "patchprograms" &&
+         $self->GetParam("TestExecutable") !~ m/^[\w_.]+\.exe_test\.exe$/) ||
+        ($self->GetParam("TestExecutable") =~ m=(?:[a-z]:|[/\\])=i))
     {
-      $self->{ErrMessage} = "Invalid name for Test executable";
       $self->{ErrField} = "TestExecutable";
+      $self->{ErrMessage} = "Invalid test executable filename";
       return !1;
     }
 
