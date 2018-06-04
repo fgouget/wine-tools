@@ -42,6 +42,10 @@ sub _initialize($$)
 
   $self->{Class} = "Enum";
   $self->{Values} = $Values;
+  if (!$self->{IsRequired})
+  {
+    die "Optional enum properties are not supported\n";
+  }
 
   $self->SUPER::_initialize();
 }
