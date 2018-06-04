@@ -42,6 +42,7 @@ sub _initialize($$)
 
   $self->{Class} = "Enum";
   $self->{Values} = $Values;
+  map { $self->{Allowed}->{$_} = 1 } @{$Values};
   if (!$self->{IsRequired})
   {
     die "Optional enum properties are not supported\n";
@@ -68,18 +69,14 @@ sub ValidateValue($$$)
 {
   my ($self, $Value, $IsNew) = @_;
 
-  if ($self->GetIsRequired())
+  return undef if (defined $Value and $self->{Allowed}->{$Value});
+
+  if ($self->GetIsRequired() and !$IsNew and
+      (!defined $Value or $Value eq ""))
   {
-    if (!$IsNew && (!defined($Value) || $Value eq ""))
-    {
-      return $self->GetDisplayName() .  ": Must be entered";
-    }
+    return $self->GetDisplayName() .  ": Must be entered";
   }
 
-  foreach my $V (@{$self->{Values}})
-  {
-      return undef if ($V eq $Value);
-  }
   return $self->GetDisplayName() . ": Is not valid";
 }
 
