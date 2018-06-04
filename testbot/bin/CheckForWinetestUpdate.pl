@@ -65,6 +65,28 @@ sub AddJob($$$)
 {
   my ($BaseJob, $LatestBaseName, $Bits) = @_;
 
+  my $VMs = CreateVMs();
+  if ($Bits == 64)
+  {
+    $VMs->AddFilter("Type", ["win64"]);
+    $VMs->AddFilter("Role", ["base", "winetest"]);
+  }
+  elsif ($BaseJob)
+  {
+    $VMs->AddFilter("Type", ["win32", "win64"]);
+    $VMs->AddFilter("Role", ["base"]);
+  }
+  else
+  {
+    $VMs->AddFilter("Type", ["win32", "win64"]);
+    $VMs->AddFilter("Role", ["winetest"]);
+  }
+  if ($VMs->GetItemsCount() == 0)
+  {
+    # There is nothing to do
+    return 1;
+  }
+
   # Create a hard link in staging so it can then be moved into the job
   # directory. This is ok because the latest file is never overwritten.
   my $StagingFileName = CreateNewLink("$DataDir/latest/$LatestBaseName",
@@ -90,38 +112,14 @@ sub AddJob($$$)
 
   # Add a task for each VM
   my $Tasks = $NewStep->Tasks;
-  my $HasTasks = !1;
-  my $VMs = CreateVMs();
-  if ($Bits == 64)
-  {
-    $VMs->AddFilter("Type", ["win64"]);
-    $VMs->AddFilter("Role", ["base", "winetest"]);
-  }
-  elsif ($BaseJob)
-  {
-    $VMs->AddFilter("Type", ["win32", "win64"]);
-    $VMs->AddFilter("Role", ["base"]);
-  }
-  else
-  {
-    $VMs->AddFilter("Type", ["win32", "win64"]);
-    $VMs->AddFilter("Role", ["winetest"]);
-  }
   foreach my $VMKey (@{$VMs->SortKeysBySortOrder($VMs->GetKeys())})
   {
     my $Task = $Tasks->Add();
     $Task->VM($VMs->GetItem($VMKey));
     $Task->Timeout($SuiteTimeout);
-    $HasTasks = 1;
   }
 
   # Now save the whole thing
-  if (!$HasTasks)
-  {
-    unlink($StagingFileName);
-    return 1;
-  }
-
   my ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
   if (defined $ErrMessage)
   {
