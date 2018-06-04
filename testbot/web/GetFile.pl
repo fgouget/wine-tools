@@ -52,7 +52,7 @@ sub GetFile($$$)
     return !1;
   }
 
-  my $FileName = $Step->GetDir() ."/". $Step->FileName;
+  my $FileName = $Step->GetFullFileName();
   if (! sysopen(FILE, $FileName, O_RDONLY))
   {
     return !1;

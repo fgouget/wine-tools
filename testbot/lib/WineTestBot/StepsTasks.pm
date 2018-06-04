@@ -39,6 +39,22 @@ sub GetStepDir($)
   return "$DataDir/jobs/$JobId/". $self->StepNo;
 }
 
+# See WineTestBot::Step::GetFullFileName()
+sub GetFullFileName($)
+{
+  my ($self) = @_;
+
+  my ($JobId, $_StepTaskId) = @{$self->GetMasterKey()};
+  # FIXME: Remove legacy support once no such job remains (so after
+  #        $JobPurgeDays).
+  my $LegacyPath = "$DataDir/jobs/$JobId/". $self->StepNo ."/". $self->FileName;
+  return $LegacyPath if (-f $LegacyPath);
+
+  my $Path = "$DataDir/jobs/$JobId/";
+  $Path .= $self->PreviousNo ."/" if ($self->PreviousNo);
+  return $Path . $self->FileName;
+}
+
 sub GetTaskDir($)
 {
   my ($self) = @_;
@@ -121,6 +137,7 @@ sub _initialize($$)
       my $StepTask = $self->CreateItem();
       $StepTask->Id(100 * $Step->No + $Task->No);
       $StepTask->StepNo($Step->No);
+      $StepTask->PreviousNo($Step->PreviousNo);
       $StepTask->TaskNo($Task->No);
       $StepTask->Type($Step->Type);
       $StepTask->Status($Task->Status);
@@ -166,6 +183,7 @@ sub CreateItem($)
 my @PropertyDescriptors = (
   CreateBasicPropertyDescriptor("Id", "Id", 1, 1, "N", 4),
   CreateBasicPropertyDescriptor("StepNo", "Step no", !1, 1, "N", 2),
+  CreateBasicPropertyDescriptor("PreviousNo", "Previous step", !1, !1, "N", 2),
   CreateBasicPropertyDescriptor("TaskNo", "Task no", !1, 1, "N", 2),
   CreateBasicPropertyDescriptor("Type", "Step type", !1, 1, "A", 32),
   CreateBasicPropertyDescriptor("Status", "Status", !1, 1, "A", 32),

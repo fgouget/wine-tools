@@ -388,10 +388,9 @@ if ($FileType ne "exe32" && $FileType ne "exe64")
 {
   FatalError("Unexpected file type $FileType found\n");
 }
-my $StepDir = $Step->GetDir();
 my $FileName = $Step->FileName;
-Debug(Elapsed($Start), " Sending '$StepDir/$FileName'\n");
-if (!$TA->SendFile("$StepDir/$FileName", $FileName, 0))
+Debug(Elapsed($Start), " Sending '". $Step->GetFullFileName() ."'\n");
+if (!$TA->SendFile($Step->GetFullFileName(), $FileName, 0))
 {
   FatalTAError($TA, "Could not copy the test executable to the VM");
 }

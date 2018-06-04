@@ -354,11 +354,10 @@ if (!defined $BaseName)
 # Run the build
 #
 
-my $StepDir = $Step->GetDir();
-my $FileName = $Step->FileName;
+my $FileName = $Step->GetFullFileName();
 my $TA = $VM->GetAgent();
-Debug(Elapsed($Start), " Sending '$StepDir/$FileName'\n");
-if (!$TA->SendFile("$StepDir/$FileName", "staging/patch.diff", 0))
+Debug(Elapsed($Start), " Sending '$FileName'\n");
+if (!$TA->SendFile($FileName, "staging/patch.diff", 0))
 {
   FatalTAError($TA, "Could not copy the patch to the VM");
 }
@@ -461,6 +460,7 @@ FatalTAError(undef, $TAError) if (defined $TAError);
 # Don't try copying the test executables if the build step failed
 if ($NewStatus eq "completed")
 {
+  my $StepDir = $Step->CreateDir();
   foreach my $OtherStep (@{$Job->Steps->GetItems()})
   {
     next if ($OtherStep->No == $StepNo);
@@ -480,12 +480,11 @@ if ($NewStatus eq "completed")
     }
 
     Debug(Elapsed($Start), " Retrieving '$OtherFileName'\n");
-    my $OtherStepDir = $OtherStep->CreateDir();
-    if (!$TA->GetFile($TestExecutable, "$OtherStepDir/$OtherFileName"))
+    if (!$TA->GetFile($TestExecutable, "$StepDir/$OtherFileName"))
     {
       FatalTAError($TA, "Could not retrieve '$OtherFileName'");
     }
-    chmod 0664, "$OtherStepDir/$OtherFileName";
+    chmod 0664, "$StepDir/$OtherFileName";
   }
 }
 $TA->Disconnect();

@@ -57,6 +57,12 @@ the Step was running, and to skipped if it was queued.
 
 =back
 
+If FileName is set it identifies a file that the Step needs for its operation.
+That file will either be in the directory of the PreviousNo Step that produced
+it, or in the directory of the job if it was provided by the user.
+Conversely a Step's Task(s) may produce one or more files. These are all stored
+in that Step's directory and may be used by one or more Steps.
+
 Note that the PreviousNo relation will prevent the deletion of the target Step.
 It is the responsibility of the caller to delete the Steps in a suitable order,
 or to reset their PreviousNo fields beforehand.
@@ -136,6 +142,21 @@ sub RmTree($)
   rmtree($Dir);
 }
 
+sub GetFullFileName($)
+{
+  my ($self) = @_;
+
+  my ($JobId, $StepNo) = @{$self->GetMasterKey()};
+  # FIXME: Remove legacy support once no such job remains (so after
+  #        $JobPurgeDays).
+  my $LegacyPath = "$DataDir/jobs/$JobId/$StepNo/" . $self->FileName;
+  return $LegacyPath if (-f $LegacyPath);
+
+  my $Path = "$DataDir/jobs/$JobId/";
+  $Path .= $self->PreviousNo ."/" if ($self->PreviousNo);
+  return $Path . $self->FileName;
+}
+
 sub HandleStaging($$)
 {
   my ($self) = @_;
@@ -150,13 +171,13 @@ sub HandleStaging($$)
     return "Can't split staging filename";
   }
   my $BaseName = $1;
+  $self->FileName($BaseName);
   my $StagingFileName = "$DataDir/staging/$FileName";
-  if (!move($StagingFileName, "$StepDir/$BaseName"))
+  if (!move($StagingFileName, $self->GetFullFileName()))
   {
     return "Could not move the staging file: $!";
   }
 
-  $self->FileName($BaseName);
   $self->InStaging(!1);
   my ($ErrProperty, $ErrMessage) = $self->Save();
 
