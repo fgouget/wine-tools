@@ -44,6 +44,8 @@ sub GetFullFileName($)
 {
   my ($self) = @_;
 
+  return undef if (!defined $self->FileName);
+
   my ($JobId, $_StepTaskId) = @{$self->GetMasterKey()};
   # FIXME: Remove legacy support once no such job remains (so after
   #        $JobPurgeDays).
@@ -189,7 +191,7 @@ my @PropertyDescriptors = (
   CreateBasicPropertyDescriptor("Status", "Status", !1, 1, "A", 32),
   CreateItemrefPropertyDescriptor("VM", "VM", !1, 1, \&CreateVMs, ["VMName"]),
   CreateBasicPropertyDescriptor("Timeout", "Timeout", !1, 1, "N", 4),
-  CreateBasicPropertyDescriptor("FileName", "File name", !1, 1, "A", 100),
+  CreateBasicPropertyDescriptor("FileName", "File name", !1, !1, "A", 100),
   CreateBasicPropertyDescriptor("FileType", "File Type", !1, 1, "A", 32),
   CreateBasicPropertyDescriptor("CmdLineArg", "Command line args", !1, !1, "A", 256),
   CreateBasicPropertyDescriptor("Started", "Execution started", !1, !1, "DT", 19),

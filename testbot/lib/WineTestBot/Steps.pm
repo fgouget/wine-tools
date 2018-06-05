@@ -89,6 +89,7 @@ sub InitializeNew($$)
 
   $self->Status("queued");
   $self->Type("single");
+  $self->FileType("none");
   $self->InStaging(1);
   $self->DebugLevel(1);
   $self->ReportSuccessfulTests(!1);
@@ -116,6 +117,10 @@ sub Validate($)
   if ($self->PreviousNo and $self->PreviousNo >= $self->No)
   {
     return ("PreviousNo", "The previous step number must be less than this one's.");
+  }
+  if (defined $self->FileName and $self->FileType eq "none")
+  {
+    return ("FileType", "A file has been specified but no FileType");
   }
   return $self->SUPER::Validate();
 }
@@ -145,6 +150,8 @@ sub RmTree($)
 sub GetFullFileName($)
 {
   my ($self) = @_;
+
+  return undef if (!defined $self->FileName);
 
   my ($JobId, $StepNo) = @{$self->GetMasterKey()};
   # FIXME: Remove legacy support once no such job remains (so after
@@ -256,8 +263,8 @@ my @PropertyDescriptors = (
   CreateBasicPropertyDescriptor("PreviousNo", "Previous step", !1, !1, "N", 2),
   CreateEnumPropertyDescriptor("Status", "Status",  !1,  1, ['queued', 'running', 'completed', 'badpatch', 'badbuild', 'boterror', 'canceled', 'skipped']),
   CreateEnumPropertyDescriptor("Type", "Step type",  !1,  1, ['suite', 'single', 'build', 'reconfig']),
-  CreateBasicPropertyDescriptor("FileName", "File name",  !1,  1, "A", 100),
-  CreateEnumPropertyDescriptor("FileType", "File type",  !1,  1, ['exe32', 'exe64', 'patchdlls', 'patchprograms']),
+  CreateBasicPropertyDescriptor("FileName", "File name",  !1, !1, "A", 100),
+  CreateEnumPropertyDescriptor("FileType", "File type",  !1,  1, ['none', 'exe32', 'exe64', 'patchdlls', 'patchprograms']),
   CreateBasicPropertyDescriptor("InStaging", "File is in staging area", !1, 1, "B", 1),
   CreateBasicPropertyDescriptor("DebugLevel", "Debug level (WINETEST_DEBUG)", !1, 1, "N", 2),
   CreateBasicPropertyDescriptor("ReportSuccessfulTests", "Report successful tests (WINETEST_REPORT_SUCCESS)", !1, 1, "B", 1),

@@ -486,7 +486,7 @@ sub GenerateDataCell($$$$$)
   elsif ($PropertyName eq "FileName")
   {
     my $FileName = $StepTask->GetFullFileName();
-    if (-r $FileName)
+    if ($FileName and -r $FileName)
     {
       my $URI = "/GetFile.pl?JobKey=" . uri_escape($self->{JobId}) .
                   "&StepKey=" . uri_escape($StepTask->StepNo);

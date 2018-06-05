@@ -251,8 +251,7 @@ sub AddReconfigJob()
   my $Steps = $NewJob->Steps;
   my $NewStep = $Steps->Add();
   $NewStep->Type("reconfig");
-  $NewStep->FileName("-");
-  $NewStep->FileType("patchdlls");
+  $NewStep->FileType("none");
   $NewStep->InStaging(!1);
 
   # Add a task for the build VM
