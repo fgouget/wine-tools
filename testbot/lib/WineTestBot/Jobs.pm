@@ -243,7 +243,12 @@ sub UpdateStatus($)
       {
         $self->Ended(time);
       }
-      $self->Save();
+      my ($ErrProperty, $ErrMessage) = $self->Save();
+      if (defined $ErrMessage)
+      {
+        require WineTestBot::Log;
+        WineTestBot::Log::LogMsg("Could not update job status: $ErrMessage\n");
+      }
       last;
     }
   }
