@@ -6,6 +6,7 @@
 # runs the full test suite on the standard Windows test VMs.
 #
 # Copyright 2009 Ge van Geldorp
+# Copyright 2018 Francois Gouget
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -37,6 +38,8 @@ sub BEGIN
     unshift @INC, "$::RootDir/lib";
   }
 }
+my $Name0 = $0;
+$Name0 =~ s+^.*/++;
 
 use File::Basename;
 use File::Compare;
@@ -60,10 +63,111 @@ my %WineTestUrls = (
     64 => "http://test.winehq.org/builds/winetest64-latest.exe"
 );
 
+my %TaskTypes = (build => 1, base32 => 1, winetest32 => 1, all64 => 1);
+
+
+my $Debug;
+sub Debug(@)
+{
+  print STDERR @_ if ($Debug);
+}
+
+my $LogOnly;
+sub Error(@)
+{
+  print STDERR "$Name0:error: ", @_ if (!$LogOnly);
+  LogMsg @_;
+}
+
+
+=pod
+=over 12
+
+=item C<UpdateWineTest()>
+
+Downloads the latest WineTest executable.
+
+Returns 1 if the executable was updated, 0 if it was not, and -1 if an
+error occurred.
+
+=back
+=cut
+
+sub UpdateWineTest($$)
+{
+  my ($OptCreate, $Bits) = @_;
+
+  my $BitsSuffix = ($Bits == 64 ? "64" : "");
+  my $LatestBaseName = "winetest${BitsSuffix}-latest.exe";
+  my $LatestFileName = "$DataDir/latest/$LatestBaseName";
+  if ($OptCreate)
+  {
+    return (1, $LatestBaseName) if (-r $LatestFileName);
+    Debug("$LatestBaseName is missing\n");
+  }
+
+  # See if the online WineTest executable is newer
+  my $UA = LWP::UserAgent->new();
+  $UA->agent("WineTestBot");
+  my $Request = HTTP::Request->new(GET => $WineTestUrls{$Bits});
+  if (-r $LatestFileName)
+  {
+    my $Since = gmtime((stat $LatestFileName)[9]);
+    $Request->header("If-Modified-Since" => "$Since GMT");
+  }
+  Debug("Checking $WineTestUrls{$Bits}\n");
+  my $Response = $UA->request($Request);
+  if ($Response->code == RC_NOT_MODIFIED)
+  {
+    Debug("$LatestBaseName is already up to date\n");
+    return (0, $LatestBaseName); # Already up to date
+  }
+  if ($Response->code != RC_OK)
+  {
+    Error "Unexpected HTTP response code ", $Response->code, "\n";
+    return (-1, undef);
+  }
+
+  # Download the WineTest executable
+  Debug("Downloading $LatestBaseName\n");
+  umask 002;
+  mkdir "$DataDir/staging";
+  my ($fh, $StagingFileName) = OpenNewFile("$DataDir/staging", "_$LatestBaseName");
+  if (!$fh)
+  {
+    Error "Could not create staging file: $!\n";
+    return (-1, undef);
+  }
+  print $fh $Response->decoded_content();
+  close($fh);
+
+  if (-r $LatestFileName and compare($StagingFileName, $LatestFileName) == 0)
+  {
+    Debug("$LatestBaseName did not change\n");
+    unlink($StagingFileName);
+    return (0, $LatestBaseName); # No change after all
+  }
+
+  # Save the WineTest executable to the latest directory for the next round
+  mkdir "$DataDir/latest";
+  if (!move($StagingFileName, $LatestFileName))
+  {
+    Error "Could not move '$StagingFileName' to '$LatestFileName': $!\n";
+    unlink($StagingFileName);
+    return (-1, undef);
+  }
+  utime time, $Response->last_modified, $LatestFileName;
+
+  return (1, $LatestBaseName);
+}
 
 sub AddJob($$$)
 {
   my ($BaseJob, $LatestBaseName, $Bits) = @_;
+
+  my $Remarks = ($Bits == 64 ? "64-bit" : $BaseJob ? "base" : "other");
+  $Remarks = "WineTest: $Remarks VMs";
+  Debug("Creating the '$Remarks' job\n");
 
   my $VMs = CreateVMs();
   if ($Bits == 64)
@@ -84,6 +188,7 @@ sub AddJob($$$)
   if ($VMs->GetItemsCount() == 0)
   {
     # There is nothing to do
+    Debug("  Found no VM\n");
     return 1;
   }
 
@@ -97,9 +202,7 @@ sub AddJob($$$)
   my $NewJob = $Jobs->Add();
   $NewJob->User(GetBatchUser());
   $NewJob->Priority($BaseJob && $Bits == 32 ? 8 : 9);
-  $NewJob->Remarks("WineTest: " .
-                   ($Bits == 64 ? "64-bit" : $BaseJob ? "base" : "other") .
-                   " VMs");
+  $NewJob->Remarks($Remarks);
 
   # Add a step to the job
   my $Steps = $NewJob->Steps;
@@ -114,6 +217,7 @@ sub AddJob($$$)
   my $Tasks = $NewStep->Tasks;
   foreach my $VMKey (@{$VMs->SortKeysBySortOrder($VMs->GetKeys())})
   {
+    Debug("  $VMKey\n");
     my $Task = $Tasks->Add();
     $Task->VM($VMs->GetItem($VMKey));
     $Task->Timeout($SuiteTimeout);
@@ -123,7 +227,7 @@ sub AddJob($$$)
   my ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
   if (defined $ErrMessage)
   {
-    LogMsg "Failed to save job: $ErrMessage\n";
+    Error "Failed to save job: $ErrMessage\n";
     unlink($StagingFileName);
     return 0;
   }
@@ -133,12 +237,15 @@ sub AddJob($$$)
 
 sub AddReconfigJob()
 {
+  my $Remarks = "Update Wine to latest git";
+  Debug("Creating the '$Remarks' job\n");
+
   # First create a new job
   my $Jobs = CreateJobs();
   my $NewJob = $Jobs->Add();
   $NewJob->User(GetBatchUser());
   $NewJob->Priority(3);
-  $NewJob->Remarks("Update Wine to latest git");
+  $NewJob->Remarks($Remarks);
 
   # Add a step to the job
   my $Steps = $NewJob->Steps;
@@ -153,6 +260,7 @@ sub AddReconfigJob()
   $VMs->AddFilter("Type", ["build"]);
   $VMs->AddFilter("Role", ["base"]);
   my $BuildVM = ${$VMs->GetItems()}[0];
+  Debug("  ", $BuildVM->GetKey(), "\n");
   my $Task = $NewStep->Tasks->Add();
   $Task->VM($BuildVM);
   $Task->Timeout($ReconfigTimeout);
@@ -161,97 +269,112 @@ sub AddReconfigJob()
   my ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
   if (defined $ErrMessage)
   {
-    LogMsg "Failed to save reconfig job: $ErrMessage\n";
+    Error "Failed to save reconfig job: $ErrMessage\n";
     return 0;
   }
 }
 
-my $Bits = $ARGV[0];
-if (!$Bits)
-{
-  die "Usage: CheckForWinetestUpdate.pl <bits>";
-}
-if ($Bits =~ m/^(32|64)$/)
-{
-  $Bits = $1;
-}
-else
-{
-  die "Invalid number of bits $Bits";
-}
-my $BitsSuffix = ($Bits == 64 ? "64" : "");
 
-# Download the winetest executable if new
-my $UA = LWP::UserAgent->new();
-$UA->agent("WineTestBot");
-my $Request = HTTP::Request->new(GET => $WineTestUrls{$Bits});
-my $LatestBaseName = "winetest${BitsSuffix}-latest.exe";
-my $LatestFileName = "$DataDir/latest/$LatestBaseName";
-if (-r $LatestFileName)
+#
+# Command line processing
+#
+
+my ($OptCreate, %OptTypes, $Usage);
+while (@ARGV)
 {
-  my $Since = gmtime((stat $LatestFileName)[9]);
-  $Request->header("If-Modified-Since" => "$Since GMT");
-}
-my $Response = $UA->request($Request);
-if ($Response->code != RC_OK)
-{
-  if ($Response->code != RC_NOT_MODIFIED)
+  my $Arg = shift @ARGV;
+  if ($Arg eq "--create")
   {
-    LogMsg "Unexpected HTTP response code ", $Response->code, "\n";
-    exit 1;
+    $OptCreate = 1;
   }
-  exit 0;
+  elsif ($TaskTypes{$Arg})
+  {
+    $OptTypes{$Arg} = 1;
+  }
+  elsif ($Arg eq "--debug")
+  {
+    $Debug = 1;
+  }
+  elsif ($Arg eq "--log-only")
+  {
+    $LogOnly = 1;
+  }
+  elsif ($Arg =~ /^(?:-\?|-h|--help)$/)
+  {
+    $Usage = 0;
+    last;
+  }
+  elsif ($Arg =~ /^-/)
+  {
+    Error "unknown option '$Arg'\n";
+    $Usage = 2;
+    last;
+  }
+  else
+  {
+    Error "unexpected argument '$Arg'\n";
+    $Usage = 2;
+    last;
+  }
 }
 
-# Store the new WineTest executable in the staging directory:
-# - So we can compare it to the reference one in the latest directory to
-#   verify that it truly is new.
-# - Because we don't know the relevant Job and Step IDs yet and thus cannot
-#   put it in the jobs directory tree.
-umask 002;
-mkdir "$DataDir/staging";
-my ($fh, $StagingFileName) = OpenNewFile("$DataDir/staging", "_$LatestBaseName");
-if (!$fh)
+# Check parameters
+if (!defined $Usage)
 {
-  LogMsg "Could not create staging file: $!\n";
-  exit 1;
+  map { $OptTypes{$_} = 1 } keys %TaskTypes if (!%OptTypes);
 }
-print $fh $Response->decoded_content();
-close($fh);
-
-my $NewFile = 1;
-if (-r $LatestFileName)
+if (defined $Usage)
 {
-  $NewFile = compare($StagingFileName, $LatestFileName) != 0;
+  print "Usage: $Name0 [--debug] [--log-only] [--help] [--create] [TASKTYPE] ...\n";
+  print "\n";
+  print "Where TASKTYPE is one of: ", join(" ", sort keys %TaskTypes), "\n";
+  exit $Usage;
 }
-if (!$NewFile)
+
+
+#
+# Create the 32 bit tasks
+#
+
+my $Rc = 0;
+if ($OptTypes{build} or $OptTypes{base32} or $OptTypes{winetest32})
 {
-  # Nothing to do
-  unlink($StagingFileName);
-  exit 0;
+  my ($Create, $LatestBaseName) = UpdateWineTest($OptCreate, 32);
+  if ($Create < 0)
+  {
+    $Rc = 1;
+  }
+  elsif ($Create == 1)
+  {
+    # A new executable means there have been commits so update Wine. Create
+    # this job first purely to make the WineTestBot job queue look nice, and
+    # arbitrarily do it only for 32-bit executables to avoid redundant updates.
+    $Rc = 1 if ($OptTypes{build} and !AddReconfigJob());
+    $Rc = 1 if ($OptTypes{base32} and !AddJob("base", $LatestBaseName, 32));
+    $Rc = 1 if ($OptTypes{winetest32} and !AddJob("", $LatestBaseName, 32));
+  }
 }
 
-# Save the WineTest executable in the latest directory for the next round
-mkdir "$DataDir/latest";
-if (!move($StagingFileName, $LatestFileName))
+
+#
+# Create the 64 bit tasks
+#
+
+if ($OptTypes{all64})
 {
-  LogMsg "Could not move '$StagingFileName' to '$LatestFileName': $!\n";
-  unlink($StagingFileName);
-  exit 1;
+  my ($Create, $LatestBaseName) = UpdateWineTest($OptCreate, 64);
+  if ($Create < 0)
+  {
+    $Rc = 1;
+  }
+  elsif ($Create == 1)
+  {
+    $Rc = 1 if ($OptTypes{all64} and !AddJob("", $LatestBaseName, 64));
+  }
 }
-utime time, $Response->last_modified, $LatestFileName;
-
-# A new executable means there have been commits so update Wine. Create this
-# job first purely to make the WineTestBot job queue look nice, and arbitrarily
-# do it only for 32-bit executables to avoid redundant updates.
-my $rc = 0;
-$rc = 1 if ($Bits == 32 and !AddReconfigJob());
-
-$rc = 1 if (!AddJob(1, $LatestBaseName, $Bits));
-$rc = 1 if ($Bits == 32 and !AddJob(!1, $LatestBaseName, $Bits));
 
 RescheduleJobs();
 
 LogMsg "Submitted jobs\n";
 
-exit $rc;
+exit $Rc;

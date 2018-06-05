@@ -86,8 +86,7 @@ Setup for Wine's patches site:
 Setup for Winetest updates:
 - Use a cron job to run CheckForWinetestUpdate.pl periodically. For
   instance:
-    */10 * * * * $HOME/tools/testbot/bin/CheckForWinetestUpdate.pl 32
-    */10 * * * * $HOME/tools/testbot/bin/CheckForWinetestUpdate.pl 64
+    */10 * * * * $HOME/tools/testbot/bin/CheckForWinetestUpdate.pl --log-only
 
 Setup for wine-devel:
 - A proper WineTestBot system should integrate with Wine's patches site.
