@@ -166,7 +166,6 @@ sub Submit($$$)
 
     # Create a new job for this patch
     my $NewJob = $Jobs->Add();
-    $NewJob->Status("queued");
     $NewJob->User($User);
     $NewJob->Priority(6);
     my $PropertyDescriptor = $Jobs->GetPropertyDescriptorByName("Remarks");
@@ -181,11 +180,9 @@ sub Submit($$$)
     # Add build step to the job
     my $Steps = $NewJob->Steps;
     my $NewStep = $Steps->Add();
-    # Create a link to the patch file in the staging dir
-    my $StagingFileName = CreateNewLink($PatchFileName, "$DataDir/staging", "_patch.diff");
-    $NewStep->FileName(basename($StagingFileName));
+    $NewStep->FileName("patch.diff");
     $NewStep->FileType($TestInfo->{Type});
-    $NewStep->InStaging(1);
+    $NewStep->InStaging(!1);
     $NewStep->Type("build");
     $NewStep->DebugLevel(0);
   
@@ -198,12 +195,19 @@ sub Submit($$$)
     $Task->VM($BuildVM);
     $Task->Timeout($BuildTimeout);
 
-    # Save this step (&job+task) so the others can reference it
+    # Save the build step so other steps can reference it
     my ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
     if (defined($ErrMessage))
     {
       $self->Disposition("Failed to submit build step");
       return $ErrMessage;
+    }
+
+    # Stage the patch so it can be picked up by the job
+    if (!link($PatchFileName, "$DataDir/staging/job". $NewJob->Id ."_patch.diff"))
+    {
+      $self->Disposition("Failed to prepare patch file");
+      return $!;
     }
 
     foreach my $Unit (sort keys %{$TestInfo->{Units}})
@@ -217,7 +221,7 @@ sub Submit($$$)
         if (@{$VMs->GetKeys()})
         {
           # Create the corresponding Step
-          $NewStep = $Steps->Add();
+          my $NewStep = $Steps->Add();
           $NewStep->PreviousNo(1);
           my $FileName = $TestInfo->{ExeBase};
           $FileName .= "64" if ($Bits eq "64");
@@ -240,10 +244,20 @@ sub Submit($$$)
       }
     }
 
+    # Save it all
     ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
-    if (defined($ErrMessage))
+    if (defined $ErrMessage)
     {
       $self->Disposition("Failed to submit job");
+      return $ErrMessage;
+    }
+
+    # Switch Status to staging to indicate we are done setting up the job
+    $NewJob->Status("staging");
+    ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
+    if (defined $ErrMessage)
+    {
+      $self->Disposition("Failed to submit job (staging)");
       return $ErrMessage;
     }
 
