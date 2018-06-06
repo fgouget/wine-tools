@@ -267,8 +267,15 @@ sub _CheckAndClassifyVMs()
       {
         # The child process got stuck!
         $FoundVMErrors = 1;
+        my $NewStatus = "dirty";
+        if ($VM->Status eq "reverting" or $VM->Status eq "sleeping")
+        {
+          my $Errors = ($VM->Errors || 0) + 1;
+          $VM->Errors($Errors);
+          $NewStatus = "maintenance" if ($Errors >= $MaxVMErrors);
+        }
+        $VM->Status($NewStatus);
         $VM->KillChild();
-        $VM->Status("dirty");
         $VM->Save();
         $VM->RecordResult($Sched->{records}, "boterror stuck process");
         $Sched->{lambvms}->{$VMKey} = 1;
