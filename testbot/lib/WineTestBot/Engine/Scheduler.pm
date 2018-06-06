@@ -30,6 +30,8 @@ WineTestBot::Engine::Scheduler - Schedules the TestBot tasks
 use Exporter 'import';
 our @EXPORT = qw(ScheduleJobs CheckJobs);
 
+use File::Copy;
+
 use WineTestBot::Config;
 use WineTestBot::Engine::Events;
 use WineTestBot::Jobs;
@@ -524,10 +526,36 @@ sub _ScheduleTasks($)
   # Process the jobs in decreasing priority order
   my $JobRank;
   my $Jobs = CreateJobs($Sched->{VMs});
-  $Jobs->AddFilter("Status", ["queued", "running"]);
+  $Jobs->AddFilter("Status", ["staging", "queued", "running"]);
   foreach my $Job (sort CompareJobPriority @{$Jobs->GetItems()})
   {
     $JobRank++;
+
+    if ($Job->Status eq "staging")
+    {
+      # Move the file(s) from the staging directory to the job directory
+      my %Staged;
+      my $JobDir = $Job->CreateDir();
+      foreach my $Step (@{$Job->Steps->Clone()->GetItems()})
+      {
+        # Ignore steps that need a file provided by the previous step
+        next if ($Step->PreviousNo or !defined $Step->FileName);
+        # Skip the step if its file has already been staged
+        next if ($Staged{$Step->FileName});
+
+        my $StagingFile = "job". $Job->Id ."_". $Step->FileName;
+        if (move("$DataDir/staging/$StagingFile", "$JobDir/". $Step->FileName))
+        {
+          $Staged{$Step->FileName} = 1;
+        }
+        else
+        {
+          LogMsg "Could not move the '$StagingFile' staging file: $!";
+        }
+      }
+      $Job->Status("queued");
+      $Job->Save();
+    }
 
     # The per-step lists of VMs that should be getting ready to run
     # before we prepare the next step

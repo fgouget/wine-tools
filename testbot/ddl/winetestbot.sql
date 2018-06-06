@@ -113,7 +113,7 @@ CREATE TABLE Jobs
   BranchName VARCHAR(20) NOT NULL,
   UserName   VARCHAR(40) NOT NULL,
   Priority   INT(1)      NOT NULL,
-  Status     ENUM('queued', 'running', 'completed', 'badpatch', 'badbuild', 'boterror', 'canceled') NOT NULL,
+  Status     ENUM('new', 'staging', 'queued', 'running', 'completed', 'badpatch', 'badbuild', 'boterror', 'canceled') NOT NULL,
   Remarks    VARCHAR(128) NULL,
   Submitted  DATETIME    NOT NULL,
   Ended      DATETIME    NULL,

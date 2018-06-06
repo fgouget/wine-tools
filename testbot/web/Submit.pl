@@ -774,6 +774,7 @@ sub OnSubmit($)
   # First create a new job
   my $Jobs = CreateJobs();
   my $NewJob = $Jobs->Add();
+  $NewJob->Status("queued");
   $NewJob->User($self->GetCurrentSession()->User);
   $NewJob->Priority(5);
   if ($self->GetParam("Remarks"))

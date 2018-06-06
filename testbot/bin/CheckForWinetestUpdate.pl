@@ -200,6 +200,7 @@ sub AddJob($$$)
   # First create a new job
   my $Jobs = CreateJobs();
   my $NewJob = $Jobs->Add();
+  $NewJob->Status("queued");
   $NewJob->User(GetBatchUser());
   $NewJob->Priority($BaseJob && $Bits == 32 ? 8 : 9);
   $NewJob->Remarks($Remarks);
@@ -243,6 +244,7 @@ sub AddReconfigJob()
   # First create a new job
   my $Jobs = CreateJobs();
   my $NewJob = $Jobs->Add();
+  $NewJob->Status("queued");
   $NewJob->User(GetBatchUser());
   $NewJob->Priority(3);
   $NewJob->Remarks($Remarks);

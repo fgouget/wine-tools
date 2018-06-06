@@ -1,6 +1,6 @@
 # -*- Mode: Perl; perl-indent-level: 2; indent-tabs-mode: nil -*-
 # Copyright 2009 Ge van Geldorp
-# Copyright 2012-2017 Francois Gouget
+# Copyright 2012-2018 Francois Gouget
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -52,7 +52,19 @@ A Job's lifecycle is as follows:
 =over
 
 =item *
-A Job is created with Status set to queued which means it is ready to run.
+A Job is created with Status set to new. During this time the process setting
+up the Job can add new Steps and Tasks to it. It can also put the required
+input files into place in the staging directory with a name of the form
+'job<JobID>_<FileName>' where <JobId> is the Id of the new Job, and FileName is
+the name of a file a Step depends on.
+
+=item *
+Once the Job set up is complete its Status is set to staging. This indicates
+that the TestBot Engine can retrieve the files it depends on from the staging
+directory and move them to the Job's directory.
+
+=item *
+Then the Status is set to queued which indicates the Job is ready to run.
 
 =item *
 As soon as one of the Step starts running, the Job's Status field is set to
@@ -93,7 +105,7 @@ sub InitializeNew($$)
   my ($self, $Collection) = @_;
 
   $self->Branch(CreateBranches()->GetDefaultBranch());
-  $self->Status("queued");
+  $self->Status("new");
   $self->Submitted(time());
 
   $self->SUPER::InitializeNew($Collection);
@@ -446,7 +458,7 @@ my @PropertyDescriptors = (
   CreateItemrefPropertyDescriptor("Branch", "Branch", !1, 1, \&CreateBranches, ["BranchName"]),
   CreateItemrefPropertyDescriptor("User", "Author", !1, 1, \&CreateUsers, ["UserName"]),
   CreateBasicPropertyDescriptor("Priority", "Priority", !1, 1, "N", 1),
-  CreateEnumPropertyDescriptor("Status", "Status", !1, 1, ['queued', 'running', 'completed', 'badpatch', 'badbuild', 'boterror', 'canceled']),
+  CreateEnumPropertyDescriptor("Status", "Status", !1, 1, ['new', 'staging', 'queued', 'running', 'completed', 'badpatch', 'badbuild', 'boterror', 'canceled']),
   CreateBasicPropertyDescriptor("Remarks", "Remarks", !1, !1, "A", 128),
   CreateBasicPropertyDescriptor("Submitted", "Submitted", !1, !1, "DT", 19),
   CreateBasicPropertyDescriptor("Ended", "Ended", !1, !1, "DT", 19),
