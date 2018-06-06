@@ -753,28 +753,11 @@ sub OnSubmit($)
   my $BaseName = $self->ValidateAndGetFileName("FileName");
   return !1 if (!$BaseName);
 
-  # Store the file in the staging directory until the relevant Job and Step
-  # IDs are known and it can be moved to the jobs directory tree. But rename
-  # it so it does not get overwritten if the user submits another one before
-  # the Engine gets around to doing so.
-  my $StagingFileName = CreateNewFile("$DataDir/staging", "_$BaseName");
-
-  my $TmpStagingFullPath = $self->GetTmpStagingFullPath($BaseName);
-  if ($StagingFileName and !rename($TmpStagingFullPath, $StagingFileName))
-  {
-    $self->{ErrMessage} = "Could not rename '$TmpStagingFullPath' to '$StagingFileName': $!\n";
-    unlink($StagingFileName);
-    $StagingFileName = undef;
-  }
-  # If needed fall back to the existing staging file and hope for the best.
-  $StagingFileName = basename($StagingFileName || $TmpStagingFullPath);
-
   # See also Patches::Submit() in lib/WineTestBot/Patches.pm
 
   # First create a new job
   my $Jobs = CreateJobs();
   my $NewJob = $Jobs->Add();
-  $NewJob->Status("queued");
   $NewJob->User($self->GetCurrentSession()->User);
   $NewJob->Priority(5);
   if ($self->GetParam("Remarks"))
@@ -792,15 +775,15 @@ sub OnSubmit($)
   }
   my $Steps = $NewJob->Steps;
 
+  my $BuildStep;
   my $FileType = $self->GetParam("FileType");
-  my $BuildStepNo;
   if ($FileType eq "patchdlls" || $FileType eq "patchprograms")
   {
     # This is a patch so add a build step...
-    my $BuildStep = $Steps->Add();
-    $BuildStep->FileName($StagingFileName);
+    $BuildStep = $Steps->Add();
+    $BuildStep->FileName($BaseName);
     $BuildStep->FileType($FileType);
-    $BuildStep->InStaging(1);
+    $BuildStep->InStaging(!1);
     $BuildStep->Type("build");
     $BuildStep->DebugLevel(0);
 
@@ -813,14 +796,13 @@ sub OnSubmit($)
     $Task->VM($BuildVM);
     $Task->Timeout($BuildTimeout);
 
-    # Save this step (&job+task) so the others can reference it
+    # Save the build step so the others can reference it
     my ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
     if (defined($ErrMessage))
     {
       $self->{ErrMessage} = $ErrMessage;
       return !1;
     }
-    $BuildStepNo = 1;
   }
 
   # Add steps and tasks for the 32 and 64-bit tests
@@ -844,22 +826,18 @@ sub OnSubmit($)
       {
         # First create the test step
         my $TestStep = $Steps->Add();
-        $TestStep->PreviousNo($BuildStepNo);
         if ($FileType eq "patchdlls" || $FileType eq "patchprograms")
         {
-          my $FileName=$self->GetParam("TestExecutable");
-          if ($Bits eq "64")
-          {
-            $FileName =~ s/_test\.exe$/_test64.exe/;
-          }
-          $TestStep->FileName($FileName);
-          $TestStep->InStaging(!1);
+          $TestStep->PreviousNo($BuildStep->No);
+          my $TestExe = basename($self->GetParam("TestExecutable"));
+          $TestExe =~ s/_test\.exe$/_test64.exe/ if ($Bits eq "64");
+          $TestStep->FileName($TestExe);
         }
         else
         {
-          $TestStep->FileName($StagingFileName);
-          $TestStep->InStaging(1);
+          $TestStep->FileName($BaseName);
         }
+        $TestStep->InStaging(!1);
         $TestStep->FileType("exe$Bits");
         $TestStep->Type("single");
         $TestStep->DebugLevel($self->GetParam("DebugLevel"));
@@ -875,8 +853,25 @@ sub OnSubmit($)
     }
   }
 
-  # Now save the whole thing (or whatever's left to save)
+  # Now save it all (or whatever's left to save)
   my ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
+  if (defined($ErrMessage))
+  {
+    $self->{ErrMessage} = $ErrMessage;
+    return !1;
+  }
+
+  # Stage the test patch/executable so the job can pick it up
+  my $TmpStagingFullPath = $self->GetTmpStagingFullPath($BaseName);
+  if (!rename($TmpStagingFullPath, "$DataDir/staging/job". $NewJob->Id ."_$BaseName"))
+  {
+    $self->{ErrMessage} = "Could not stage '$BaseName': $!\n";
+    return !1;
+  }
+
+  # Switch Status to staging to indicate we are done setting up the job
+  $NewJob->Status("staging");
+  ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
   if (defined($ErrMessage))
   {
     $self->{ErrMessage} = $ErrMessage;
