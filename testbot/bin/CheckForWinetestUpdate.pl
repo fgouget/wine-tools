@@ -192,15 +192,9 @@ sub AddJob($$$)
     return 1;
   }
 
-  # Create a hard link in staging so it can then be moved into the job
-  # directory. This is ok because the latest file is never overwritten.
-  my $StagingFileName = CreateNewLink("$DataDir/latest/$LatestBaseName",
-                                      "$DataDir/staging", "_$LatestBaseName");
-
   # First create a new job
   my $Jobs = CreateJobs();
   my $NewJob = $Jobs->Add();
-  $NewJob->Status("queued");
   $NewJob->User(GetBatchUser());
   $NewJob->Priority($BaseJob && $Bits == 32 ? 8 : 9);
   $NewJob->Remarks($Remarks);
@@ -210,9 +204,9 @@ sub AddJob($$$)
   my $NewStep = $Steps->Add();
   my $BitsSuffix = ($Bits == 64 ? "64" : "");
   $NewStep->Type("suite");
-  $NewStep->FileName(basename($StagingFileName));
+  $NewStep->FileName($LatestBaseName);
   $NewStep->FileType($Bits == 64 ? "exe64" : "exe32");
-  $NewStep->InStaging(1);
+  $NewStep->InStaging(!1);
 
   # Add a task for each VM
   my $Tasks = $NewStep->Tasks;
@@ -224,12 +218,28 @@ sub AddJob($$$)
     $Task->Timeout($SuiteTimeout);
   }
 
-  # Now save the whole thing
+  # Save it all
   my ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
   if (defined $ErrMessage)
   {
-    Error "Failed to save job: $ErrMessage\n";
-    unlink($StagingFileName);
+    LogMsg "Failed to save the $LatestBaseName job: $ErrMessage\n";
+    return 0;
+  }
+
+  # Stage the test file so it can be picked up by the job
+  if (!link("$DataDir/latest/$LatestBaseName",
+            "$DataDir/staging/job". $NewJob->Id ."_$LatestBaseName"))
+  {
+    Error "Failed to stage $LatestBaseName: $!\n";
+    return 0;
+  }
+
+  # Switch Status to staging to indicate we are done setting up the job
+  $NewJob->Status("staging");
+  ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
+  if (defined $ErrMessage)
+  {
+    Error "Failed to save the $LatestBaseName job (staging): $ErrMessage\n";
     return 0;
   }
 
@@ -244,7 +254,6 @@ sub AddReconfigJob()
   # First create a new job
   my $Jobs = CreateJobs();
   my $NewJob = $Jobs->Add();
-  $NewJob->Status("queued");
   $NewJob->User(GetBatchUser());
   $NewJob->Priority(3);
   $NewJob->Remarks($Remarks);
@@ -266,11 +275,20 @@ sub AddReconfigJob()
   $Task->VM($BuildVM);
   $Task->Timeout($ReconfigTimeout);
 
-  # Now save the whole thing
+  # Save it all
   my ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
   if (defined $ErrMessage)
   {
-    Error "Failed to save reconfig job: $ErrMessage\n";
+    Error "Failed to save the Reconfig job: $ErrMessage\n";
+    return 0;
+  }
+
+  # Switch Status to staging to indicate we are done setting up the job
+  $NewJob->Status("staging");
+  ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
+  if (defined $ErrMessage)
+  {
+    Error "Failed to save the Reconfig job (staging): $ErrMessage\n";
     return 0;
   }
 }
