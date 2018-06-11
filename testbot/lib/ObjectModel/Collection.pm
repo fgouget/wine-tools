@@ -40,7 +40,7 @@ criteria.
 use Exporter 'import';
 our @EXPORT_OK = qw(new ComputeMasterKey);
 
-use Scalar::Util qw(weaken);
+use Scalar::Util qw(blessed weaken);
 use ObjectModel::BackEnd;
 use ObjectModel::Item;
 
@@ -112,6 +112,38 @@ sub _initialize($;$)
   my ($self, $_MasterObject) = @_;
 
   $self->{AllScopeItems}->{ref($self)} ||= {};
+}
+
+=pod
+=over 12
+
+=item C<Clone()>
+
+Clones the collection, omitting the filters that were applied to it.
+
+=back
+=cut
+
+sub Clone($)
+{
+  my ($self) = @_;
+
+  my $Copy = {TableName           => $self->{TableName},
+              CollectionName      => $self->{CollectionName},
+              ItemName            => $self->{ItemName},
+              PropertyDescriptors => $self->{PropertyDescriptors},
+              MasterColNames      => $self->{MasterColNames},
+              MasterColValues     => $self->{MasterColValues},
+              MasterKey           => $self->{MasterKey},
+              Filters             => {},
+              AllScopeItems       => $self->{AllScopeItems},
+              Items               => undef};
+  # See Collection::new()
+  weaken($Copy->{AllScopeItems});
+
+  $Copy = bless $Copy, blessed($self);
+  $Copy->_initialize(@_);
+  return $Copy;
 }
 
 sub GetPropertyDescriptors($)
