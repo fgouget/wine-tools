@@ -250,3 +250,5 @@ sub GetPatchImpact($;$$)
 
   return $Impacts;
 }
+
+1;
