@@ -6,6 +6,7 @@
 # resulting 32 and 64 bit binaries.
 #
 # Copyright 2009 Ge van Geldorp
+# Copyright 2012-2014, 2017-2018 Francois Gouget
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -83,7 +84,7 @@ sub ApplyPatch($)
   if ($? != 0)
   {
     LogMsg "Patch failed to apply\n";
-    return 0;
+    return undef;
   }
 
   my $Impacts = GetPatchImpact($PatchFile, "nounits");
@@ -96,7 +97,7 @@ sub ApplyPatch($)
     if ($? != 0)
     {
       LogMsg "make_makefiles failed\n";
-      return 0;
+      return undef;
     }
   }
 
@@ -109,11 +110,11 @@ sub ApplyPatch($)
     if ($? != 0)
     {
        LogMsg "Autoconf failed\n";
-       return 0;
+       return undef;
     }
   }
 
-  return 1;
+  return $Impacts;
 }
 
 my $ncpus;
@@ -136,57 +137,71 @@ sub BuildNative()
   system("( cd $DataDir/build-native && set -x && " .
          "  time make -j$ncpus __tooldeps__ " .
          ") >>$LogDir/Build.log 2>&1");
-
   if ($? != 0)
   {
-    LogMsg "Build native failed\n";
+    LogMsg "Rebuild of native tools failed\n";
     return !1;
   }
 
   return 1;
 }
 
-sub BuildTestExecutable($$$)
+sub BuildTestExecutables($$)
 {
-  my ($BaseName, $PatchType, $Bits) = @_;
+  my ($Impacts, $Bits) = @_;
 
-  my $TestsDir = "$PatchType/$BaseName/tests";
-  my $TestExecutable = "$TestsDir/$BaseName";
-  if ($PatchType eq "programs")
+  my (@BuildDirs, @TestExes);
+  foreach my $TestInfo (values %{$Impacts->{Tests}})
   {
-    $TestExecutable .= ".exe";
+    push @BuildDirs, $TestInfo->{Path};
+    my $TestExe = "$TestInfo->{Path}/$TestInfo->{ExeBase}.exe";
+    push @TestExes, $TestExe;
+    unlink("$DataDir/build-mingw$Bits/$TestExe"); # Ignore errors
   }
-  $TestExecutable .= "_test.exe";
-  unlink("$DataDir/build-mingw${Bits}/$TestExecutable");
 
-  InfoMsg "\nBuilding the $Bits-bit test executable\n";
+  InfoMsg "\nBuilding the $Bits-bit test executable(s)\n";
   system("( cd $DataDir/build-mingw$Bits && set -x && " .
-         "  time make -j$ncpus $TestsDir " .
+         "  time make -j$ncpus ". join(" ", sort @BuildDirs) .
          ") >>$LogDir/Build.log 2>&1");
   if ($? != 0)
   {
     LogMsg "Rebuild of $Bits-bit crossbuild failed\n";
     return !1;
   }
-  if (! -f "$DataDir/build-mingw${Bits}/$TestExecutable")
+
+  my $Success = 1;
+  foreach my $TestExe (@TestExes)
   {
-    LogMsg "Make didn't produce a $TestExecutable file\n";
-    return !1;
+    if (!-f "$DataDir/build-mingw$Bits/$TestExe")
+    {
+      LogMsg "Make didn't produce a $TestExe file\n";
+      $Success = undef;
+    }
   }
 
-  return 1;
+  return $Success;
 }
 
 $ENV{PATH} = "/usr/lib/ccache:/usr/bin:/bin";
 delete $ENV{ENV};
 
-# Start with clean logfile
+# Start with a clean logfile
 unlink("$LogDir/Build.log");
 
-my ($PatchFile, $PatchType, $BaseName, $BitIndicators) = @ARGV;
-if (! $PatchFile || ! $PatchType || ! $BaseName || !$BitIndicators)
+my ($PatchFile, $BitIndicators);
+if (@ARGV == 2)
 {
-  FatalError "Usage: Build.pl <patchfile> <patchtype> <basename> <bits>\n";
+  ($PatchFile, $BitIndicators) = @ARGV;
+}
+else
+{
+  # FIXME Remove support for the legacy parameters
+  my ($_PatchType, $_BaseName);
+  ($PatchFile, $_PatchType, $_BaseName, $BitIndicators) = @ARGV;
+}
+if (! $PatchFile || !$BitIndicators)
+{
+  FatalError "Usage: Build.pl <patchfile> <bits>\n";
 }
 
 # Untaint parameters
@@ -203,36 +218,16 @@ else
   FatalError "Invalid patch file $PatchFile\n";
 }
 
-if ($PatchType =~ m/^patch(dlls|programs)$/)
-{
-  $PatchType = $1;
-}
-else
-{
-  FatalError "Invalid patch type $PatchType\n";
-}
-
-if ($BaseName =~ m/^([\w_.\-]+)$/)
-{
-  $BaseName = $1;
-}
-else
-{
-  FatalError "Invalid DLL base name $BaseName\n";
-}
-
-my $Run32 = !1;
-my $Run64 = !1;
+my ($Run32, $Run64);
 if ($BitIndicators =~ m/^([\d,]+)$/)
 {
-  my @Bits = split /,/, $1;
-  foreach my $BitsValue (@Bits)
+  foreach my $BitsValue (split /,/, $1)
   {
-    if ($BitsValue == 32)
+    if ($BitsValue eq "32")
     {
       $Run32 = 1;
     }
-    elsif ($BitsValue == 64)
+    elsif ($BitsValue eq "64")
     {
       $Run64 = 1;
     }
@@ -241,7 +236,7 @@ if ($BitIndicators =~ m/^([\d,]+)$/)
       FatalError "Invalid number of bits $BitsValue\n";
     }
   }
-  if (! $Run32 && ! $Run64)
+  if (!$Run32 && !$Run64)
   {
     FatalError "Specify at least one of 32 or 64 bits\n";
   }
@@ -251,10 +246,8 @@ else
   FatalError "Invalid number of bits $BitIndicators\n";
 }
 
-if (!ApplyPatch($PatchFile))
-{
-  exit(1);
-}
+my $Impacts = ApplyPatch($PatchFile);
+exit(1) if (!$Impacts);
 
 CountCPUs();
 
@@ -262,12 +255,11 @@ if (!BuildNative())
 {
   exit(1);
 }
-
-if ($Run32 && ! BuildTestExecutable($BaseName, $PatchType, 32))
+if ($Run32 && !BuildTestExecutables($Impacts, 32))
 {
   exit(1);
 }
-if ($Run64 && ! BuildTestExecutable($BaseName, $PatchType, 64))
+if ($Run64 && !BuildTestExecutables($Impacts, 64))
 {
   exit(1);
 }
