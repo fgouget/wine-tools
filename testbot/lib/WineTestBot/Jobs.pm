@@ -209,7 +209,7 @@ sub UpdateStatus($)
   return $Status if ($Status ne "queued" && $Status ne "running");
 
   my %Has;
-  my $Steps = $self->Steps;
+  my $Steps = $self->Steps->Clone();
   my @SortedSteps = sort { $a->No <=> $b->No } @{$Steps->GetItems()};
   foreach my $Step (@SortedSteps)
   {
