@@ -291,6 +291,8 @@ sub AddReconfigJob()
     Error "Failed to save the Reconfig job (staging): $ErrMessage\n";
     return 0;
   }
+
+  return 1;
 }
 
 
