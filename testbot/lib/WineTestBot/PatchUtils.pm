@@ -211,8 +211,8 @@ sub GetPatchImpact($;$$)
         last;
       }
       if (exists $TestInfo->{Files}->{"$Base.spec"} and
-             ($TestInfo->{Files}->{"$Base.c"} or
-              $TestInfo->{Files}->{"$Base.spec"}))
+          ($TestInfo->{Files}->{"$Base.c"} or
+           $TestInfo->{Files}->{"$Base.spec"}))
       {
         # Any change to a helper dll can potentially impact all tests
         $AllUnits = 1;
