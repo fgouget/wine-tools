@@ -1010,7 +1010,9 @@ sub ScheduleJobs()
 
   # Reschedule at the latest when the next task times out
   my $FirstDeadline;
-  foreach my $VM (@{$Sched->{VMs}->GetItems()})
+  my $VMs = $Sched->{VMs}->Clone();
+  $VMs->FilterEnabledRole();
+  foreach my $VM (@{$VMs->GetItems()})
   {
     if (defined $VM->ChildDeadline and
         (!defined $FirstDeadline or $VM->ChildDeadline < $FirstDeadline))
