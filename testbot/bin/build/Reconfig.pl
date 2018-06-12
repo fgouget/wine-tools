@@ -102,13 +102,13 @@ sub GitPull()
 my $ncpus;
 sub CountCPUs()
 {
-    if (open(my $fh, "<", "/proc/cpuinfo"))
-    {
-        # Linux
-        map { $ncpus++ if (/^processor/); } <$fh>;
-        close($fh);
-    }
-    $ncpus ||= 1;
+  if (open(my $fh, "<", "/proc/cpuinfo"))
+  {
+    # Linux
+    map { $ncpus++ if (/^processor/); } <$fh>;
+    close($fh);
+  }
+  $ncpus ||= 1;
 }
 
 sub BuildTestAgentd()

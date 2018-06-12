@@ -109,8 +109,8 @@ sub ApplyPatch($)
            ") >>$LogDir/Build.log 2>&1");
     if ($? != 0)
     {
-       LogMsg "Autoconf failed\n";
-       return undef;
+      LogMsg "Autoconf failed\n";
+      return undef;
     }
   }
 
@@ -120,13 +120,13 @@ sub ApplyPatch($)
 my $ncpus;
 sub CountCPUs()
 {
-    if (open(my $fh, "<", "/proc/cpuinfo"))
-    {
-        # Linux
-        map { $ncpus++ if (/^processor/); } <$fh>;
-        close($fh);
-    }
-    $ncpus ||= 1;
+  if (open(my $fh, "<", "/proc/cpuinfo"))
+  {
+    # Linux
+    map { $ncpus++ if (/^processor/); } <$fh>;
+    close($fh);
+  }
+  $ncpus ||= 1;
 }
 
 sub BuildNative()
