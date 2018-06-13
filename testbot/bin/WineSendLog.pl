@@ -501,6 +501,11 @@ EOF
   }
 }
 
+
+#
+# Setup and command line processing
+#
+
 $ENV{PATH} = "/usr/bin:/bin";
 delete $ENV{ENV};
 
@@ -527,6 +532,11 @@ if (! defined($Job))
   LogMsg "Job $JobId doesn't exist\n";
   exit(1);
 }
+
+
+#
+# Analyze the log and notify the developer
+#
 
 SendLog($Job);
 

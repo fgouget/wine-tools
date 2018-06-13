@@ -48,6 +48,10 @@ use WineTestBot::Log;
 use WineTestBot::Engine::Notify;
 
 
+#
+# Logging and error handling helpers
+#
+
 my $Debug;
 sub Debug(@)
 {

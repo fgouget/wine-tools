@@ -53,6 +53,11 @@ use WineTestBot::Tasks;
 use WineTestBot::Users;
 use WineTestBot::VMs;
 
+
+#
+# Logging and error handling helpers
+#
+
 my $LogOnly;
 sub Trace(@)
 {
@@ -67,6 +72,9 @@ sub Error(@)
 }
 
 
+#
+# Setup and command line processing
+#
 
 $ENV{PATH} = "/usr/bin:/bin";
 delete $ENV{ENV};

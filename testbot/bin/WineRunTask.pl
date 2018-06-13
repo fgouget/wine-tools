@@ -47,6 +47,10 @@ use WineTestBot::Log;
 use WineTestBot::Engine::Notify;
 
 
+#
+# Logging and error handling helpers
+#
+
 my $Debug;
 sub Debug(@)
 {
@@ -59,6 +63,11 @@ sub Error(@)
   print STDERR "$Name0:error: ", @_ if (!$LogOnly);
   LogMsg @_;
 }
+
+
+#
+# Task helpers
+#
 
 sub TakeScreenshot($$)
 {
