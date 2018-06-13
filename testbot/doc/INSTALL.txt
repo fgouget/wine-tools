@@ -5,7 +5,7 @@ Dependencies:
 - Apache2 with mod_perl
 - MySQL
 - Perl DBD and DBI::mysql modules
-- Sendmail
+- Sendmail and Procmail
 - Sys::Virt (libsys-virt-perl, see http://libvirt.org/)
 - Image::Magick (perlmagick)
 - Optional: IO::Socket::IP (for IPv6, libio-socket-ip-perl)
