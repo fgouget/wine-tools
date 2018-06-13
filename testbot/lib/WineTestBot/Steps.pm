@@ -200,6 +200,7 @@ sub UpdateStatus($$)
 
   my %Has;
   map { $Has{$_->UpdateStatus($Skip)} = 1 } (@{$self->Tasks->Clone()->GetItems()});
+  $Has{completed} = 1 if (!%Has); # This step has no task!
 
   # Inherit the tasks most significant status.
   # Note that one or more tasks may have been requeued during the cleanup phase

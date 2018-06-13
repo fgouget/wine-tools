@@ -229,6 +229,7 @@ sub UpdateStatus($)
     my $StepStatus = $Step->UpdateStatus($Skip);
     $Has{$StepStatus} = 1;
   }
+  $Has{completed} = 1 if (!%Has); # This job has no step!
 
   # Inherit the steps most significant status.
   # Note that one or more tasks may have been requeued during the cleanup phase
