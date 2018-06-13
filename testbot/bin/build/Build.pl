@@ -72,6 +72,18 @@ sub FatalError(@)
   exit 1;
 }
 
+my $ncpus;
+sub CountCPUs()
+{
+  if (open(my $fh, "<", "/proc/cpuinfo"))
+  {
+    # Linux
+    map { $ncpus++ if (/^processor/); } <$fh>;
+    close($fh);
+  }
+  $ncpus ||= 1;
+}
+
 sub ApplyPatch($)
 {
   my ($PatchFile) = @_;
@@ -115,18 +127,6 @@ sub ApplyPatch($)
   }
 
   return $Impacts;
-}
-
-my $ncpus;
-sub CountCPUs()
-{
-  if (open(my $fh, "<", "/proc/cpuinfo"))
-  {
-    # Linux
-    map { $ncpus++ if (/^processor/); } <$fh>;
-    close($fh);
-  }
-  $ncpus ||= 1;
 }
 
 sub BuildNative()
