@@ -157,59 +157,55 @@ sub Submit($$$)
     $User = GetBatchUser();
   }
 
-  my $Disposition = "Submitted job ";
-  my $First = 1;
+  # Create a new job for this patch
+  my $Jobs = CreateJobs();
+  my $NewJob = $Jobs->Add();
+  $NewJob->User($User);
+  $NewJob->Priority(6);
+  my $PropertyDescriptor = $Jobs->GetPropertyDescriptorByName("Remarks");
+  my $Subject = $self->Subject;
+  $Subject =~ s/\[PATCH[^\]]*]//i;
+  $Subject =~ s/[[\(]?\d+\/\d+[\)\]]?//;
+  $Subject =~ s/^\s*//;
+  $NewJob->Remarks(substr("[wine-patches] " . $Subject, 0,
+                          $PropertyDescriptor->GetMaxLength()));
+  $NewJob->Patch($self);
+
+  # Add build step to the job
+  my $BuildStep = $NewJob->Steps->Add();
+  $BuildStep->FileName("patch.diff");
+  $BuildStep->FileType("patchdlls"); # This is irrelevant now
+  $BuildStep->InStaging(!1);
+  $BuildStep->Type("build");
+  $BuildStep->DebugLevel(0);
+  
+  # Add build task
+  my $VMs = CreateVMs();
+  $VMs->AddFilter("Type", ["build"]);
+  $VMs->AddFilter("Role", ["base"]);
+  my $BuildVM = ${$VMs->GetItems()}[0];
+  my $Task = $BuildStep->Tasks->Add();
+  $Task->VM($BuildVM);
+  $Task->Timeout($BuildTimeout);
+
+  # Save the build step so the others can reference it.
+  my ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
+  if (defined($ErrMessage))
+  {
+    $self->Disposition("Failed to submit build step");
+    return $ErrMessage;
+  }
+
+  # Stage the patch so it can be picked up by the job
+  if (!link($PatchFileName, "$DataDir/staging/job". $NewJob->Id ."_patch.diff"))
+  {
+    $self->Disposition("Failed to stage the patch file");
+    return $!;
+  }
+
   foreach my $Module (sort keys %{$Impacts->{Tests}})
   {
     my $TestInfo = $Impacts->{Tests}->{$Module};
-    my $Jobs = CreateJobs();
-
-    # Create a new job for this patch
-    my $NewJob = $Jobs->Add();
-    $NewJob->User($User);
-    $NewJob->Priority(6);
-    my $PropertyDescriptor = $Jobs->GetPropertyDescriptorByName("Remarks");
-    my $Subject = $self->Subject;
-    $Subject =~ s/\[PATCH[^\]]*]//i;
-    $Subject =~ s/[[\(]?\d+\/\d+[\)\]]?//;
-    $Subject =~ s/^\s*//;
-    $NewJob->Remarks(substr("[wine-patches] " . $Subject, 0,
-                            $PropertyDescriptor->GetMaxLength()));
-    $NewJob->Patch($self);
-  
-    # Add build step to the job
-    my $Steps = $NewJob->Steps;
-    my $NewStep = $Steps->Add();
-    $NewStep->FileName("patch.diff");
-    $NewStep->FileType($TestInfo->{Type});
-    $NewStep->InStaging(!1);
-    $NewStep->Type("build");
-    $NewStep->DebugLevel(0);
-  
-    # Add build task
-    my $VMs = CreateVMs();
-    $VMs->AddFilter("Type", ["build"]);
-    $VMs->AddFilter("Role", ["base"]);
-    my $BuildVM = ${$VMs->GetItems()}[0];
-    my $Task = $NewStep->Tasks->Add();
-    $Task->VM($BuildVM);
-    $Task->Timeout($BuildTimeout);
-
-    # Save the build step so other steps can reference it
-    my ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
-    if (defined($ErrMessage))
-    {
-      $self->Disposition("Failed to submit build step");
-      return $ErrMessage;
-    }
-
-    # Stage the patch so it can be picked up by the job
-    if (!link($PatchFileName, "$DataDir/staging/job". $NewJob->Id ."_patch.diff"))
-    {
-      $self->Disposition("Failed to prepare patch file");
-      return $!;
-    }
-
     foreach my $Unit (sort keys %{$TestInfo->{Units}})
     {
       # Add 32 and 64-bit tasks
@@ -221,8 +217,8 @@ sub Submit($$$)
         if (@{$VMs->GetKeys()})
         {
           # Create the corresponding Step
-          my $NewStep = $Steps->Add();
-          $NewStep->PreviousNo(1);
+          my $NewStep = $NewJob->Steps->Add();
+          $NewStep->PreviousNo($BuildStep->No);
           my $FileName = $TestInfo->{ExeBase};
           $FileName .= "64" if ($Bits eq "64");
           $NewStep->FileName("$FileName.exe");
@@ -243,35 +239,26 @@ sub Submit($$$)
         }
       }
     }
-
-    # Save it all
-    ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
-    if (defined $ErrMessage)
-    {
-      $self->Disposition("Failed to submit job");
-      return $ErrMessage;
-    }
-
-    # Switch Status to staging to indicate we are done setting up the job
-    $NewJob->Status("staging");
-    ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
-    if (defined $ErrMessage)
-    {
-      $self->Disposition("Failed to submit job (staging)");
-      return $ErrMessage;
-    }
-
-    if ($First)
-    {
-      $First = !1;
-    }
-    else
-    {
-      $Disposition .= ", ";
-    }
-    $Disposition .= $NewJob->Id;
   }
-  $self->Disposition($Disposition);
+
+  # Save it all
+  ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
+  if (defined $ErrMessage)
+  {
+    $self->Disposition("Failed to submit job");
+    return $ErrMessage;
+  }
+
+  # Switch Status to staging to indicate we are done setting up the job
+  $NewJob->Status("staging");
+  ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
+  if (defined $ErrMessage)
+  {
+    $self->Disposition("Failed to submit job (staging)");
+    return $ErrMessage;
+  }
+
+  $self->Disposition("Submitted job ". $NewJob->Id);
   return undef;
 }
 

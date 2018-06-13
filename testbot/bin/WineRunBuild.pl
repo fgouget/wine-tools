@@ -43,6 +43,7 @@ $Name0 =~ s+^.*/++;
 
 use WineTestBot::Config;
 use WineTestBot::Jobs;
+use WineTestBot::PatchUtils;
 use WineTestBot::VMs;
 use WineTestBot::Log;
 use WineTestBot::Engine::Notify;
@@ -323,30 +324,14 @@ elsif ($Debug and !$VM->GetDomain()->IsPoweredOn())
 # Figure out what to build
 #
 
-my ($Run64, $BaseName);
-foreach my $OtherStep (@{$Job->Steps->GetItems()})
+my (%Bitnesses, %TestExes);
+foreach my $TestStep (@{$Job->Steps->GetItems()})
 {
-  next if ($OtherStep->No == $StepNo);
-
-  $Run64 = 1 if ($OtherStep->FileType eq "exe64");
-  my $OtherFileName = $OtherStep->FileName;
-  if ($OtherFileName =~ m/^([\w_.]+)_test(?:64)?\.exe$/)
+  if ($TestStep->FileType =~ /^exe([0-9]+)$/)
   {
-    my $OtherBaseName = $1;
-    if ($Step->FileType eq "patchprograms")
-    {
-      $OtherBaseName =~ s/\.exe$//;
-    }
-    if (defined $BaseName and $BaseName ne $OtherBaseName)
-    {
-      FatalError("$OtherBaseName doesn't match previously found $BaseName\n");
-    }
-    $BaseName = $OtherBaseName;
+    $Bitnesses{$1} = 1;
+    $TestExes{$TestStep->FileName} = 1;
   }
-}
-if (!defined $BaseName)
-{
-  FatalError("Could not determine the test executable's base name\n");
 }
 
 
@@ -363,9 +348,8 @@ if (!$TA->SendFile($FileName, "staging/patch.diff", 0))
 }
 my $Script = "#!/bin/sh\n" .
              "rm -f Build.log\n" .
-             "../bin/build/Build.pl patch.diff 32";
-$Script .= ",64"if ($Run64);
-$Script .= " >>Build.log 2>&1\n";
+             "../bin/build/Build.pl patch.diff ". join(",", keys %Bitnesses) .
+             " >>Build.log 2>&1\n";
 Debug(Elapsed($Start), " Sending the script: [$Script]\n");
 if (!$TA->SendFileFromString($Script, "task", $TestAgent::SENDFILE_EXE))
 {
@@ -456,34 +440,25 @@ FatalTAError(undef, $TAError) if (defined $TAError);
 # Grab the executables for the next steps
 #
 
-# Don't try copying the test executables if the build step failed
-if ($NewStatus eq "completed")
+my $Impacts = GetPatchImpact($FileName, "nounit");
+my $StepDir = $Step->CreateDir();
+foreach my $TestInfo (values %{$Impacts->{Tests}})
 {
-  my $StepDir = $Step->CreateDir();
-  foreach my $OtherStep (@{$Job->Steps->GetItems()})
+  foreach my $Bits ("", "64")
   {
-    next if ($OtherStep->No == $StepNo);
+    my $Local = "$TestInfo->{ExeBase}$Bits.exe";
+    next if (!$TestExes{$Local});
 
-    my $OtherFileName = $OtherStep->FileName;
-    next if ($OtherFileName !~ /^[\w_.]+_test(?:64)?\.exe$/);
-
-    my $Bits = $OtherStep->FileType eq "exe64" ? "64" : "32";
-    my $TestExecutable;
-    if ($Step->FileType ne "patchprograms")
+    my $Remote = "build-mingw". ($Bits || "32") ."/$TestInfo->{Path}/$TestInfo->{ExeBase}.exe";
+    Debug(Elapsed($Start), " Retrieving '$Local'\n");
+    if ($TA->GetFile($Remote, "$StepDir/$Local"))
     {
-      $TestExecutable = "build-mingw$Bits/dlls/$BaseName/tests/${BaseName}_test.exe";
+      chmod 0664, "$StepDir/$Local";
     }
-    else
+    elsif ($TA->GetLastError() !~ /: No such file or directory/)
     {
-      $TestExecutable = "build-mingw$Bits/programs/$BaseName/tests/${BaseName}.exe_test.exe";
+      FatalTAError($TA, "Could not retrieve '$Local'");
     }
-
-    Debug(Elapsed($Start), " Retrieving '$OtherFileName'\n");
-    if (!$TA->GetFile($TestExecutable, "$StepDir/$OtherFileName"))
-    {
-      FatalTAError($TA, "Could not retrieve '$OtherFileName'");
-    }
-    chmod 0664, "$StepDir/$OtherFileName";
   }
 }
 $TA->Disconnect();
