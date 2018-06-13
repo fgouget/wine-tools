@@ -363,8 +363,7 @@ if (!$TA->SendFile($FileName, "staging/patch.diff", 0))
 }
 my $Script = "#!/bin/sh\n" .
              "rm -f Build.log\n" .
-             "../bin/build/Build.pl patch.diff " . $Step->FileType .
-             " $BaseName 32";
+             "../bin/build/Build.pl patch.diff 32";
 $Script .= ",64"if ($Run64);
 $Script .= " >>Build.log 2>&1\n";
 Debug(Elapsed($Start), " Sending the script: [$Script]\n");
