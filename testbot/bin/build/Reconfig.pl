@@ -6,6 +6,7 @@
 # 32 and 64 bit winetest binaries.
 #
 # Copyright 2009 Ge van Geldorp
+# Copyright 2012-2014, 2017-2018 Francois Gouget
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -70,35 +71,6 @@ sub FatalError(@)
   exit 1;
 }
 
-sub GitPull()
-{
-  InfoMsg "Updating the Wine source\n";
-  system("cd $DataDir/wine && git pull >> $LogDir/Reconfig.log 2>&1");
-  if ($? != 0)
-  {
-    LogMsg "Git pull failed\n";
-    return !1;
-  }
-
-  if (open(my $fh, ">", "$DataDir/testlist.txt"))
-  {
-    foreach my $TestFile (glob("$DataDir/wine/*/*/tests/*.c"),
-                          glob("$DataDir/wine/*/*/tests/*.spec"))
-    {
-      next if ($TestFile =~ m=/testlist\.c$=);
-      $TestFile =~ s=^$DataDir/wine/==;
-      print $fh "$TestFile\n";
-    }
-    close($fh);
-  }
-  else
-  {
-    LogMsg "Could not open 'testlist.txt' for writing: $!\n";
-  }
-
-  return 1;
-}
-
 my $ncpus;
 sub CountCPUs()
 {
@@ -151,6 +123,35 @@ sub BuildTestLauncher()
   {
     LogMsg "Build TestLauncher failed\n";
     return !1;
+  }
+
+  return 1;
+}
+
+sub GitPull()
+{
+  InfoMsg "Updating the Wine source\n";
+  system("cd $DataDir/wine && git pull >> $LogDir/Reconfig.log 2>&1");
+  if ($? != 0)
+  {
+    LogMsg "Git pull failed\n";
+    return !1;
+  }
+
+  if (open(my $fh, ">", "$DataDir/testlist.txt"))
+  {
+    foreach my $TestFile (glob("$DataDir/wine/*/*/tests/*.c"),
+                          glob("$DataDir/wine/*/*/tests/*.spec"))
+    {
+      next if ($TestFile =~ m=/testlist\.c$=);
+      $TestFile =~ s=^$DataDir/wine/==;
+      print $fh "$TestFile\n";
+    }
+    close($fh);
+  }
+  else
+  {
+    LogMsg "Could not open 'testlist.txt' for writing: $!\n";
   }
 
   return 1;
@@ -211,15 +212,12 @@ if (! -d "$DataDir/staging" and ! mkdir "$DataDir/staging")
     LogMsg "Unable to create '$DataDir/staging': $!\n";
     exit(1);
 }
-if (! GitPull())
-{
-  exit(1);
-}
 
 CountCPUs();
 
 if (!BuildTestAgentd() ||
     !BuildTestLauncher() ||
+    !GitPull() ||
     !BuildNative() ||
     !BuildCross(32) ||
     !BuildCross(64))
