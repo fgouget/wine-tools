@@ -588,7 +588,7 @@ sub DetermineFileType($$)
 
   close FH;
 
-  my ($ErrMessage, $DllBaseName, $TestUnit);
+  my ($ErrMessage, $ExeBase, $TestUnit);
   if ($FileType eq "unknown")
   {
     my $Impacts = GetPatchImpact($FileName);
@@ -604,7 +604,7 @@ sub DetermineFileType($$)
     {
       my $TestInfo = (values %{$Impacts->{Tests}})[0];
       $FileType = $TestInfo->{Type};
-      $DllBaseName = $TestInfo->{Module};
+      $ExeBase = $TestInfo->{ExeBase};
       $TestUnit = (keys %{$TestInfo->{Units}})[0];
     }
   }
@@ -614,7 +614,7 @@ sub DetermineFileType($$)
     $FileType = "unknown";
   }
 
-  return ($ErrMessage, $FileType, $DllBaseName, $TestUnit);
+  return ($ErrMessage, $FileType, $ExeBase, $TestUnit);
 }
 
 sub OnPage1Next($)
@@ -644,7 +644,7 @@ sub OnPage1Next($)
     }
     close OUTFILE;
 
-    my ($ErrMessage, $FileType, $DllBaseName, $TestUnit) = $self->DetermineFileType($StagingFile);
+    my ($ErrMessage, $FileType, $ExeBase, $TestUnit) = $self->DetermineFileType($StagingFile);
     if (defined($ErrMessage))
     {
       $self->{ErrField} = "File";
@@ -661,14 +661,9 @@ sub OnPage1Next($)
 
     $self->{FileName} = $BaseName;
     $self->{FileType} = $FileType;
-    if (defined($DllBaseName))
+    if (defined $ExeBase)
     {
-      $self->{TestExecutable} = $DllBaseName;
-      if ($FileType eq "patchprograms")
-      {
-        $self->{TestExecutable} .= ".exe";
-      }
-      $self->{TestExecutable} .= "_test.exe";
+      $self->{TestExecutable} = "$ExeBase.exe";
     }
     if (defined($TestUnit))
     {
