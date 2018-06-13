@@ -484,7 +484,7 @@ sub OnAction($$)
 
   if ($Action eq "Cancel")
   {
-#TODO
+    # FIXME Todo
   }
   elsif ($Action eq "Add " . $self->{Collection}->GetItemName())
   {
