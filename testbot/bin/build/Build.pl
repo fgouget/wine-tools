@@ -43,32 +43,27 @@ sub BEGIN
 use WineTestBot::Config;
 use WineTestBot::PatchUtils;
 
+my $LogFileName = "$LogDir/Build.log";
+
 sub InfoMsg(@)
 {
   my $OldUMask = umask(002);
-  if (open LOGFILE, ">>$LogDir/Build.log")
+  if (open(my $Log, ">>", $LogFileName))
   {
-    print LOGFILE @_;
-    close LOGFILE;
+    print $Log @_;
+    close($Log);
   }
   umask($OldUMask);
 }
 
 sub LogMsg(@)
 {
-  my $OldUMask = umask(002);
-  if (open LOGFILE, ">>$LogDir/Build.log")
-  {
-    print LOGFILE "Build: ", @_;
-    close LOGFILE;
-  }
-  umask($OldUMask);
+  InfoMsg "Build: ", @_;
 }
 
 sub FatalError(@)
 {
   LogMsg @_;
-
   exit 1;
 }
 
@@ -92,7 +87,7 @@ sub ApplyPatch($)
   system("( cd $DataDir/wine && set -x && " .
          "  git apply --verbose $PatchFile && " .
          "  git add -A " .
-         ") >> $LogDir/Build.log 2>&1");
+         ") >>$LogFileName 2>&1");
   if ($? != 0)
   {
     LogMsg "Patch failed to apply\n";
@@ -105,7 +100,7 @@ sub ApplyPatch($)
     InfoMsg "\nRunning make_makefiles\n";
     system("( cd $DataDir/wine && set -x && " .
            " ./tools/make_makefiles " .
-           ") >> $LogDir/Build.log 2>&1");
+           ") >>$LogFileName 2>&1");
     if ($? != 0)
     {
       LogMsg "make_makefiles failed\n";
@@ -118,7 +113,7 @@ sub ApplyPatch($)
     InfoMsg "\nRunning autoconf\n";
     system("( cd $DataDir/wine && set -x && " .
            "  autoconf " .
-           ") >>$LogDir/Build.log 2>&1");
+           ") >>$LogFileName 2>&1");
     if ($? != 0)
     {
       LogMsg "Autoconf failed\n";
@@ -136,7 +131,7 @@ sub BuildNative()
   InfoMsg "\nRebuilding native tools\n";
   system("( cd $DataDir/build-native && set -x && " .
          "  time make -j$ncpus __tooldeps__ " .
-         ") >>$LogDir/Build.log 2>&1");
+         ") >>$LogFileName 2>&1");
   if ($? != 0)
   {
     LogMsg "Rebuild of native tools failed\n";
@@ -162,7 +157,7 @@ sub BuildTestExecutables($$)
   InfoMsg "\nBuilding the $Bits-bit test executable(s)\n";
   system("( cd $DataDir/build-mingw$Bits && set -x && " .
          "  time make -j$ncpus ". join(" ", sort @BuildDirs) .
-         ") >>$LogDir/Build.log 2>&1");
+         ") >>$LogFileName 2>&1");
   if ($? != 0)
   {
     LogMsg "Rebuild of $Bits-bit crossbuild failed\n";
@@ -186,7 +181,7 @@ $ENV{PATH} = "/usr/lib/ccache:/usr/bin:/bin";
 delete $ENV{ENV};
 
 # Start with a clean logfile
-unlink("$LogDir/Build.log");
+unlink($LogFileName);
 
 my ($PatchFile, $BitIndicators);
 if (@ARGV == 2)

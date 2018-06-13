@@ -42,32 +42,27 @@ sub BEGIN
 
 use WineTestBot::Config;
 
+my $LogFileName = "$LogDir/Reconfig.log";
+
 sub InfoMsg(@)
 {
   my $OldUMask = umask(002);
-  if (open LOGFILE, ">>$LogDir/Reconfig.log")
+  if (open(my $Log, ">>", $LogFileName))
   {
-    print LOGFILE @_;
-    close LOGFILE;
+    print $Log @_;
+    close($Log);
   }
   umask($OldUMask);
 }
 
 sub LogMsg(@)
 {
-  my $OldUMask = umask(002);
-  if (open LOGFILE, ">>$LogDir/Reconfig.log")
-  {
-    print LOGFILE "Reconfig: ", @_;
-    close LOGFILE;
-  }
-  umask($OldUMask);
+  InfoMsg "Reconfig: ", @_;
 }
 
 sub FatalError(@)
 {
   LogMsg @_;
-
   exit 1;
 }
 
@@ -92,7 +87,7 @@ sub BuildTestAgentd()
     InfoMsg "\nBuilding the native testagentd\n";
     system("( cd $::RootDir/src/testagentd && set -x && " .
            "  time make -j$ncpus build " .
-           ") >>$LogDir/Reconfig.log 2>&1");
+           ") >>$LogFileName 2>&1");
     if ($? != 0)
     {
       LogMsg "Build testagentd failed\n";
@@ -103,7 +98,7 @@ sub BuildTestAgentd()
   InfoMsg "\nRebuilding the Windows TestAgentd\n";
   system("( cd $::RootDir/src/testagentd && set -x && " .
          "  time make -j$ncpus iso " .
-         ") >>$LogDir/Reconfig.log 2>&1");
+         ") >>$LogFileName 2>&1");
   if ($? != 0)
   {
     LogMsg "Build winetestbot.iso failed\n";
@@ -118,7 +113,7 @@ sub BuildTestLauncher()
   InfoMsg "\nRebuilding TestLauncher\n";
   system("( cd $::RootDir/src/TestLauncher && set -x && " .
          "  time make -j$ncpus" .
-         ") >>$LogDir/Reconfig.log 2>&1");
+         ") >>$LogFileName 2>&1");
   if ($? != 0)
   {
     LogMsg "Build TestLauncher failed\n";
@@ -131,7 +126,7 @@ sub BuildTestLauncher()
 sub GitPull()
 {
   InfoMsg "Updating the Wine source\n";
-  system("cd $DataDir/wine && git pull >> $LogDir/Reconfig.log 2>&1");
+  system("cd $DataDir/wine && git pull >>$LogFileName 2>&1");
   if ($? != 0)
   {
     LogMsg "Git pull failed\n";
@@ -167,7 +162,7 @@ sub BuildNative()
          "  rm -rf * && " .
          "  time ../wine/configure --enable-win64 --without-x --without-freetype --disable-winetest && " .
          "  time make -j$ncpus __tooldeps__ " .
-         ") >>$LogDir/Reconfig.log 2>&1");
+         ") >>$LogFileName 2>&1");
 
   if ($? != 0)
   {
@@ -191,7 +186,7 @@ sub BuildCross($)
          "  rm -rf * && " .
          "  time ../wine/configure --host=$Host --with-wine-tools=../build-native --without-x --without-freetype --disable-winetest && " .
          "  time make -j$ncpus buildtests" .
-         ") >>$LogDir/Reconfig.log 2>&1");
+         ") >>$LogFileName 2>&1");
   if ($? != 0)
   {
     LogMsg "Build cross ($Bits bits) failed\n";
@@ -204,8 +199,8 @@ sub BuildCross($)
 $ENV{PATH} = "/usr/lib/ccache:/usr/bin:/bin";
 delete $ENV{ENV};
 
-# Start with clean logfile
-unlink("$LogDir/Reconfig.log");
+# Start with a clean logfile
+unlink($LogFileName);
 
 if (! -d "$DataDir/staging" and ! mkdir "$DataDir/staging")
 {
