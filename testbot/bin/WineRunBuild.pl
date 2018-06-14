@@ -350,10 +350,10 @@ if (!$TA->SendFile($FileName, "staging/patch.diff", 0))
 {
   FatalTAError($TA, "Could not copy the patch to the VM");
 }
-my $Script = "#!/bin/sh\n" .
-             "rm -f Build.log\n" .
-             "../bin/build/Build.pl patch.diff ". join(",", keys %Bitnesses) .
-             " >>Build.log 2>&1\n";
+my $Script = "#!/bin/sh\n".
+             "( set -x\n".
+             "  ../bin/build/Build.pl patch.diff ". join(",", sort keys %Bitnesses) ."\n".
+             ") >Build.log 2>&1\n";
 Debug(Elapsed($Start), " Sending the script: [$Script]\n");
 if (!$TA->SendFileFromString($Script, "task", $TestAgent::SENDFILE_EXE))
 {

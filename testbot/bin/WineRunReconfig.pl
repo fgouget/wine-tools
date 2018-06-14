@@ -328,10 +328,12 @@ elsif ($Debug and !$VM->GetDomain()->IsPoweredOn())
 # Run the build
 #
 
-my $Script = "#!/bin/sh\n" .
-             "(" .
-             "  git pull &&\n" .
-             "  ../bin/build/Reconfig.pl\n" .
+# Use our own log so it can be used for reference
+# even after another task has run.
+my $Script = "#!/bin/sh\n".
+             "( set -x\n".
+             "  git pull &&\n".
+             "  ../bin/build/Reconfig.pl\n".
              ") >Reconfig.log 2>&1\n";
 my $TA = $VM->GetAgent();
 Debug(Elapsed($Start), " Sending the script: [$Script]\n");
