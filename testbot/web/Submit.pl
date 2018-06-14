@@ -240,7 +240,7 @@ sub GenerateFields($)
       print "</th><tbody>\n";
 
       my $VMs = CreateVMs();
-      if ($self->{FileType} eq "exe64" || $self->{FileType} eq "dll64")
+      if ($self->{FileType} eq "exe64")
       {
           $VMs->AddFilter("Type", ["win64"]);
       }
