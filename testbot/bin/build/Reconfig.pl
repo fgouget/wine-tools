@@ -125,7 +125,7 @@ sub BuildTestLauncher()
 
 sub GitPull()
 {
-  InfoMsg "Updating the Wine source\n";
+  InfoMsg "\nUpdating the Wine source\n";
   system("cd $DataDir/wine && git pull >>$LogFileName 2>&1");
   if ($? != 0)
   {
