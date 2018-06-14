@@ -31,10 +31,41 @@ the Wine builds.
 =cut
 
 use Exporter 'import';
-our @EXPORT = qw(GetPatchImpact);
+our @EXPORT = qw(GetPatchImpact UpdateWineData);
 
 use WineTestBot::Config;
 
+
+=pod
+=over 12
+
+=item C<UpdateWineData()>
+
+Updates the summary information about the Wine source such as the list of
+tests (testlist.txt).
+
+=back
+=cut
+
+sub UpdateWineData($)
+{
+  my ($WineDir) = @_;
+
+  if (open(my $fh, ">", "$DataDir/testlist.txt"))
+  {
+    foreach my $TestFile (glob("$WineDir/*/*/tests/*.c"),
+                          glob("$WineDir/*/*/tests/*.spec"))
+    {
+      next if ($TestFile =~ m=/testlist\.c$=);
+      $TestFile =~ s=^$WineDir/==;
+      print $fh "$TestFile\n";
+    }
+    close($fh);
+    return undef;
+  }
+
+  return "Could not open 'testlist.txt' for writing: $!";
+}
 
 =pod
 =over 12

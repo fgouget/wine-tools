@@ -41,6 +41,7 @@ sub BEGIN
  }
 
 use WineTestBot::Config;
+use WineTestBot::PatchUtils;
 
 my $LogFileName = "$LogDir/Reconfig.log";
 
@@ -133,20 +134,11 @@ sub GitPull()
     return !1;
   }
 
-  if (open(my $fh, ">", "$DataDir/testlist.txt"))
+  my $ErrMessage = UpdateWineData("$DataDir/wine");
+  if ($ErrMessage)
   {
-    foreach my $TestFile (glob("$DataDir/wine/*/*/tests/*.c"),
-                          glob("$DataDir/wine/*/*/tests/*.spec"))
-    {
-      next if ($TestFile =~ m=/testlist\.c$=);
-      $TestFile =~ s=^$DataDir/wine/==;
-      print $fh "$TestFile\n";
-    }
-    close($fh);
-  }
-  else
-  {
-    LogMsg "Could not open 'testlist.txt' for writing: $!\n";
+    LogMsg "$ErrMessage\n";
+    return !1;
   }
 
   return 1;
