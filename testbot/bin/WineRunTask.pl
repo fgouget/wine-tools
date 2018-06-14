@@ -442,7 +442,8 @@ elsif ($Step->Type eq "suite")
 {
   $Keepalive = 60;
   $Script .= "$FileName ";
-  my $Tag = lc($TagPrefix) . "-" . lc($VM->Name);
+  my $Tag = lc($VM->Name);
+  $Tag =~ s/^$TagPrefix//;
   $Tag =~ s/[^a-zA-Z0-9]/-/g;
   if ($VM->Type eq "win64")
   {
@@ -468,7 +469,7 @@ elsif ($Step->Type eq "suite")
   $Info =~ s/"/\\"/g;
   $Info =~ s/%/%%/g;
   $Info =~ s/%/%%/g;
-  $Script .= "-q -o $RptFileName -t $Tag -m \"$EMail\" -i \"$Info\"\r\n" .
+  $Script .= "-q -o $RptFileName -t $TagPrefix-$Tag -m \"$EMail\" -i \"$Info\"\r\n".
              "$FileName -q -s $RptFileName\r\n";
 }
 Debug(Elapsed($Start), " Sending the script: [$Script]\n");
