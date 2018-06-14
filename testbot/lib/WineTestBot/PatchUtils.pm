@@ -42,7 +42,7 @@ use WineTestBot::Config;
 =item C<UpdateWineData()>
 
 Updates the summary information about the Wine source such as the list of
-tests (testlist.txt).
+tests (testlist.txt) and the full list of Wine files.
 
 =back
 =cut
@@ -50,6 +50,11 @@ tests (testlist.txt).
 sub UpdateWineData($)
 {
   my ($WineDir) = @_;
+
+  mkdir "$DataDir/latest" if (!-d "$DataDir/latest");
+
+  my $ErrMessage = `cd '$WineDir' && git ls-tree -r --name-only HEAD 2>&1 >'$DataDir/latest/winefiles.txt'`;
+  return $ErrMessage if ($? != 0);
 
   if (open(my $fh, ">", "$DataDir/testlist.txt"))
   {
