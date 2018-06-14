@@ -115,7 +115,6 @@ sub _AddTest($$$)
     my $ExeBase = ($Root eq "programs") ? "${Module}.exe_test" :
                                           "${Module}_test";
     $Tests->{$Module} = {
-      "Type"    => "patch$Root",
       "Module"  => $Module,
       "Path"    => "$Root/$Module/tests",
       "ExeBase" => $ExeBase,

@@ -118,8 +118,7 @@ sub GetPropertyDescriptors($)
   }
   elsif ($self->{Page} == 3)
   {
-    my $IsPatch = ($self->GetParam("FileType") eq "patchdlls" ||
-                   $self->GetParam("FileType") eq "patchprograms");
+    my $IsPatch = ($self->GetParam("FileType") eq "patchdlls");
     $self->{PropertyDescriptors3}[0]->{IsRequired} = $IsPatch;
     return $self->{PropertyDescriptors3};
   }
@@ -386,8 +385,7 @@ sub DisplayProperty($$)
   if ($self->{Page} == 3)
   {
     my $PropertyName = $PropertyDescriptor->GetName();
-    if ($self->GetParam("FileType") eq "patchdlls" ||
-        $self->GetParam("FileType") eq "patchprograms")
+    if ($self->GetParam("FileType") eq "patchdlls")
     {
       if ($PropertyName eq "Run64")
       {
@@ -477,8 +475,6 @@ sub Validate($)
   {
     if (($self->GetParam("FileType") eq "patchdlls" &&
          $self->GetParam("TestExecutable") !~ m/^[\w_.]+_test\.exe$/) ||
-        ($self->GetParam("FileType") eq "patchprograms" &&
-         $self->GetParam("TestExecutable") !~ m/^[\w_.]+\.exe_test\.exe$/) ||
         ($self->GetParam("TestExecutable") =~ m=(?:[a-z]:|[/\\])=i))
     {
       $self->{ErrField} = "TestExecutable";
@@ -603,7 +599,7 @@ sub DetermineFileType($$)
     else
     {
       my $TestInfo = (values %{$Impacts->{Tests}})[0];
-      $FileType = $TestInfo->{Type};
+      $FileType = "patchdlls";
       $ExeBase = $TestInfo->{ExeBase};
       $TestUnit = (keys %{$TestInfo->{Units}})[0];
     }
@@ -651,8 +647,7 @@ sub OnPage1Next($)
       $self->{ErrMessage} = $ErrMessage;
       return !1;
     }
-    if ($FileType ne "patchdlls" && $FileType ne "patchprograms" &&
-        $FileType ne "exe32" && $FileType ne "exe64")
+    if ($FileType !~ /^(?:exe32|exe64|patchdlls)$/)
     {
       $self->{ErrField} = "File";
       $self->{ErrMessage} = "Unrecognized file type";
@@ -772,7 +767,7 @@ sub OnSubmit($)
 
   my $BuildStep;
   my $FileType = $self->GetParam("FileType");
-  if ($FileType eq "patchdlls" || $FileType eq "patchprograms")
+  if ($FileType eq "patchdlls")
   {
     # This is a patch so add a build step...
     $BuildStep = $Steps->Add();
@@ -805,7 +800,7 @@ sub OnSubmit($)
   {
     next if ($Bits eq "32" && $FileType eq "exe64");
     next if ($Bits eq "64" && $FileType eq "exe32");
-    next if ($Bits eq "64" && $FileType =~ /^patch/ && !defined($self->GetParam("Run64")));
+    next if ($Bits eq "64" && $FileType eq "patchdlls" && !defined($self->GetParam("Run64")));
     my $Tasks;
 
     my $VMs = CreateVMs();
@@ -821,7 +816,7 @@ sub OnSubmit($)
       {
         # First create the test step
         my $TestStep = $Steps->Add();
-        if ($FileType eq "patchdlls" || $FileType eq "patchprograms")
+        if ($FileType eq "patchdlls")
         {
           $TestStep->PreviousNo($BuildStep->No);
           my $TestExe = basename($self->GetParam("TestExecutable"));
