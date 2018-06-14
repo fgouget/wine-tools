@@ -2,6 +2,7 @@
 # WineTestBot job submit page
 #
 # Copyright 2009 Ge van Geldorp
+# Copyright 2012-2014, 2017-2018 Francois Gouget
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -765,44 +766,16 @@ sub OnSubmit($)
   }
   my $Steps = $NewJob->Steps;
 
-  my $BuildStep;
-  my $FileType = $self->GetParam("FileType");
-  if ($FileType eq "patchdlls")
-  {
-    # This is a patch so add a build step...
-    $BuildStep = $Steps->Add();
-    $BuildStep->FileName($BaseName);
-    $BuildStep->FileType($FileType);
-    $BuildStep->InStaging(!1);
-    $BuildStep->Type("build");
-    $BuildStep->DebugLevel(0);
-
-    # ...with a build task
-    my $VMs = CreateVMs();
-    $VMs->AddFilter("Type", ["build"]);
-    $VMs->AddFilter("Role", ["base"]);
-    my $BuildVM = ${$VMs->GetItems()}[0];
-    my $Task = $BuildStep->Tasks->Add();
-    $Task->VM($BuildVM);
-    $Task->Timeout($BuildTimeout);
-
-    # Save the build step so the others can reference it
-    my ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
-    if (defined($ErrMessage))
-    {
-      $self->{ErrMessage} = $ErrMessage;
-      return !1;
-    }
-  }
-
   # Add steps and tasks for the 32 and 64-bit tests
+  my $FileType = $self->GetParam("FileType");
+  my $BuildStep;
   foreach my $Bits ("32", "64")
   {
     next if ($Bits eq "32" && $FileType eq "exe64");
     next if ($Bits eq "64" && $FileType eq "exe32");
     next if ($Bits eq "64" && $FileType eq "patchdlls" && !defined($self->GetParam("Run64")));
-    my $Tasks;
 
+    my $Tasks;
     my $VMs = CreateVMs();
     $VMs->AddFilter("Type", $Bits eq "32" ? ["win32", "win64"] : ["win64"]);
     my $SortedKeys = $VMs->SortKeysBySortOrder($VMs->GetKeys());
@@ -814,7 +787,35 @@ sub OnSubmit($)
 
       if (!$Tasks)
       {
-        # First create the test step
+        if (!$BuildStep and $FileType eq "patchdlls")
+        {
+          # This is a patch so add a build step...
+          $BuildStep = $Steps->Add();
+          $BuildStep->FileName($BaseName);
+          $BuildStep->FileType($FileType);
+          $BuildStep->InStaging(!1);
+          $BuildStep->Type("build");
+          $BuildStep->DebugLevel(0);
+
+          # ...with a build task
+          my $VMs = CreateVMs();
+          $VMs->AddFilter("Type", ["build"]);
+          $VMs->AddFilter("Role", ["base"]);
+          my $BuildVM = ${$VMs->GetItems()}[0];
+          my $Task = $BuildStep->Tasks->Add();
+          $Task->VM($BuildVM);
+          $Task->Timeout($BuildTimeout);
+
+          # Save the build step so the others can reference it
+          my ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
+          if (defined($ErrMessage))
+          {
+            $self->{ErrMessage} = $ErrMessage;
+            return !1;
+          }
+        }
+
+        # Then create the test step
         my $TestStep = $Steps->Add();
         if ($FileType eq "patchdlls")
         {
