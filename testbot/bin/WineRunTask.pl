@@ -71,14 +71,14 @@ sub Error(@)
 
 sub TakeScreenshot($$)
 {
-  my ($VM, $FullScreenshotFileName) = @_;
+  my ($VM, $FileName) = @_;
 
   my $Domain = $VM->GetDomain();
   my ($ErrMessage, $ImageSize, $ImageBytes) = $Domain->CaptureScreenImage();
   if (!defined $ErrMessage)
   {
     my $OldUMask = umask(002);
-    if (open(my $Screenshot, ">", $FullScreenshotFileName))
+    if (open(my $Screenshot, ">", $FileName))
     {
       print $Screenshot $ImageBytes;
       close($Screenshot);
