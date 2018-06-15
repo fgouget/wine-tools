@@ -257,30 +257,8 @@ sub GenerateBody($)
     my $Screenshot = $self->GetParam($ScreenshotParamName);
     $Screenshot = "" if ($Screenshot ne "1");
 
-
     print "<div class='TaskMoreInfoLinks'>\n";
-    # FIXME: Disable live screenshots for now
-    if (0 && $StepTask->Status eq "running" &&
-        ($StepTask->Type eq "single" || $StepTask->Type eq "suite"))
-    {
-      if ($Screenshot)
-      {
-        my $URI = "/Screenshot.pl?VMName=" . uri_escape($VM->Name);
-        print "<div class='Screenshot'><img src='" .
-              $self->CGI->escapeHTML($URI) . "' alt='Screenshot' /></div>\n";
-      }
-      else
-      {
-        my $URI = $ENV{"SCRIPT_NAME"} . "?Key=" . uri_escape($self->{JobId}) .
-                  "&$ScreenshotParamName=1";
-        $URI .= "#k" . uri_escape($Key);
-        print "<div class='TaskMoreInfoLink'><a href='" .
-              $self->CGI->escapeHTML($URI) .
-              "'>Show live screenshot</a></div>";
-        print "\n";
-      }
-    }
-    elsif (-r "$TaskDir/screenshot.png")
+    if (-r "$TaskDir/screenshot.png")
     {
       if ($Screenshot)
       {
