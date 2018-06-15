@@ -162,14 +162,11 @@ if (!defined $Task)
   Error "Step $StepNo task $TaskNo of job $JobId does not exist\n";
   exit 1;
 }
-
 my $OldUMask = umask(002);
 my $TaskDir = $Task->CreateDir();
 umask($OldUMask);
-my $FullLogFileName = "$TaskDir/log";
-my $FullErrFileName = "$TaskDir/err";
-
 my $VM = $Task->VM;
+
 
 my $Start = Time();
 LogMsg "Task $JobId/$StepNo/$TaskNo started\n";
@@ -185,14 +182,14 @@ sub LogTaskError($)
   Debug("$Name0:error: ", $ErrMessage);
 
   my $OldUMask = umask(002);
-  if (open(my $ErrFile, ">>", $FullErrFileName))
+  if (open(my $ErrFile, ">>", "$TaskDir/err"))
   {
     print $ErrFile $ErrMessage;
     close($ErrFile);
   }
   else
   {
-    Error "Unable to open '$FullErrFileName' for writing: $!\n";
+    Error "Unable to open 'err' for writing: $!\n";
   }
   umask($OldUMask);
 }
@@ -391,10 +388,10 @@ if (!defined $TA->Wait($Pid, $Task->Timeout, 60))
   }
 }
 
-Debug(Elapsed($Start), " Retrieving the build log to '$FullLogFileName'\n");
-if ($TA->GetFile("Build.log", $FullLogFileName))
+Debug(Elapsed($Start), " Retrieving 'Build.log'\n");
+if ($TA->GetFile("Build.log", "$TaskDir/log"))
 {
-  if (open(my $LogFile, "<", $FullLogFileName))
+  if (open(my $LogFile, "<", "$TaskDir/log"))
   {
     # Collect and analyze the 'Build:' status line(s)
     $ErrMessage ||= "";

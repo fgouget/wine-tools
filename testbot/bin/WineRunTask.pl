@@ -191,16 +191,12 @@ if (!defined $Task)
   Error "Step $StepNo task $TaskNo of job $JobId does not exist\n";
   exit 1;
 }
-
 my $OldUMask = umask(002);
 my $TaskDir = $Task->CreateDir();
 umask($OldUMask);
-my $FullLogFileName = "$TaskDir/log";
-my $FullErrFileName = "$TaskDir/err";
-my $FullScreenshotFileName = "$TaskDir/screenshot.png";
-
 my $VM = $Task->VM;
 my $RptFileName = $VM->Name . ".rpt";
+
 
 my $Start = Time();
 LogMsg "Task $JobId/$StepNo/$TaskNo started\n";
@@ -216,14 +212,14 @@ sub LogTaskError($)
   Debug("$Name0:error: ", $ErrMessage);
 
   my $OldUMask = umask(002);
-  if (open(my $ErrFile, ">>", $FullErrFileName))
+  if (open(my $ErrFile, ">>", "$TaskDir/err"))
   {
     print $ErrFile $ErrMessage;
     close($ErrFile);
   }
   else
   {
-    Error "Unable to open '$FullErrFileName' for writing: $!\n";
+    Error "Unable to open 'err' for writing: $!\n";
   }
   umask($OldUMask);
 }
@@ -237,7 +233,7 @@ sub WrapUpAndExit($;$$$)
                  $Timeout ? "timeout" : "";
 
   Debug(Elapsed($Start), " Taking a screenshot\n");
-  TakeScreenshot($VM, $FullScreenshotFileName);
+  TakeScreenshot($VM, "$TaskDir/screenshot.png");
 
   my $Tries = $Task->TestFailures || 0;
   if ($Retry)
@@ -299,9 +295,9 @@ sub WrapUpAndExit($;$$$)
     my $LatestBaseName = join("", "$DataDir/latest/", $Task->VM->Name, "_",
                               $Step->FileType eq "exe64" ? "64" : "32");
     unlink("$LatestBaseName.log");
-    link($FullLogFileName, "$LatestBaseName.log") if (-f $FullLogFileName);
+    link("$TaskDir/log", "$LatestBaseName.log") if (-f "$TaskDir/log");
     unlink("$LatestBaseName.err");
-    link($FullErrFileName, "$LatestBaseName.err") if (-f $FullErrFileName);
+    link("$TaskDir/err", "$LatestBaseName.err") if (-f "$TaskDir/err");
   }
 
   my $Result = $VM->Name .": ". $VM->Status ." Status: $Status Failures: ". (defined $TestFailures ? $TestFailures : "unset");
@@ -515,11 +511,11 @@ if (!defined $TA->Wait($Pid, $Timeout, $Keepalive))
 }
 
 my $TimedOut;
-Debug(Elapsed($Start), " Retrieving the report file to '$FullLogFileName'\n");
-if ($TA->GetFile($RptFileName, $FullLogFileName))
+Debug(Elapsed($Start), " Retrieving the report file to 'log'\n");
+if ($TA->GetFile($RptFileName, "$TaskDir/log"))
 {
-  chmod 0664, $FullLogFileName;
-  if (open(my $LogFile, "<", $FullLogFileName))
+  chmod 0664, "$TaskDir/log";
+  if (open(my $LogFile, "<", "$TaskDir/log"))
   {
     # There is more than one test unit when running the full test suite so keep
     # track of the current one. Note that for the TestBot we don't count or
@@ -785,7 +781,7 @@ if ($TA->GetFile($RptFileName, $FullLogFileName))
   else
   {
     $NewStatus = 'boterror';
-    Error "Unable to open '$FullLogFileName' for reading: $!\n";
+    Error "Unable to open 'log' for reading: $!\n";
     LogTaskError("Unable to open the log file for reading: $!\n");
   }
 }
