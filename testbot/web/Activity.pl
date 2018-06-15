@@ -215,7 +215,7 @@ EOF
         }
         else
         {
-          $Label .= " ". $VMStatus->{step}->FileName;
+          $Label .= " ". $self->escapeHTML($VMStatus->{step}->FileName);
           if ($VMStatus->{task}->CmdLineArg =~ /^\w+$/ and
               $Label =~ s/_(?:cross)?test(64)?\.exe$//)
           {
