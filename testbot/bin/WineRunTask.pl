@@ -452,8 +452,7 @@ elsif ($Step->Type eq "suite")
   if (defined($WebHostName))
   {
     my $StepTask = 100 * $StepNo + $TaskNo;
-    $Script .= '-u "http://' . $WebHostName . "/JobDetails.pl?Key=" .
-               $JobId . "&scrshot_" . $StepTask . "=1#k" . $StepTask . '" ';
+    $Script .= "-u \"http://$WebHostName/JobDetails.pl?Key=$JobId&scrshot_$StepTask=1#k$StepTask\"";
   }
   my $Info = $VM->Description ? $VM->Description : "";
   if ($VM->Details)
