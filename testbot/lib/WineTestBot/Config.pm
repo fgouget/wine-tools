@@ -97,9 +97,10 @@ $SingleTimeout = 2 * 60;
 # How long to let a regular build run before forcibly shutting it down
 # (in seconds).
 $BuildTimeout = 5 * 60;
-# How long to let a full recompilation run before forcibly shutting it down
-# (in seconds).
-$ReconfigTimeout = 45 * 60;
+# How long to let a reconfig task run before forcibly shutting it down
+# (in seconds). Note that this includes building the native Wine build tools,
+# and the 32 and 64 bit test executables.
+$ReconfigTimeout = (1 + 2 * 5) * 60;
 # How much to add to the task timeout to account for file transfers, etc.
 $TimeoutMargin = 2 * 60;
 # Maximum amount of traces for a test unit.
