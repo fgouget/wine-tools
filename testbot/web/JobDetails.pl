@@ -228,6 +228,58 @@ sub GeneratePage($)
   $self->SUPER::GeneratePage();
 }
 
+sub GetHtmlLine($$$)
+{
+  my ($self, $FullLog, $Line) = @_;
+
+  $Line = $self->escapeHTML($Line);
+  if ($Line =~ /: Test marked todo: /)
+  {
+    return (undef, $Line) if (!$FullLog);
+    my $Html = $Line;
+    $Html =~ s~^(.*\S)\s*\r?$~<span class='log-todo'>$1</span>~;
+    return ($Html, $Line);
+  }
+  if ($Line =~ /: Tests skipped: / or
+      $Line =~ /^\w+:\w+ skipped /)
+  {
+    return (undef, $Line) if (!$FullLog);
+    my $Html = $Line;
+    $Html =~ s~^(.*\S)\s*\r?$~<span class='log-skip'>$1</span>~;
+    return ($Html, $Line);
+  }
+  if ($Line =~ /: Test (?:failed|succeeded inside todo block): / or
+      $Line =~ /Fatal: test .* does not exist/ or
+      $Line =~ / done \(258\)/ or
+      $Line =~ /: unhandled exception [0-9a-fA-F]{8} at / or
+      $Line =~ /^Unhandled exception: / or
+      # Build errors
+      $Line =~ /: error: / or
+      $Line =~ /^error: patch failed:/ or
+      $Line =~ /^Makefile:[0-9]+: recipe for target .* failed$/ or
+      $Line =~ /^(?:Build|Reconfig|Task): (?!ok)/ or
+      # Typical perl errors
+      $Line =~ /^Use of uninitialized value/)
+  {
+    return ($Line, $Line) if (!$FullLog);
+    my $Html = $Line;
+    $Html =~ s~^(.*\S)\s*\r?$~<span class='log-error'>$1</span>~;
+    return ($Html, $Line);
+  }
+  if ($FullLog &&
+      ($Line =~ /^\+ \S/ or
+       $Line =~ /^\w+:\w+ start / or
+       # Build messages
+       $Line =~ /^(?:Build|Reconfig|Task): ok/))
+  {
+    my $Html = $Line;
+    $Html =~ s~^(.*\S)\s*\r?$~<span class='log-info'>$1</span>~;
+    return ($Html, $Line);
+  }
+
+  return (undef, $Line);
+}
+
 my %MILogLabels = (
   "log" => "task log",
   "log.old" => "old logs",
@@ -371,11 +423,8 @@ sub GenerateBody($)
         {
           $CurrentDll = $1;
         }
-        if ($MoreInfo->{Full} ||
-            $Line =~ m/: Test (?:failed|succeeded inside todo block): / ||
-            $Line =~ m/Fatal: test '[^']+' does not exist/ ||
-            $Line =~ m/ done \(258\)/ ||
-            $Line =~ m/: unhandled exception [0-9a-fA-F]{8} at /)
+        my ($Highlight, $Plain) = $self->GetHtmlLine($MoreInfo->{Full}, $Line);
+        if ($MoreInfo->{Full} || defined $Highlight)
         {
           if ($PrintedDll ne $CurrentDll && !$MoreInfo->{Full})
           {
@@ -402,7 +451,7 @@ sub GenerateBody($)
           }
           else
           {
-            print $self->escapeHTML($Line), "\n";
+            print(($Highlight || $Plain), "\n");
           }
         }
       }
