@@ -28,7 +28,8 @@ WineTestBot::Utils - Utility functions
 use Exporter 'import';
 our @EXPORT = qw(MakeSecureURL SecureConnection GenerateRandomString
                  OpenNewFile CreateNewFile CreateNewLink CreateNewDir
-                 DurationToString BuildEMailRecipient IsValidFileName);
+                 DurationToString BuildEMailRecipient IsValidFileName
+                 ShQuote);
 
 use Fcntl;
 
@@ -194,6 +195,29 @@ sub IsValidFileName($)
 {
   my ($FileName) = @_;
   return $FileName !~ m~[<>:"/\\|?*]~;
+}
+
+=pod
+=over 12
+
+=item C<ShQuote()>
+
+Quotes strings so they can be used in shell commands.
+
+Note that this implies escaping '$'s and '`'s which may not be appropriate
+in another context.
+
+=back
+=cut
+
+sub ShQuote($)
+{
+  my ($Str)=@_;
+  $Str =~ s%\\%\\\\%g;
+  $Str =~ s%\$%\\\$%g;
+  $Str =~ s%\"%\\\"%g;
+  $Str =~ s%\`%\\\`%g;
+  return "\"$Str\"";
 }
 
 1;

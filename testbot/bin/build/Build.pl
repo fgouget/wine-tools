@@ -1,9 +1,12 @@
-#!/usr/bin/perl -Tw
+#!/usr/bin/perl
 # -*- Mode: Perl; perl-indent-level: 2; indent-tabs-mode: nil -*-
 #
 # Performs the 'build' task in the build machine. Specifically this applies a
 # conformance test patch, rebuilds the impacted test and retrieves the
 # resulting 32 and 64 bit binaries.
+#
+# This script does not use tainting (-T) because its whole purpose is to run
+# arbitrary user-provided code anyway (in patch form).
 #
 # Copyright 2009 Ge van Geldorp
 # Copyright 2012-2014, 2017-2018 Francois Gouget
@@ -22,6 +25,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 
+use warnings;
 use strict;
 
 sub BEGIN
@@ -42,6 +46,8 @@ sub BEGIN
 
 use WineTestBot::Config;
 use WineTestBot::PatchUtils;
+use WineTestBot::Utils;
+
 
 my $LogFileName = "$LogDir/Build.log";
 
@@ -85,7 +91,7 @@ sub ApplyPatch($)
 
   InfoMsg "Applying patch\n";
   system("( cd $DataDir/wine && set -x && " .
-         "  git apply --verbose $PatchFile && " .
+         "  git apply --verbose ". ShQuote($PatchFile) ." && ".
          "  git add -A " .
          ") >>$LogFileName 2>&1");
   if ($? != 0)
@@ -199,18 +205,15 @@ if (! $PatchFile || !$BitIndicators)
   FatalError "Usage: Build.pl <patchfile> <bits>\n";
 }
 
-# Untaint parameters
-if ($PatchFile =~ m/^([\w_.\-]+)$/)
+# Verify parameters
+if (!IsValidFileName($PatchFile))
 {
-  $PatchFile = "$DataDir/staging/$1";
-  if (! -r $PatchFile)
-  {
-    FatalError "Patch file $PatchFile not readable\n";
-  }
+  FatalError "The patch filename '$PatchFile' contains invalid characters\n";
 }
-else
+$PatchFile = "$DataDir/staging/$PatchFile";
+if (!-r $PatchFile)
 {
-  FatalError "Invalid patch file $PatchFile\n";
+  FatalError "Patch file '$PatchFile' is not readable\n";
 }
 
 my ($Run32, $Run64);
