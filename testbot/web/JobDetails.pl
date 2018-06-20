@@ -228,11 +228,94 @@ sub GeneratePage($)
   $self->SUPER::GeneratePage();
 }
 
+my %MILogLabels = (
+  "log" => "task log",
+  "log.old" => "old logs",
+);
+
+sub InitMoreInfo($)
+{
+  my ($self) = @_;
+
+  my $More = $self->{More} = {};
+  my $Keys = $self->SortKeys(undef, $self->{Collection}->GetKeys());
+  foreach my $Key (@$Keys)
+  {
+    my $StepTask = $self->{Collection}->GetItem($Key);
+    $More->{$Key}->{Screenshot} = $self->GetParam("s$Key");
+
+    my $Value = $self->GetParam("f$Key");
+    my $TaskDir = $StepTask->GetTaskDir();
+    foreach my $Log ("log", "log.old")
+    {
+      if (!-f "$TaskDir/$Log" or -z "$TaskDir/$Log")
+      {
+        my $Err = $Log;
+        next if ($Err !~ s/^log/err/ or !-f "$TaskDir/$Err" or -z "$TaskDir/$Err");
+      }
+      push @{$More->{$Key}->{Logs}}, $Log;
+
+      $More->{$Key}->{Full} = $Log if (uri_escape($Log) eq $Value);
+    }
+    $More->{$Key}->{Full} ||= "";
+  }
+}
+
+sub GenerateMoreInfoLink($$$;$)
+{
+  my ($self, $LinkKey, $Label, $Set, $Value) = @_;
+
+  my $Url = $ENV{"SCRIPT_NAME"} ."?Key=". uri_escape($self->{JobId});
+
+  my $Action = "Show";
+  foreach my $Key (sort keys %{$self->{More}})
+  {
+    my $MoreInfo = $self->{More}->{$Key};
+    if ($Key eq $LinkKey and $Set eq "Screenshot")
+    {
+      if (!$MoreInfo->{Screenshot})
+      {
+        $Url .= "&s$Key=1";
+      }
+      else
+      {
+        $Action = "Hide";
+      }
+    }
+    else
+    {
+      $Url .= "&s$Key=1" if ($MoreInfo->{Screenshot});
+    }
+
+    if ($Key eq $LinkKey and $Set eq "Full")
+    {
+      if ($MoreInfo->{Full} ne $Value)
+      {
+        $Url .= "&f$Key=". uri_escape($Value);
+      }
+      else
+      {
+        $Action = "Hide";
+      }
+    }
+    else
+    {
+      $Url .= "&f$Key=". uri_escape($MoreInfo->{Full}) if ($MoreInfo->{Full});
+    }
+  }
+  $Url .= "#k" . uri_escape($LinkKey);
+
+  print "<div class='TaskMoreInfoLink'><a href='",
+        $self->CGI->escapeHTML($Url), "'>$Action $Label</a></div>\n";
+}
+
 sub GenerateBody($)
 {
   my ($self) = @_;
 
   $self->SUPER::GenerateBody();
+
+  $self->InitMoreInfo();
 
   print "<div class='Content'>\n";
   my $Keys = $self->SortKeys(undef, $self->{Collection}->GetKeys());
@@ -249,18 +332,11 @@ sub GenerateBody($)
           $self->CGI->escapeHTML($VM->Details || "No details!"),
           "</details>\n";
 
-    my $FullLogParamName = "log_$Key";
-    my $FullLog = $self->GetParam($FullLogParamName);
-    $FullLog = "" if ($FullLog !~ /^[12]$/);
-
-    my $ScreenshotParamName = "scrshot_$Key";
-    my $Screenshot = $self->GetParam($ScreenshotParamName);
-    $Screenshot = "" if ($Screenshot ne "1");
-
+    my $MoreInfo = $self->{More}->{$Key};
     print "<div class='TaskMoreInfoLinks'>\n";
     if (-r "$TaskDir/screenshot.png")
     {
-      if ($Screenshot)
+      if ($MoreInfo->{Screenshot})
       {
         my $URI = "/Screenshot.pl?JobKey=" . uri_escape($self->{JobId}) .
                   "&StepKey=" . uri_escape($StepTask->StepNo) .
@@ -268,59 +344,19 @@ sub GenerateBody($)
         print "<div class='Screenshot'><img src='" .
               $self->CGI->escapeHTML($URI) . "' alt='Screenshot' /></div>\n";
       }
-      else
-      {
-        my $URI = $ENV{"SCRIPT_NAME"} . "?Key=" . uri_escape($self->{JobId}) .
-                  "&$ScreenshotParamName=1";
-        $URI .= "&$FullLogParamName=$FullLog";
-        $URI .= "#k" . uri_escape($Key);
-        print "<div class='TaskMoreInfoLink'><a href='" .
-              $self->CGI->escapeHTML($URI) .
-              "'>Show final screenshot</a></div>";
-        print "\n";
-      }
+      $self->GenerateMoreInfoLink($Key, "final screenshot", "Screenshot");
     }
 
-    my $LogName = "$TaskDir/log";
-    my $ErrName = "$TaskDir/err";
-    if (-r $LogName and $FullLog != "1")
+    foreach my $Log (@{$MoreInfo->{Logs}})
     {
-      my $URI = $ENV{"SCRIPT_NAME"} . "?Key=" . uri_escape($self->{JobId}) .
-                "&$FullLogParamName=1";
-      $URI .= "&$ScreenshotParamName=$Screenshot";
-      $URI .= "#k" . uri_escape($Key);
-      print "<div class='TaskMoreInfoLink'><a href='" .
-            $self->CGI->escapeHTML($URI) .
-            "'>Show full log</a></div>\n";
-    }
-    if ((-r $LogName or -r $ErrName) and $FullLog == "2")
-    {
-      my $URI = $ENV{"SCRIPT_NAME"} . "?Key=" . uri_escape($self->{JobId});
-      $URI .= "&$ScreenshotParamName=$Screenshot";
-      $URI .= "#k" . uri_escape($Key);
-      print "<div class='TaskMoreInfoLink'><a href='" .
-            $self->CGI->escapeHTML($URI) .
-            "'>Show latest log</a></div>\n";
-    }
-    if ((-r "$LogName.old" or -r "$ErrName.old") and $FullLog != "2")
-    {
-      my $URI = $ENV{"SCRIPT_NAME"} . "?Key=" . uri_escape($self->{JobId}) .
-                "&$FullLogParamName=2";
-      $URI .= "&$ScreenshotParamName=$Screenshot";
-      $URI .= "#k" . uri_escape($Key);
-      print "<div class='TaskMoreInfoLink'><a href='" .
-            $self->CGI->escapeHTML($URI) .
-            "'>Show old logs</a></div>\n";
+      $self->GenerateMoreInfoLink($Key, $MILogLabels{$Log}, "Full", $Log);
     }
     print "</div>\n";
 
-    if ($FullLog eq "2")
-    {
-      $LogName .= ".old";
-      $ErrName .= ".old";
-    }
+    my $LogName = $MoreInfo->{Full} || $MoreInfo->{Logs}->[0] || "log";
+    my $ErrName = $LogName eq "log.old" ? "err.old" : "err";
 
-    if (open LOGFILE, "<$LogName")
+    if (open LOGFILE, "<", "$TaskDir/$LogName")
     {
       my $HasLogEntries = !1;
       my $First = 1;
@@ -335,13 +371,13 @@ sub GenerateBody($)
         {
           $CurrentDll = $1;
         }
-        if ($FullLog ||
+        if ($MoreInfo->{Full} ||
             $Line =~ m/: Test (?:failed|succeeded inside todo block): / ||
             $Line =~ m/Fatal: test '[^']+' does not exist/ ||
             $Line =~ m/ done \(258\)/ ||
             $Line =~ m/: unhandled exception [0-9a-fA-F]{8} at /)
         {
-          if ($PrintedDll ne $CurrentDll && ! $FullLog)
+          if ($PrintedDll ne $CurrentDll && !$MoreInfo->{Full})
           {
             if ($First)
             {
@@ -359,7 +395,7 @@ sub GenerateBody($)
             print "<pre><code>";
             $First = !1;
           }
-          if (! $FullLog && $Line =~ m/^[^:]+:([^:]*)(?::[0-9a-f]+)? done \(258\)/)
+          if (!$MoreInfo->{Full} && $Line =~ m/^[^:]+:([^:]*)(?::[0-9a-f]+)? done \(258\)/)
           {
             my $Unit = $1 ne "" ? "$1: " : "";
             print "${Unit}Timeout\n";
@@ -372,7 +408,7 @@ sub GenerateBody($)
       }
       close LOGFILE;
 
-      if (open ERRFILE, "<$ErrName")
+      if (open ERRFILE, "<", "$TaskDir/$ErrName")
       {
         $CurrentDll = "*err*";
         while (defined($Line = <ERRFILE>))
@@ -409,7 +445,7 @@ sub GenerateBody($)
                                " failures found" : "Empty log";
       }
     }
-    elsif (open ERRFILE, "<$ErrName")
+    elsif (open ERRFILE, "<", "$TaskDir/$ErrName")
     {
       my $HasErrEntries = !1;
       my $Line;
