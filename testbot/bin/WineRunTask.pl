@@ -493,7 +493,7 @@ if (!$Pid)
 
 my $NewStatus = 'completed';
 my ($TaskFailures, $TaskTimedOut, $TAError, $PossibleCrash);
-Debug(Elapsed($Start), " Waiting for the script (", $Task->Timeout, "s timeout)\n");
+Debug(Elapsed($Start), " Waiting for the script (", $Timeout, "s timeout)\n");
 if (!defined $TA->Wait($Pid, $Timeout, $Keepalive))
 {
   my $ErrMessage = $TA->GetLastError();
