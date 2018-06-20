@@ -227,10 +227,8 @@ sub GetPatchImpact($;$$)
 
   $Impacts->{ModuleCount} = 0;
   $Impacts->{UnitCount} = 0;
-  foreach my $Module (keys %{$Impacts->{Tests}})
+  foreach my $TestInfo (values %{$Impacts->{Tests}})
   {
-    my $TestInfo = $Impacts->{Tests}->{$Module};
-
     # For each module, identify modifications to non-C files and helper dlls
     my $AllUnits;
     foreach my $File (keys %{$TestInfo->{Files}})
