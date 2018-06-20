@@ -49,27 +49,19 @@ use WineTestBot::PatchUtils;
 use WineTestBot::Utils;
 
 
-my $LogFileName = "$LogDir/Build.log";
-
 sub InfoMsg(@)
 {
-  my $OldUMask = umask(002);
-  if (open(my $Log, ">>", $LogFileName))
-  {
-    print $Log @_;
-    close($Log);
-  }
-  umask($OldUMask);
+  print @_;
 }
 
 sub LogMsg(@)
 {
-  InfoMsg "Build: ", @_;
+  print "Build: ", @_;
 }
 
 sub FatalError(@)
 {
-  LogMsg @_;
+  print STDERR @_;
   exit 1;
 }
 
@@ -90,10 +82,9 @@ sub ApplyPatch($)
   my ($PatchFile) = @_;
 
   InfoMsg "Applying patch\n";
-  system("( cd $DataDir/wine && set -x && " .
-         "  git apply --verbose ". ShQuote($PatchFile) ." && ".
-         "  git add -A " .
-         ") >>$LogFileName 2>&1");
+  system("cd $DataDir/wine && set -x && ".
+         "git apply --verbose ". ShQuote($PatchFile) ." && ".
+         "git add -A");
   if ($? != 0)
   {
     LogMsg "Patch failed to apply\n";
@@ -104,9 +95,7 @@ sub ApplyPatch($)
   if ($Impacts->{Makefiles})
   {
     InfoMsg "\nRunning make_makefiles\n";
-    system("( cd $DataDir/wine && set -x && " .
-           " ./tools/make_makefiles " .
-           ") >>$LogFileName 2>&1");
+    system("cd $DataDir/wine && set -x && ./tools/make_makefiles");
     if ($? != 0)
     {
       LogMsg "make_makefiles failed\n";
@@ -117,9 +106,7 @@ sub ApplyPatch($)
   if ($Impacts->{Autoconf} && !$Impacts->{HasConfigure})
   {
     InfoMsg "\nRunning autoconf\n";
-    system("( cd $DataDir/wine && set -x && " .
-           "  autoconf " .
-           ") >>$LogFileName 2>&1");
+    system("cd $DataDir/wine && set -x && autoconf");
     if ($? != 0)
     {
       LogMsg "Autoconf failed\n";
@@ -135,9 +122,8 @@ sub BuildNative()
   mkdir "$DataDir/build-native" if (! -d "$DataDir/build-native");
 
   InfoMsg "\nRebuilding native tools\n";
-  system("( cd $DataDir/build-native && set -x && " .
-         "  time make -j$ncpus __tooldeps__ " .
-         ") >>$LogFileName 2>&1");
+  system("cd $DataDir/build-native && set -x && ".
+         "time make -j$ncpus __tooldeps__");
   if ($? != 0)
   {
     LogMsg "Rebuild of native tools failed\n";
@@ -161,9 +147,8 @@ sub BuildTestExecutables($$)
   }
 
   InfoMsg "\nBuilding the $Bits-bit test executable(s)\n";
-  system("( cd $DataDir/build-mingw$Bits && set -x && " .
-         "  time make -j$ncpus ". join(" ", sort @BuildDirs) .
-         ") >>$LogFileName 2>&1");
+  system("cd $DataDir/build-mingw$Bits && set -x && ".
+         "time make -j$ncpus ". join(" ", sort @BuildDirs));
   if ($? != 0)
   {
     LogMsg "Rebuild of $Bits-bit crossbuild failed\n";
@@ -185,9 +170,6 @@ sub BuildTestExecutables($$)
 
 $ENV{PATH} = "/usr/lib/ccache:/usr/bin:/bin";
 delete $ENV{ENV};
-
-# Start with a clean logfile
-unlink($LogFileName);
 
 my ($PatchFile, $BitIndicators);
 if (@ARGV == 2)

@@ -43,28 +43,15 @@ sub BEGIN
 use WineTestBot::Config;
 use WineTestBot::PatchUtils;
 
-my $LogFileName = "$LogDir/Reconfig.log";
 
 sub InfoMsg(@)
 {
-  my $OldUMask = umask(002);
-  if (open(my $Log, ">>", $LogFileName))
-  {
-    print $Log @_;
-    close($Log);
-  }
-  umask($OldUMask);
+  print @_;
 }
 
 sub LogMsg(@)
 {
-  InfoMsg "Reconfig: ", @_;
-}
-
-sub FatalError(@)
-{
-  LogMsg @_;
-  exit 1;
+  print "Reconfig: ", @_;
 }
 
 my $ncpus;
@@ -86,9 +73,8 @@ sub BuildTestAgentd()
   if (! -x "$BinDir/build/testagentd")
   {
     InfoMsg "\nBuilding the native testagentd\n";
-    system("( cd $::RootDir/src/testagentd && set -x && " .
-           "  time make -j$ncpus build " .
-           ") >>$LogFileName 2>&1");
+    system("cd $::RootDir/src/testagentd && set -x && ".
+           "time make -j$ncpus build");
     if ($? != 0)
     {
       LogMsg "Build testagentd failed\n";
@@ -97,9 +83,8 @@ sub BuildTestAgentd()
   }
 
   InfoMsg "\nRebuilding the Windows TestAgentd\n";
-  system("( cd $::RootDir/src/testagentd && set -x && " .
-         "  time make -j$ncpus iso " .
-         ") >>$LogFileName 2>&1");
+  system("cd $::RootDir/src/testagentd && set -x && ".
+         "time make -j$ncpus iso");
   if ($? != 0)
   {
     LogMsg "Build winetestbot.iso failed\n";
@@ -112,9 +97,8 @@ sub BuildTestAgentd()
 sub BuildTestLauncher()
 {
   InfoMsg "\nRebuilding TestLauncher\n";
-  system("( cd $::RootDir/src/TestLauncher && set -x && " .
-         "  time make -j$ncpus" .
-         ") >>$LogFileName 2>&1");
+  system("cd $::RootDir/src/TestLauncher && set -x && ".
+         "time make -j$ncpus");
   if ($? != 0)
   {
     LogMsg "Build TestLauncher failed\n";
@@ -127,7 +111,7 @@ sub BuildTestLauncher()
 sub GitPull()
 {
   InfoMsg "\nUpdating the Wine source\n";
-  system("cd $DataDir/wine && git pull >>$LogFileName 2>&1");
+  system("cd $DataDir/wine && git pull");
   if ($? != 0)
   {
     LogMsg "Git pull failed\n";
@@ -150,11 +134,10 @@ sub BuildNative()
 
   # Rebuild from scratch to make sure cruft will not accumulate
   InfoMsg "\nRebuilding native tools\n";
-  system("( cd $DataDir/build-native && set -x && " .
-         "  rm -rf * && " .
-         "  time ../wine/configure --enable-win64 --without-x --without-freetype --disable-winetest && " .
-         "  time make -j$ncpus __tooldeps__ " .
-         ") >>$LogFileName 2>&1");
+  system("cd $DataDir/build-native && set -x && ".
+         "rm -rf * && ".
+         "time ../wine/configure --enable-win64 --without-x --without-freetype --disable-winetest && ".
+         "time make -j$ncpus __tooldeps__");
 
   if ($? != 0)
   {
@@ -174,11 +157,10 @@ sub BuildCross($)
 
   # Rebuild from scratch to make sure cruft will not accumulate
   InfoMsg "\nRebuilding the $Bits-bit test executables\n";
-  system("( cd $DataDir/build-mingw$Bits && set -x && " .
-         "  rm -rf * && " .
-         "  time ../wine/configure --host=$Host --with-wine-tools=../build-native --without-x --without-freetype --disable-winetest && " .
-         "  time make -j$ncpus buildtests" .
-         ") >>$LogFileName 2>&1");
+  system("cd $DataDir/build-mingw$Bits && set -x && ".
+         "rm -rf * && ".
+         "time ../wine/configure --host=$Host --with-wine-tools=../build-native --without-x --without-freetype --disable-winetest && ".
+         "time make -j$ncpus buildtests");
   if ($? != 0)
   {
     LogMsg "Build cross ($Bits bits) failed\n";
@@ -190,9 +172,6 @@ sub BuildCross($)
 
 $ENV{PATH} = "/usr/lib/ccache:/usr/bin:/bin";
 delete $ENV{ENV};
-
-# Start with a clean logfile
-unlink($LogFileName);
 
 if (! -d "$DataDir/staging" and ! mkdir "$DataDir/staging")
 {
