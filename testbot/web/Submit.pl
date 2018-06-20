@@ -514,10 +514,10 @@ sub ValidateAndGetFileName($$)
     $self->{ErrMessage} = "You must provide a file to test";
     return undef;
   }
-  if ($FileName =~ m=[/\\]=)
+  if (!IsValidFileName($FileName))
   {
     $self->{ErrField} = $FieldName;
-    $self->{ErrMessage} = "The filename is invalid";
+    $self->{ErrMessage} = "The filename contains invalid characters";
     return undef;
   }
   my $PropertyDescriptor = CreateSteps()->GetPropertyDescriptorByName("FileName");

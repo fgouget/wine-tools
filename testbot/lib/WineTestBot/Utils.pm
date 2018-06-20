@@ -28,7 +28,7 @@ WineTestBot::Utils - Utility functions
 use Exporter 'import';
 our @EXPORT = qw(MakeSecureURL SecureConnection GenerateRandomString
                  OpenNewFile CreateNewFile CreateNewLink CreateNewDir
-                 DurationToString BuildEMailRecipient);
+                 DurationToString BuildEMailRecipient IsValidFileName);
 
 use Fcntl;
 
@@ -171,6 +171,29 @@ sub CreateNewDir($$)
     # This is not an error that will be fixed by trying a different path
     return undef if (!$!{EEXIST});
   }
+}
+
+
+#
+# Shell helpers
+#
+
+=pod
+=over 12
+
+=item C<IsValidFileName()>
+
+Returns true if the filename is valid on Unix and Windows systems.
+
+This also ensures this is not a trick filename such as '../important/file'.
+
+=back
+=cut
+
+sub IsValidFileName($)
+{
+  my ($FileName) = @_;
+  return $FileName !~ m~[<>:"/\\|?*]~;
 }
 
 1;
