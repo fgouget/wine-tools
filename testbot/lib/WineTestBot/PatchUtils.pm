@@ -36,6 +36,23 @@ our @EXPORT = qw(GetPatchImpact UpdateWineData);
 use WineTestBot::Config;
 
 
+# Patches to these paths don't impact the Wine build. So ignore them.
+my $IgnoredPathsRe = join('|',
+  '\.mailmap$',
+  'ANNOUNCE$',
+  'AUTHORS$',
+  'COPYING\.LIB$',
+  'LICENSE\$',
+  'LICENSE\.OLD$',
+  'MAINTAINERS$',
+  'README$',
+  'VERSION$',
+  'documentation/',
+  'tools/c2man\.pl$',
+  'tools/winapi/',
+  'tools/winemaker/',
+);
+
 =pod
 =over 12
 
@@ -102,46 +119,54 @@ sub GetTestList()
   return $TestList;
 }
 
-sub _AddTest($$$)
+sub _HandleFile($$$)
 {
   my ($Impacts, $Path, $Change) = @_;
 
-  return if ($Path !~ m~^(dlls|programs)/([^/]+)/tests/([^/\s]+)$~);
-  my ($Root, $Module, $File) = ($1, $2, $3);
-
-  my $Tests = $Impacts->{Tests};
-  if (!$Tests->{$Module})
+  if ($Path =~ m~^(dlls|programs)/([^/]+)/tests/([^/\s]+)$~)
   {
-    my $ExeBase = ($Root eq "programs") ? "${Module}.exe_test" :
-                                          "${Module}_test";
-    $Tests->{$Module} = {
-      "Module"  => $Module,
-      "Path"    => "$Root/$Module/tests",
-      "ExeBase" => $ExeBase,
-    };
-  }
+    my ($Root, $Module, $File) = ($1, $2, $3);
+    $Impacts->{TestBuild} = 1;
 
-  # Assume makefile modifications may break the build but not the tests
-  if ($File eq "Makefile.in")
-  {
-    if ($Change eq "new" or $Change eq "rm")
+    my $Tests = $Impacts->{Tests};
+    if (!$Tests->{$Module})
     {
-      # This adds / removes a directory
-      $Impacts->{Makefiles} = 1;
+      my $ExeBase = ($Root eq "programs") ? "${Module}.exe_test" :
+                                            "${Module}_test";
+      $Tests->{$Module} = {
+        "Module"  => $Module,
+        "Path"    => "$Root/$Module/tests",
+        "ExeBase" => $ExeBase,
+      };
     }
-    return;
-  }
-  return if ($Impacts->{NoUnits});
 
-  if (!$Tests->{$Module}->{Files})
-  {
-    my $TestList = ( $Impacts->{TestList} ||= GetTestList() );
-    foreach my $File (keys %{$TestList->{$Module}})
+    # Assume makefile modifications may break the build but not the tests
+    if ($File eq "Makefile.in")
     {
-      $Tests->{$Module}->{Files}->{$File} = 0; # not modified
+      if ($Change eq "new" or $Change eq "rm")
+      {
+        # This adds / removes a directory
+        $Impacts->{Makefiles} = 1;
+      }
+      return;
     }
+    return if ($Impacts->{NoUnits});
+
+    if (!$Tests->{$Module}->{Files})
+    {
+      my $TestList = ( $Impacts->{TestList} ||= GetTestList() );
+      foreach my $File (keys %{$TestList->{$Module}})
+      {
+        $Tests->{$Module}->{Files}->{$File} = 0; # not modified
+      }
+    }
+    $Tests->{$Module}->{Files}->{$File} = $Change;
   }
-  $Tests->{$Module}->{Files}->{$File} = $Change;
+  else
+  {
+    # Figure out if this patch impacts the Wine build
+    $Impacts->{WineBuild} = 1 if ($Path !~ /^(?:$IgnoredPathsRe)/);
+  }
 }
 
 =pod
@@ -176,8 +201,8 @@ sub GetPatchImpact($;$$)
       {
         foreach my $File (keys %{$PastInfo->{Files}})
         {
-          _AddTest($Impacts, "$PastInfo->{Path}/$File",
-                   $PastInfo->{Files}->{$File} eq "rm" ? "rm" : 0);
+          _HandleFile($Impacts, "$PastInfo->{Path}/$File",
+                      $PastInfo->{Files}->{$File} eq "rm" ? "rm" : 0);
         }
       }
     }
@@ -187,33 +212,33 @@ sub GetPatchImpact($;$$)
   {
     if ($Line =~ m=^--- \w+/(?:aclocal\.m4|configure\.ac)$=)
     {
-      $Impacts->{Autoconf} = 1;
+      $Impacts->{WineBuild} = $Impacts->{Autoconf} = 1;
     }
     elsif ($Line =~ m=^--- \w+/configure$=)
     {
-      $Impacts->{HasConfigure} = 1;
+      $Impacts->{WineBuild} = $Impacts->{HasConfigure} = 1;
     }
     elsif ($Line =~ m=^--- \w+/tools/make_makefiles$=)
     {
-      $Impacts->{Makefiles} = 1;
+      $Impacts->{WineBuild} = $Impacts->{Makefiles} = 1;
     }
     elsif ($Line =~ m=^--- /dev/null$=)
     {
       $Change = "new";
     }
-    elsif ($Line =~ m~^--- \w+/([^/]+/[^/]+/tests/[^/\s]+)$~)
+    elsif ($Line =~ m~^--- \w+/([^\s]+)$~)
     {
       $Path = $1;
     }
     elsif ($Line =~ m~^\+\+\+ /dev/null$~)
     {
-      _AddTest($Impacts, $Path, "rm") if (defined $Path);
+      _HandleFile($Impacts, $Path, "rm") if (defined $Path);
       $Path = undef;
       $Change = "";
     }
-    elsif ($Line =~ m~^\+\+\+ \w+/(\w+/[^/]+/tests/[^/\s]+)$~)
+    elsif ($Line =~ m~^\+\+\+ \w+/([^\s]+)$~)
     {
-      _AddTest($Impacts, $1, $Change || "modify");
+      _HandleFile($Impacts, $1, $Change || "modify");
       $Path = undef;
       $Change = "";
     }

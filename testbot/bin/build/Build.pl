@@ -246,7 +246,7 @@ exit(1) if (!$Impacts);
 
 CountCPUs();
 
-if (!BuildNative())
+if ($Impacts->{WineBuild} and !BuildNative())
 {
   exit(1);
 }
