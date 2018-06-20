@@ -226,11 +226,11 @@ sub LogTaskError($)
 
 sub WrapUpAndExit($;$$$)
 {
-  my ($Status, $TestFailures, $Retry, $Timeout) = @_;
+  my ($Status, $TestFailures, $Retry, $TimedOut) = @_;
   my $NewVMStatus = $Status eq 'queued' ? 'offline' : 'dirty';
   my $VMResult = $Status eq "boterror" ? "boterror" :
                  $Status eq "queued" ? "error" :
-                 $Timeout ? "timeout" : "";
+                 $TimedOut ? "timeout" : "";
 
   Debug(Elapsed($Start), " Taking a screenshot\n");
   TakeScreenshot($VM, "$TaskDir/screenshot.png");

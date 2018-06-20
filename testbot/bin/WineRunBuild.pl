@@ -196,11 +196,11 @@ sub LogTaskError($)
 
 sub WrapUpAndExit($;$$)
 {
-  my ($Status, $Retry, $Timeout) = @_;
+  my ($Status, $Retry, $TimedOut) = @_;
   my $NewVMStatus = $Status eq 'queued' ? 'offline' : 'dirty';
   my $VMResult = $Status eq "boterror" ? "boterror" :
                  $Status eq "queued" ? "error" :
-                 $Timeout ? "timeout" : "";
+                 $TimedOut ? "timeout" : "";
 
   my $TestFailures;
   my $Tries = $Task->TestFailures || 0;
