@@ -444,6 +444,16 @@ if ($NewStatus eq "completed")
   {
     $TAError = "An error occurred while retrieving the test list: ". $TA->GetLastError();
   }
+
+  Debug(Elapsed($Start), " Retrieving the list of Wine files '$TaskDir/winefiles.txt'\n");
+  if ($TA->GetFile("latest/winefiles.txt", "$TaskDir/winefiles.txt"))
+  {
+    copy "$TaskDir/winefiles.txt", "$DataDir/latest/winefiles.txt";
+  }
+  elsif (!defined $TAError)
+  {
+    $TAError = "An error occurred while retrieving the list of Wine files: ". $TA->GetLastError();
+  }
 }
 
 $TA->Disconnect();
