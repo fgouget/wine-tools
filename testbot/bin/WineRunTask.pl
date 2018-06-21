@@ -289,7 +289,7 @@ sub WrapUpAndExit($;$$$)
     $VM->Save();
   }
 
-  if ($Status eq 'completed' and $Step->Type eq 'suite')
+  if ($Step->Type eq 'suite' and $Status eq 'completed' and !$TimedOut)
   {
     # Keep the old report if the new one is missing
     if (-f "$TaskDir/log" and !-z "$TaskDir/log")
