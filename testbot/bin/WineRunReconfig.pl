@@ -45,6 +45,7 @@ use WineTestBot::Config;
 use WineTestBot::Jobs;
 use WineTestBot::VMs;
 use WineTestBot::Log;
+use WineTestBot::LogUtils;
 use WineTestBot::Engine::Notify;
 
 
@@ -373,45 +374,23 @@ if (!defined $TA->Wait($Pid, $Task->Timeout, 60))
 Debug(Elapsed($Start), " Retrieving 'Reconfig.log'\n");
 if ($TA->GetFile("Reconfig.log", "$TaskDir/log"))
 {
-  if (open(my $LogFile, "<", "$TaskDir/log"))
+  my $Result = ParseTaskLog("$TaskDir/log", "Reconfig");
+  if ($Result eq "ok")
   {
-    # Collect and analyze the 'Reconfig:' status line(s).
-    my $LogErrors;
-    foreach my $Line (<$LogFile>)
-    {
-      chomp($Line);
-      next if ($Line !~ /^Reconfig: (.*)$/);
-      # Add the error message or an empty string for 'ok'
-      $LogErrors = ($LogErrors || "") . ($1 ne "ok" ? "$1\n" : "");
-    }
-    close($LogFile);
-
-    if (!defined $LogErrors)
-    {
-      if (!defined $ErrMessage)
-      {
-        $NewStatus = "badbuild";
-        $ErrMessage = "Missing reconfig status line\n";
-      }
-      # otherwise $ErrMessage probably already explains why the reconfig
-      # status line is missing
-    }
-    elsif ($LogErrors eq "")
-    {
-      # We must have gotten the full log and the build did succeed.
-      # So forget any prior error.
-      $NewStatus = "completed";
-      $TAError = $ErrMessage = undef;
-    }
-    else
-    {
-      $NewStatus = "badbuild";
-      $ErrMessage = $LogErrors . ($ErrMessage || "");
-    }
+    # We must have gotten the full log and the build did succeed.
+    # So forget any prior error.
+    $NewStatus = "completed";
+    $TAError = $ErrMessage = undef;
+  }
+  elsif ($Result =~ s/^nolog://)
+  {
+    FatalError("$Result\n", "retry");
   }
   else
   {
-    FatalError("Unable to open the build log for reading: $!\n");
+    # We should not have badpatch errors and if the result line is missing we
+    # probably already have an error message that explains why.
+    $NewStatus = "badbuild";
   }
 }
 elsif (!defined $TAError)

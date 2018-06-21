@@ -46,6 +46,7 @@ use WineTestBot::Jobs;
 use WineTestBot::PatchUtils;
 use WineTestBot::VMs;
 use WineTestBot::Log;
+use WineTestBot::LogUtils;
 use WineTestBot::Engine::Notify;
 
 
@@ -391,39 +392,29 @@ if (!defined $TA->Wait($Pid, $Task->Timeout, 60))
 Debug(Elapsed($Start), " Retrieving 'Build.log'\n");
 if ($TA->GetFile("Build.log", "$TaskDir/log"))
 {
-  if (open(my $LogFile, "<", "$TaskDir/log"))
+  my $Result = ParseTaskLog("$TaskDir/log", "Build");
+  if ($Result eq "ok")
   {
-    # Collect and analyze the 'Build:' status line(s)
-    $ErrMessage ||= "";
-    foreach my $Line (<$LogFile>)
-    {
-      chomp($Line);
-      next if ($Line !~ /^Build: (.*)$/);
-      if ($1 eq "ok")
-      {
-        # We must have gotten the full log and the build did succeed.
-        # So forget any prior error.
-        $NewStatus = "completed";
-        $TAError = $ErrMessage = undef;
-      }
-      else
-      {
-        $NewStatus = ($1 eq "Patch failed to apply") ? "badpatch" : "badbuild";
-        # Collect all the build errors (32 bit, 64 bit, etc)
-        $ErrMessage .= "$1\n";
-      }
-    }
-    close($LogFile);
-
-    if (!defined $NewStatus)
-    {
-      $NewStatus = "badbuild";
-      $ErrMessage = "Missing build status line\n";
-    }
+    # We must have gotten the full log and the build did succeed.
+    # So forget any prior error.
+    $NewStatus = "completed";
+    $TAError = $ErrMessage = undef;
+  }
+  elsif ($Result eq "badpatch")
+  {
+    # This too is conclusive enough to ignore other errors.
+    $NewStatus = "badpatch";
+    $TAError = $ErrMessage = undef;
+  }
+  elsif ($Result =~ s/^nolog://)
+  {
+    FatalError("$Result\n", "retry");
   }
   else
   {
-    FatalError("Unable to open the build log for reading: $!\n", "retry");
+    # If the result line is missing we probably already have an error message
+    # that explains why.
+    $NewStatus = "badbuild";
   }
 }
 elsif (!defined $TAError)
