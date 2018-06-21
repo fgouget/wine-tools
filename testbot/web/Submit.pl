@@ -244,9 +244,13 @@ sub GenerateFields($)
       {
           $VMs->AddFilter("Type", ["win64"]);
       }
-      else
+      elsif ($self->{FileType} eq "exe32")
       {
           $VMs->AddFilter("Type", ["win32", "win64"]);
+      }
+      else
+      {
+          $VMs->AddFilter("Type", ["win32", "win64", "wine"]);
       }
       if ($self->{ShowAll})
       {
@@ -270,6 +274,10 @@ sub GenerateFields($)
         if ($VM->Status =~ /^(offline|maintenance)$/)
         {
           $Status = " [". $VM->Status ."]";
+          $Checked = undef;
+        }
+        elsif ($VM->Type eq "wine")
+        {
           $Checked = undef;
         }
         if ($Checked and
@@ -841,6 +849,39 @@ sub OnSubmit($)
       $Task->VM($VM);
       $Task->Timeout($SingleTimeout);
       $Task->CmdLineArg($self->GetParam("CmdLineArg"));
+    }
+  }
+
+  if ($FileType eq "patchdlls")
+  {
+    my $Tasks;
+    my $VMs = CreateVMs();
+    $VMs->AddFilter("Type", ["wine"]);
+    my $SortedKeys = $VMs->SortKeysBySortOrder($VMs->GetKeys());
+    foreach my $VMKey (@$SortedKeys)
+    {
+      my $VM = $VMs->GetItem($VMKey);
+      my $FieldName = "vm_" . $self->CGI->escapeHTML($VMKey);
+      next if (!$self->GetParam($FieldName)); # skip unselected VMs
+
+      if (!$Tasks)
+      {
+        # First create the Wine test step
+        my $WineStep = $Steps->Add();
+        $WineStep->FileName($BaseName);
+        $WineStep->FileType($FileType);
+        $WineStep->InStaging(!1);
+        $WineStep->Type("build");
+        $WineStep->DebugLevel($self->GetParam("DebugLevel"));
+        $WineStep->ReportSuccessfulTests(defined($self->GetParam("ReportSuccessfulTests")));
+        $Tasks = $WineStep->Tasks;
+      }
+
+      # Then add a task for this VM
+      my $Task = $Tasks->Add();
+      $Task->VM($VM);
+      $Task->CmdLineArg("win32");
+      $Task->Timeout($WineReconfigTimeout);
     }
   }
 
