@@ -317,6 +317,20 @@ h2
   padding-bottom: 0.1em;
 }
 
+.HrTitle {
+  margin-top: 0.5em;
+  display: flex;
+  align-items: center;
+  color: #a50d0d;
+}
+
+.HrLine {
+  border-top: 1px solid grey;
+  flex-grow: 1;
+  margin: 0 10px;
+  border-color: #a50d0d;
+}
+
 details
 {
   font-style: italic;

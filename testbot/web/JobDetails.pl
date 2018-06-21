@@ -495,7 +495,12 @@ sub GenerateBody($)
         chomp $Line;
         if ($ErrFirst)
         {
-          print "<hr>\n" if (!$LogFirst);
+          if (!$LogFirst)
+          {
+            print "<div class='HrTitle'>".
+                  ($ErrName eq "err" ? "Other errors" : "Old errors") .
+                  "<div class='HrLine'></div></div>\n";
+          }
           print "<pre><code>";
           $ErrFirst = 0;
         }
