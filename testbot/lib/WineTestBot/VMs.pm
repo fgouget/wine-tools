@@ -730,11 +730,4 @@ sub FilterEnabledStatus($)
   $self->AddFilter("Status", ["dirty", "reverting", "sleeping", "idle", "running", "off", "offline"]);
 }
 
-sub FilterHypervisors($$)
-{
-  my ($self, $Hypervisors) = @_;
-
-  $self->AddFilter("VirtURI", $Hypervisors);
-}
-
 1;
