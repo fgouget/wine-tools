@@ -364,16 +364,25 @@ sub FatalTAError($$;$)
 
 
 #
-# Check the VM
+# Check the VM and Step
 #
 
-if (!$Debug and $VM->Status ne "running")
+if ($VM->Type ne "win32" and $VM->Type ne "win64")
+{
+  FatalError("This is not a Windows VM! (" . $VM->Type . ")\n");
+}
+elsif (!$Debug and $VM->Status ne "running")
 {
   FatalError("The VM is not ready for use (" . $VM->Status . ")\n");
 }
-elsif ($Debug and !$VM->GetDomain()->IsPoweredOn())
+elsif (!$VM->GetDomain()->IsPoweredOn())
 {
   FatalError("The VM is not powered on\n");
+}
+
+if ($Step->FileType ne "exe32" and $Step->FileType ne "exe64")
+{
+  FatalError("Unexpected file type '". $Step->FileType ."' found\n");
 }
 
 
@@ -395,11 +404,6 @@ if (!$TA->SetTime())
   }
 }
 
-my $FileType = $Step->FileType;
-if ($FileType ne "exe32" && $FileType ne "exe64")
-{
-  FatalError("Unexpected file type $FileType found\n");
-}
 my $FileName = $Step->FileName;
 Debug(Elapsed($Start), " Sending '". $Step->GetFullFileName() ."'\n");
 if (!$TA->SendFile($Step->GetFullFileName(), $FileName, 0))
@@ -418,7 +422,7 @@ if ($Step->ReportSuccessfulTests)
 my $IsWineTest = 1;
 if ($Step->Type eq "single")
 {
-  my $TestLauncher = "TestLauncher" . ($FileType eq "exe64" ? "64" : "32") . ".exe";
+  my $TestLauncher = "TestLauncher" . ($Step->FileType eq "exe64" ? "64" : "32") . ".exe";
   Debug(Elapsed($Start), " Sending 'latest/$TestLauncher'\n");
   if (!$TA->SendFile("$DataDir/latest/$TestLauncher", $TestLauncher, 0))
   {
@@ -450,7 +454,7 @@ elsif ($Step->Type eq "suite")
   $Tag =~ s/[^a-zA-Z0-9]/-/g;
   if ($VM->Type eq "win64")
   {
-    $Tag .= "-" . ($FileType eq "exe64" ? "64" : "32");
+    $Tag .= "-" . ($Step->FileType eq "exe64" ? "64" : "32");
   }
   if (defined($WebHostName))
   {
