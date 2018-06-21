@@ -43,11 +43,18 @@ sub BEGIN
   }
   $::BuildEnv = 1;
 }
+my $Name0 = $0;
+$Name0 =~ s+^.*/++;
+
 
 use WineTestBot::Config;
 use WineTestBot::PatchUtils;
 use WineTestBot::Utils;
 
+
+#
+# Logging and error handling helpers
+#
 
 sub InfoMsg(@)
 {
@@ -59,11 +66,15 @@ sub LogMsg(@)
   print "Build: ", @_;
 }
 
-sub FatalError(@)
+sub Error(@)
 {
-  print STDERR @_;
-  exit 1;
+  print STDERR "$Name0:error: ", @_;
 }
+
+
+#
+# Build helpers
+#
 
 my $ncpus;
 sub CountCPUs()
@@ -133,9 +144,11 @@ sub BuildNative()
   return 1;
 }
 
-sub BuildTestExecutables($$)
+sub BuildTestExecutables($$$)
 {
-  my ($Impacts, $Bits) = @_;
+  my ($Targets, $Impacts, $Bits) = @_;
+
+  return 1 if (!$Targets->{"exe$Bits"});
 
   my (@BuildDirs, @TestExes);
   foreach my $TestInfo (values %{$Impacts->{Tests}})
@@ -168,62 +181,113 @@ sub BuildTestExecutables($$)
   return $Success;
 }
 
+
+#
+# Setup and command line processing
+#
+
 $ENV{PATH} = "/usr/lib/ccache:/usr/bin:/bin";
 delete $ENV{ENV};
 
-my ($PatchFile, $BitIndicators);
-if (@ARGV == 2)
-{
-  ($PatchFile, $BitIndicators) = @ARGV;
-}
-else
-{
-  # FIXME Remove support for the legacy parameters
-  my ($_PatchType, $_BaseName);
-  ($PatchFile, $_PatchType, $_BaseName, $BitIndicators) = @ARGV;
-}
-if (! $PatchFile || !$BitIndicators)
-{
-  FatalError "Usage: Build.pl <patchfile> <bits>\n";
-}
+my %AllTargets;
+map { $AllTargets{$_} = 1 } qw(exe32 exe64);
 
-# Verify parameters
-if (!IsValidFileName($PatchFile))
+my ($Usage, $PatchFile, $TargetList);
+my $IgnoreNext = 0; # FIXME Backward compatibility
+while (@ARGV)
 {
-  FatalError "The patch filename '$PatchFile' contains invalid characters\n";
-}
-$PatchFile = "$DataDir/staging/$PatchFile";
-if (!-r $PatchFile)
-{
-  FatalError "Patch file '$PatchFile' is not readable\n";
-}
-
-my ($Run32, $Run64);
-if ($BitIndicators =~ m/^([\d,]+)$/)
-{
-  foreach my $BitsValue (split /,/, $1)
+  my $Arg = shift @ARGV;
+  if ($Arg =~ /^patch(?:dlls|programs)$/)
   {
-    if ($BitsValue eq "32")
+    $IgnoreNext ||= 1; # Ignore this legacy parameter
+  }
+  elsif ($IgnoreNext == 1)
+  {
+    $IgnoreNext = 2; # Ignore this legacy parameter
+  }
+  elsif ($Arg =~ /^(?:-\?|-h|--help)$/)
+  {
+    $Usage = 0;
+    last;
+  }
+  elsif ($Arg =~ /^-/)
+  {
+    Error "unknown option '$Arg'\n";
+    $Usage = 2;
+    last;
+  }
+  elsif (!defined $PatchFile)
+  {
+    if (IsValidFileName($Arg))
     {
-      $Run32 = 1;
-    }
-    elsif ($BitsValue eq "64")
-    {
-      $Run64 = 1;
+      $PatchFile = "$DataDir/staging/$Arg";
+      if (!-r $PatchFile)
+      {
+        Error "patch file '$Arg' is not readable\n";
+        $Usage = 2;
+      }
     }
     else
     {
-      FatalError "Invalid number of bits $BitsValue\n";
+      Error "the patch filename '$Arg' contains invalid characters\n";
+      $Usage = 2;
+      last;
     }
   }
-  if (!$Run32 && !$Run64)
+  elsif (!defined $TargetList)
   {
-    FatalError "Specify at least one of 32 or 64 bits\n";
+    $TargetList = $Arg;
+  }
+  else
+  {
+    Error "unexpected argument '$Arg'\n";
+    $Usage = 2;
+    last;
   }
 }
-else
+
+# Check and untaint parameters
+my $Targets;
+if (!defined $Usage)
 {
-  FatalError "Invalid number of bits $BitIndicators\n";
+  if (!defined $PatchFile)
+  {
+    Error "you must specify a patch to apply\n";
+    $Usage = 2;
+  }
+
+  $TargetList = join(",", keys %AllTargets) if (!defined $TargetList);
+  foreach my $Target (split /,/, $TargetList)
+  {
+    $Target = "exe$1" if ($Target =~ /^(32|64)$/);
+    if (!$AllTargets{$Target})
+    {
+      Error "invalid target name $Target\n";
+      $Usage = 2;
+      last;
+    }
+    $Targets->{$Target} = 1;
+  }
+}
+if (defined $Usage)
+{
+  if ($Usage)
+  {
+    Error "try '$Name0 --help' for more information\n";
+    exit $Usage;
+  }
+  print "Usage: $Name0 [--help] PATCHFILE TARGETS\n";
+  print "\n";
+  print "Applies the specified patch and rebuilds the Wine test executables.\n";
+  print "\n";
+  print "Where:\n";
+  print "  PATCHFILE Is the staging file containing the patch to build.\n";
+  print "  TARGETS   Is a comma-separated list of build targets. By default every\n";
+  print "            target is run.\n";
+  print "            - exe32: Rebuild the 32 bit Windows test executables.\n";
+  print "            - exe64: Rebuild the 64 bit Windows test executables.\n";
+  print "  --help    Shows this usage message.\n";
+  exit 0;
 }
 
 if ($DataDir =~ /'/)
@@ -232,20 +296,19 @@ if ($DataDir =~ /'/)
     exit(1);
 }
 
-my $Impacts = ApplyPatch($PatchFile);
-exit(1) if (!$Impacts);
+
+#
+# Run the builds
+#
 
 CountCPUs();
 
-if ($Impacts->{WineBuild} and !BuildNative())
-{
-  exit(1);
-}
-if ($Run32 && !BuildTestExecutables($Impacts, 32))
-{
-  exit(1);
-}
-if ($Run64 && !BuildTestExecutables($Impacts, 64))
+my $Impacts = ApplyPatch($PatchFile);
+
+if (!$Impacts or
+    ($Impacts->{WineBuild} and !BuildNative()) or
+    !BuildTestExecutables($Targets, $Impacts, 32) or
+    !BuildTestExecutables($Targets, $Impacts, 64))
 {
   exit(1);
 }
