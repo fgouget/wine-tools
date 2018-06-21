@@ -414,16 +414,6 @@ if ($NewStatus eq "completed")
     }
   }
 
-  Debug(Elapsed($Start), " Retrieving the updated test list '$TaskDir/testlist.txt'\n");
-  if ($TA->GetFile("testlist.txt", "$TaskDir/testlist.txt"))
-  {
-    copy "$TaskDir/testlist.txt", "$DataDir/latest/testlist.txt";
-  }
-  elsif (!defined $TAError)
-  {
-    $TAError = "An error occurred while retrieving the test list: ". $TA->GetLastError();
-  }
-
   Debug(Elapsed($Start), " Retrieving the list of Wine files '$TaskDir/winefiles.txt'\n");
   if ($TA->GetFile("latest/winefiles.txt", "$TaskDir/winefiles.txt"))
   {

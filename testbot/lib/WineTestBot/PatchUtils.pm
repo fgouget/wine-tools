@@ -58,8 +58,8 @@ my $IgnoredPathsRe = join('|',
 
 =item C<UpdateWineData()>
 
-Updates the summary information about the Wine source such as the list of
-tests (testlist.txt) and the full list of Wine files.
+Updates information about the Wine source, such as the list of Wine files,
+for use by the TestBot server.
 
 =back
 =cut
@@ -72,51 +72,51 @@ sub UpdateWineData($)
 
   my $ErrMessage = `cd '$WineDir' && git ls-tree -r --name-only HEAD 2>&1 >'$DataDir/latest/winefiles.txt'`;
   return $ErrMessage if ($? != 0);
-
-  if (open(my $fh, ">", "$DataDir/testlist.txt"))
-  {
-    foreach my $TestFile (glob("$WineDir/*/*/tests/*.c"),
-                          glob("$WineDir/*/*/tests/*.spec"))
-    {
-      next if ($TestFile =~ m=/testlist\.c$=);
-      $TestFile =~ s=^$WineDir/==;
-      print $fh "$TestFile\n";
-    }
-    close($fh);
-    return undef;
-  }
-
-  return "Could not open 'testlist.txt' for writing: $!";
 }
+
+my $_TimeStamp;
+my $_TestList;
 
 =pod
 =over 12
 
-=item C<GetTestList()>
+=item C<_LoadWineFiles()>
 
-Returns a hashtable containing the list of the source files for a given module.
-This structure is built from the latest/testlist.txt file.
+Reads latest/winefiles.txt to build a per-module hashtable of the test unit
+files.
 
 =back
 =cut
 
-sub GetTestList()
+sub _LoadWineFiles()
 {
-  my $TestList = {};
-  if (open(my $File, "<", "$DataDir/latest/testlist.txt"))
+  my $FileName = "$DataDir/latest/winefiles.txt";
+  my $MTime = (stat($FileName))[9] || 0;
+
+  if ($_TestList and $_TimeStamp == $MTime)
   {
-    while (my $TestFileName = <$File>)
+    # The file has not changed since we loaded it
+    return;
+  }
+
+  $_TimeStamp = $MTime;
+  $_TestList = {};
+  if (open(my $fh, "<", $FileName))
+  {
+    while (my $Line = <$fh>)
     {
-      chomp $TestFileName;
-      if ($TestFileName =~ m~^\w+/([^/]+)/tests/([^/]+)$~)
+      chomp $Line;
+
+      if ($Line =~ m~^\w+/([^/]+)/tests/([^/]+)$~)
       {
         my ($Module, $File) = ($1, $2);
-        $TestList->{$Module}->{$File} = 1;
+        next if ($File eq "testlist.c");
+        next if ($File !~ /\.(?:c|spec)$/);
+        $_TestList->{$Module}->{$File} = 1;
       }
     }
-    close($File);
+    close($fh);
   }
-  return $TestList;
 }
 
 sub _HandleFile($$$)
@@ -154,8 +154,7 @@ sub _HandleFile($$$)
 
     if (!$Tests->{$Module}->{Files})
     {
-      my $TestList = ( $Impacts->{TestList} ||= GetTestList() );
-      foreach my $File (keys %{$TestList->{$Module}})
+      foreach my $File (keys %{$_TestList->{$Module}})
       {
         $Tests->{$Module}->{Files}->{$File} = 0; # not modified
       }
@@ -192,6 +191,7 @@ sub GetPatchImpact($;$$)
     NoUnits => $NoUnits,
     Tests => {},
   };
+  _LoadWineFiles();
 
   if ($PastImpacts)
   {
