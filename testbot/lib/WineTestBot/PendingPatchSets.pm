@@ -248,8 +248,7 @@ sub NewSubmission($$)
 
   if (! $Set->CheckSubsetComplete($PartNo))
   {
-    $Patch->Disposition($Patch->AffectsTests ? "Set not complete yet" :
-                        "Patch doesn't affect tests");
+    $Patch->Disposition("Set not complete yet");
   }
   else
   {
@@ -260,16 +259,11 @@ sub NewSubmission($$)
       my $Part = $Parts->GetItem($PartNo);
       if (defined($Part))
       {
-        if ($Part->Patch->AffectsTests)
+        $ErrMessage = $Set->SubmitSubset($PartNo, $Part->Patch);
+        if (!defined $ErrMessage)
         {
-          $ErrMessage = $Set->SubmitSubset($PartNo, $Part->Patch);
+          (my $ErrProperty, $ErrMessage) = $Part->Patch->Save();
         }
-        else
-        {
-          $Part->Patch->Disposition("Patch doesn't affect tests");
-        }
-        my $ErrProperty;
-        ($ErrProperty, $ErrMessage) = $Part->Patch->Save();
       }
       else
       {

@@ -306,10 +306,10 @@ sub Validate($)
 {
   my ($self) = @_;
 
-  if ($self->Type ne "win32" && $self->Type ne "win64" &&
-      ($self->Role eq "winetest" || $self->Role eq "extra"))
+  if ($self->Type !~ /^(?:win32|win64|wine)$/ and
+      $self->Role =~ /^(?:extra|winetest)$/)
   {
-    return ("Role", "Only win32 and win64 VMs can have a role of '" . $self->Role . "'");
+    return ("Role", "Only win32, win64 and wine VMs can have a role of '" . $self->Role . "'");
   }
   return $self->SUPER::Validate();
 }
@@ -664,7 +664,7 @@ sub CreateItem($)
 my @PropertyDescriptors = (
   CreateBasicPropertyDescriptor("Name", "VM name", 1, 1, "A", 20),
   CreateBasicPropertyDescriptor("SortOrder", "Display order", !1, 1, "N", 3),
-  CreateEnumPropertyDescriptor("Type", "Type of VM", !1, 1, ['win32', 'win64', 'build']),
+  CreateEnumPropertyDescriptor("Type", "Type of VM", !1, 1, ['win32', 'win64', 'build', 'wine']),
   CreateEnumPropertyDescriptor("Role", "VM Role", !1, 1, ['extra', 'base', 'winetest', 'retired', 'deleted']),
   CreateEnumPropertyDescriptor("Status", "Current status", !1, 1, ['dirty', 'reverting', 'sleeping', 'idle', 'running', 'off', 'offline', 'maintenance']),
   CreateBasicPropertyDescriptor("Errors", "Errors", !1, !1, "N", 2),

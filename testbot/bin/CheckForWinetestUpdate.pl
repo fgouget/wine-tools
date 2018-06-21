@@ -63,7 +63,8 @@ my %WineTestUrls = (
     64 => "http://test.winehq.org/builds/winetest64-latest.exe"
 );
 
-my %TaskTypes = (build => 1, base32 => 1, winetest32 => 1, all64 => 1);
+my %TaskTypes = (build => 1, base32 => 1, winetest32 => 1, all64 => 1,
+                 wine => 1);
 
 
 my $Debug;
@@ -212,7 +213,7 @@ sub AddJob($$$)
   my $Tasks = $NewStep->Tasks;
   foreach my $VMKey (@{$VMs->SortKeysBySortOrder($VMs->GetKeys())})
   {
-    Debug("  $VMKey\n");
+    Debug("  $VMKey exe$Bits\n");
     my $Task = $Tasks->Add();
     $Task->VM($VMs->GetItem($VMKey));
     $Task->Timeout($SuiteTimeout);
@@ -246,10 +247,22 @@ sub AddJob($$$)
   return 1;
 }
 
-sub AddReconfigJob()
+sub AddReconfigJob($)
 {
-  my $Remarks = "Update Wine to latest git";
+  my ($VMType) = @_;
+
+  my $Remarks = "Update the $VMType VMs";
   Debug("Creating the '$Remarks' job\n");
+
+  my $VMs = CreateVMs();
+  $VMs->AddFilter("Type", [$VMType]);
+  $VMs->FilterEnabledRole();
+  if ($VMs->GetItemsCount() == 0)
+  {
+    # There is nothing to do
+    Debug("  Found no VM\n");
+    return 1;
+  }
 
   # First create a new job
   my $Jobs = CreateJobs();
@@ -265,15 +278,16 @@ sub AddReconfigJob()
   $NewStep->FileType("none");
   $NewStep->InStaging(!1);
 
-  # Add a task for the build VM
-  my $VMs = CreateVMs();
-  $VMs->AddFilter("Type", ["build"]);
-  $VMs->AddFilter("Role", ["base"]);
-  my $BuildVM = ${$VMs->GetItems()}[0];
-  Debug("  ", $BuildVM->GetKey(), "\n");
-  my $Task = $NewStep->Tasks->Add();
-  $Task->VM($BuildVM);
-  $Task->Timeout($ReconfigTimeout);
+  # And a task for each VM
+  my $SortedKeys = $VMs->SortKeysBySortOrder($VMs->GetKeys());
+  foreach my $VMKey (@$SortedKeys)
+  {
+    my $VM = $VMs->GetItem($VMKey);
+    Debug("  $VMKey $VMType reconfig\n");
+    my $Task = $NewStep->Tasks->Add();
+    $Task->VM($VM);
+    $Task->Timeout($ReconfigTimeout);
+  }
 
   # Save it all
   my ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
@@ -358,7 +372,8 @@ if (defined $Usage)
 #
 
 my $Rc = 0;
-if ($OptTypes{build} or $OptTypes{base32} or $OptTypes{winetest32})
+if ($OptTypes{build} or $OptTypes{base32} or $OptTypes{winetest32} or
+    $OptTypes{wine})
 {
   my ($Create, $LatestBaseName) = UpdateWineTest($OptCreate, 32);
   if ($Create < 0)
@@ -370,9 +385,11 @@ if ($OptTypes{build} or $OptTypes{base32} or $OptTypes{winetest32})
     # A new executable means there have been commits so update Wine. Create
     # this job first purely to make the WineTestBot job queue look nice, and
     # arbitrarily do it only for 32-bit executables to avoid redundant updates.
-    $Rc = 1 if ($OptTypes{build} and !AddReconfigJob());
+    $Rc = 1 if ($OptTypes{build} and !AddReconfigJob("build"));
     $Rc = 1 if ($OptTypes{base32} and !AddJob("base", $LatestBaseName, 32));
     $Rc = 1 if ($OptTypes{winetest32} and !AddJob("", $LatestBaseName, 32));
+
+    $Rc = 1 if ($OptTypes{wine} and !AddReconfigJob("wine"));
   }
 }
 

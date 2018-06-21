@@ -78,7 +78,7 @@ sub GetTitle($)
     {
       $Title .= "64 bit ";
     }
-    $Title .= $self->CmdLineArg;
+    $Title .= $self->CmdLineArg || "";
   }
   elsif ($self->Type eq "build")
   {

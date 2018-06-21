@@ -1,11 +1,10 @@
 #!/usr/bin/perl -Tw
 # -*- Mode: Perl; perl-indent-level: 2; indent-tabs-mode: nil -*-
 #
-# Communicates with the build machine to have it perform the 'reconfig' task.
-# See the bin/build/Reconfig.pl script.
+# Makes sure the Wine patches compile.
+# See the bin/build/WineTest.pl script.
 #
-# Copyright 2009 Ge van Geldorp
-# Copyright 2013-2018 Francois Gouget
+# Copyright 2018 Francois Gouget
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -43,6 +42,7 @@ $Name0 =~ s+^.*/++;
 
 use WineTestBot::Config;
 use WineTestBot::Jobs;
+use WineTestBot::PatchUtils;
 use WineTestBot::VMs;
 use WineTestBot::Log;
 use WineTestBot::LogUtils;
@@ -162,9 +162,7 @@ if (!defined $Task)
   Error "Step $StepNo task $TaskNo of job $JobId does not exist\n";
   exit 1;
 }
-my $OldUMask = umask(002);
 my $TaskDir = $Task->CreateDir();
-umask($OldUMask);
 my $VM = $Task->VM;
 
 
@@ -181,7 +179,6 @@ sub LogTaskError($)
   my ($ErrMessage) = @_;
   Debug("$Name0:error: ", $ErrMessage);
 
-  my $OldUMask = umask(002);
   if (open(my $ErrFile, ">>", "$TaskDir/err"))
   {
     print $ErrFile $ErrMessage;
@@ -191,17 +188,15 @@ sub LogTaskError($)
   {
     Error "Unable to open 'err' for writing: $!\n";
   }
-  umask($OldUMask);
 }
 
 sub WrapUpAndExit($;$$)
 {
-  my ($Status, $Retry, $TimedOut) = @_;
-  my $NewVMStatus = $Status eq 'queued' ? 'offline' :
-                    $Status eq 'completed' ? 'idle' : 'dirty';
+  my ($Status, $Retry, $Timeout) = @_;
+  my $NewVMStatus = $Status eq 'queued' ? 'offline' : 'dirty';
   my $VMResult = $Status eq "boterror" ? "boterror" :
                  $Status eq "queued" ? "error" :
-                 $TimedOut ? "timeout" : "";
+                 $Timeout ? "timeout" : "";
 
   my $TestFailures;
   my $Tries = $Task->TestFailures || 0;
@@ -312,9 +307,9 @@ sub FatalTAError($$)
 # Check the VM and Step
 #
 
-if ($VM->Type ne "build" and $VM->Type ne "wine")
+if ($VM->Type ne "wine")
 {
-  FatalError("This is neither a build nor a Wine VM! (" . $VM->Type . ")\n");
+  FatalError("This is not a Wine VM! (" . $VM->Type . ")\n");
 }
 elsif (!$Debug and $VM->Status ne "running")
 {
@@ -325,41 +320,43 @@ elsif (!$VM->GetDomain()->IsPoweredOn())
   FatalError("The VM is not powered on\n");
 }
 
-if ($Step->FileType ne "none")
+if ($Step->FileType ne "patchdlls")
 {
   FatalError("Unexpected file type '". $Step->FileType ."' found\n");
 }
 
 
 #
-# Run the build
+# Run the task
 #
 
-# Use our own log so it can be used for reference
-# even after another task has run.
-my $Script = $VM->Type eq "wine" ? "WineReconfig.pl" : "Reconfig.pl";
-$Script = "#!/bin/sh\n".
-          "( set -x\n".
-          "  git pull &&\n".
-          "  ../bin/build/$Script\n".
-          ") >Reconfig.log 2>&1\n";
+my $FileName = $Step->GetFullFileName();
 my $TA = $VM->GetAgent();
+Debug(Elapsed($Start), " Sending '$FileName'\n");
+if (!$TA->SendFile($FileName, "staging/patch.diff", 0))
+{
+  FatalTAError($TA, "Could not copy the patch to the VM");
+}
+my $Script = "#!/bin/sh\n".
+             "( set -x\n" .
+             "  ../bin/build/WineTest.pl ". $Task->CmdLineArg ." build patch.diff\n".
+             ") >Task.log 2>&1\n";
 Debug(Elapsed($Start), " Sending the script: [$Script]\n");
 if (!$TA->SendFileFromString($Script, "task", $TestAgent::SENDFILE_EXE))
 {
-  FatalTAError($TA, "Could not send the reconfig script to the VM");
+  FatalTAError($TA, "Could not send the task script to the VM");
 }
 
 Debug(Elapsed($Start), " Starting the script\n");
 my $Pid = $TA->Run(["./task"], 0);
 if (!$Pid)
 {
-  FatalTAError($TA, "Failed to start the build VM update");
+  FatalTAError($TA, "Failed to start the task");
 }
 
 
 #
-# From that point on we want to at least try to grab the build
+# From that point on we want to at least try to grab the task
 # log before giving up
 #
 
@@ -370,21 +367,21 @@ if (!defined $TA->Wait($Pid, $Task->Timeout, 60))
   $ErrMessage = $TA->GetLastError();
   if ($ErrMessage =~ /timed out waiting for the child process/)
   {
-    $ErrMessage = "The build timed out\n";
+    $ErrMessage = "The task timed out\n";
     $NewStatus = "badbuild";
     $TaskTimedOut = 1;
   }
   else
   {
-    $TAError = "An error occurred while waiting for the build to complete: $ErrMessage";
+    $TAError = "An error occurred while waiting for the task to complete: $ErrMessage";
     $ErrMessage = undef;
   }
 }
 
-Debug(Elapsed($Start), " Retrieving 'Reconfig.log'\n");
-if ($TA->GetFile("Reconfig.log", "$TaskDir/log"))
+Debug(Elapsed($Start), " Retrieving 'Task.log'\n");
+if ($TA->GetFile("Task.log", "$TaskDir/log"))
 {
-  my $Result = ParseTaskLog("$TaskDir/log", "Reconfig");
+  my $Result = ParseTaskLog("$TaskDir/log", "Task");
   if ($Result eq "ok")
   {
     # We must have gotten the full log and the build did succeed.
@@ -392,85 +389,31 @@ if ($TA->GetFile("Reconfig.log", "$TaskDir/log"))
     $NewStatus = "completed";
     $TAError = $ErrMessage = undef;
   }
+  elsif ($Result eq "badpatch")
+  {
+    $NewStatus = "badpatch";
+  }
   elsif ($Result =~ s/^nolog://)
   {
     FatalError("$Result\n", "retry");
   }
   else
   {
-    # We should not have badpatch errors and if the result line is missing we
-    # probably already have an error message that explains why.
+    # If the result line is missing we probably already have an error message
+    # that explains why.
     $NewStatus = "badbuild";
   }
 }
 elsif (!defined $TAError)
 {
-  $TAError = "An error occurred while retrieving the reconfig log: ". $TA->GetLastError();
+  $TAError = "An error occurred while retrieving the task log: ". $TA->GetLastError();
 }
 
-if ($NewStatus eq "completed")
-{
-  use File::Copy;
-  if ($VM->Type eq "build")
-  {
-    for my $Bitness ("32", "64")
-    {
-      Debug(Elapsed($Start), " Retrieving the $Bitness bit TestLauncher to '$TaskDir/TestLauncher$Bitness.exe'\n");
-      if ($TA->GetFile("../src/TestLauncher/TestLauncher$Bitness.exe", "$TaskDir/TestLauncher$Bitness.exe"))
-      {
-        copy "$TaskDir/TestLauncher$Bitness.exe", "$DataDir/latest/TestLauncher$Bitness.exe";
-      }
-      elsif (!defined $TAError)
-      {
-        $TAError = "An error occurred while retrieving the $Bitness bit TestLauncher: ". $TA->GetLastError();
-      }
-    }
-  }
-
-  Debug(Elapsed($Start), " Retrieving the list of Wine files '$TaskDir/winefiles.txt'\n");
-  if ($TA->GetFile("latest/winefiles.txt", "$TaskDir/winefiles.txt"))
-  {
-    copy "$TaskDir/winefiles.txt", "$DataDir/latest/winefiles.txt";
-  }
-  elsif (!defined $TAError)
-  {
-    $TAError = "An error occurred while retrieving the list of Wine files: ". $TA->GetLastError();
-  }
-}
-
-$TA->Disconnect();
-
-# Report the reconfig errors even though they may have been caused by
+# Report the task errors even though they may have been caused by
 # TestAgent trouble.
 LogTaskError($ErrMessage) if (defined $ErrMessage);
 FatalTAError(undef, $TAError) if (defined $TAError);
-
-
-#
-# Update the build VM's snapshot
-#
-
-if ($NewStatus eq 'completed')
-{
-  Debug(Elapsed($Start), " Deleting the old ", $VM->IdleSnapshot, " snapshot\n");
-  $ErrMessage = $VM->GetDomain()->RemoveSnapshot();
-  if (defined $ErrMessage)
-  {
-    # It's not clear if the snapshot is still usable. Rather than try to figure
-    # it out now, let the next task deal with it.
-    FatalError("Could not remove the ". $VM->IdleSnapshot ." snapshot: $ErrMessage\n", "retry");
-  }
-
-  Debug(Elapsed($Start), " Recreating the ", $VM->IdleSnapshot, " snapshot\n");
-  $ErrMessage = $VM->GetDomain()->CreateSnapshot();
-  if (defined $ErrMessage)
-  {
-    # Without the snapshot the VM is not usable anymore but FatalError() will
-    # just mark it as 'dirty'. It's only the next time it is used that the
-    # problem will be noticed and that it will be taken offline.
-    FatalError("Could not recreate the ". $VM->IdleSnapshot ." snapshot: $ErrMessage\n");
-  }
-}
+$TA->Disconnect();
 
 
 #

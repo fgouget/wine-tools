@@ -392,7 +392,8 @@ sub _CheckAndClassifyVMs()
          20) + # extra
         ($VM->Type eq "build" ? 0 :
          $VM->Type eq "win64" ? 1 :
-         2); # win32
+         $VM->Type eq "win32" ? 2 :
+         3); # wine
   }
 
   # If a VM was in an inconsistent state, update the jobs status fields before

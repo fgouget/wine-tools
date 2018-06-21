@@ -46,7 +46,7 @@ CREATE TABLE VMs
 (
   Name          VARCHAR(20)      NOT NULL,
   SortOrder     INT(3)           NOT NULL,
-  Type          ENUM('win32', 'win64', 'build') NOT NULL,
+  Type          ENUM('win32', 'win64', 'build', 'wine') NOT NULL,
   Role          ENUM('extra', 'base', 'winetest', 'retired', 'deleted') NOT NULL,
   Status        ENUM('dirty', 'reverting', 'sleeping', 'idle', 'running', 'off', 'offline', 'maintenance') NOT NULL,
   Errors        INT(2)           NULL,

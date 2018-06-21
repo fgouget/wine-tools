@@ -177,8 +177,9 @@ sub Run($$)
   my ($self, $Step) = @_;
 
   my ($JobId, $StepNo, $TaskNo) = @{$self->GetMasterKey()};
-  my $Script = $Step->Type eq "build" ? "Build" :
-               $Step->Type eq "reconfig" ? "Reconfig" :
+  my $Script = $Step->Type eq "reconfig" ? "Reconfig" :
+               $self->VM->Type eq "wine" ? "WineTest" :
+               $Step->Type eq "build" ? "Build" :
                "Task";
   my $Args = ["$BinDir/${ProjectName}Run$Script.pl", "--log-only",
               $JobId, $StepNo, $TaskNo];

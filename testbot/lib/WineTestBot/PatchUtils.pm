@@ -36,6 +36,22 @@ our @EXPORT = qw(GetPatchImpact UpdateWineData);
 use WineTestBot::Config;
 
 
+# These paths are too generic to be proof that this is a Wine patch.
+my $AmbiguousPathsRe = join('|',
+  'Makefile\.in$',
+  # aclocal.m4 gets special treatment
+  # configure gets special treatment
+  # configure.ac gets special treatment
+  'include/Makefile\.in$',
+  'include/config\.h\.in$',
+  'po/',
+  'tools/Makefile.in',
+  'tools/config.guess',
+  'tools/config.sub',
+  'tools/install-sh',
+  'tools/makedep.c',
+);
+
 # Patches to these paths don't impact the Wine build. So ignore them.
 my $IgnoredPathsRe = join('|',
   '\.mailmap$',
@@ -52,6 +68,7 @@ my $IgnoredPathsRe = join('|',
   'tools/winapi/',
   'tools/winemaker/',
 );
+
 
 =pod
 =over 12
@@ -75,6 +92,7 @@ sub UpdateWineData($)
 }
 
 my $_TimeStamp;
+my $_WineFiles;
 my $_TestList;
 
 =pod
@@ -83,7 +101,7 @@ my $_TestList;
 =item C<_LoadWineFiles()>
 
 Reads latest/winefiles.txt to build a per-module hashtable of the test unit
-files.
+files and a hashtable of all the Wine files.
 
 =back
 =cut
@@ -101,11 +119,13 @@ sub _LoadWineFiles()
 
   $_TimeStamp = $MTime;
   $_TestList = {};
+  $_WineFiles = {};
   if (open(my $fh, "<", $FileName))
   {
     while (my $Line = <$fh>)
     {
       chomp $Line;
+      $_WineFiles->{$Line} = 1;
 
       if ($Line =~ m~^\w+/([^/]+)/tests/([^/]+)$~)
       {
@@ -121,11 +141,23 @@ sub _LoadWineFiles()
 
 sub _HandleFile($$$)
 {
-  my ($Impacts, $Path, $Change) = @_;
+  my ($Impacts, $FilePath, $Change) = @_;
 
-  if ($Path =~ m~^(dlls|programs)/([^/]+)/tests/([^/\s]+)$~)
+  if ($Change eq "new")
+  {
+    delete $Impacts->{DeletedFiles}->{$FilePath};
+    $Impacts->{NewFiles}->{$FilePath} = 1;
+  }
+  elsif ($Change eq "rm")
+  {
+    delete $Impacts->{NewFiles}->{$FilePath};
+    $Impacts->{DeletedFiles}->{$FilePath} = 1;
+  }
+
+  if ($FilePath =~ m~^(dlls|programs)/([^/]+)/tests/([^/\s]+)$~)
   {
     my ($Root, $Module, $File) = ($1, $2, $3);
+    $Impacts->{IsWinePatch} = 1;
     $Impacts->{TestBuild} = 1;
 
     my $Tests = $Impacts->{Tests};
@@ -163,8 +195,29 @@ sub _HandleFile($$$)
   }
   else
   {
-    # Figure out if this patch impacts the Wine build
-    $Impacts->{WineBuild} = 1 if ($Path !~ /^(?:$IgnoredPathsRe)/);
+    my $WineFiles = $Impacts->{WineFiles} || $_WineFiles;
+    if ($WineFiles->{$FilePath})
+    {
+      if ($FilePath !~ /^(?:$AmbiguousPathsRe)/)
+      {
+        $Impacts->{IsWinePatch} = 1;
+      }
+      # Else this file exists in Wine but has a very common name so it may just
+      # as well belong to another repository. Still update WineBuild in case
+      # this patch really is for Wine.
+
+      if ($FilePath !~ /^(?:$IgnoredPathsRe)/)
+      {
+        $Impacts->{WineBuild} = 1;
+      }
+      # Else patches to this file don't impact the Wine build.
+    }
+    elsif ($FilePath =~ m~/Makefile.in$~ and $Change eq "new")
+    {
+      # This may or may not be a Wine patch but the new Makefile.in will be
+      # added to the build by make_makefiles.
+      $Impacts->{WineBuild} = $Impacts->{Makefiles} = 1;
+    }
   }
 }
 
@@ -195,6 +248,21 @@ sub GetPatchImpact($;$$)
 
   if ($PastImpacts)
   {
+    if ($PastImpacts->{WineBuild} or $PastImpacts->{TestBuild})
+    {
+      # Update the list of Wine files so we correctly recognize patchset parts
+      # that modify new Wine files.
+      my $WineFiles = $PastImpacts->{WineFiles} || $_WineFiles;
+      map { $Impacts->{WineFiles}->{$_} = 1 } keys %{$WineFiles};
+      map { $Impacts->{WineFiles}->{$_} = 1 } keys %{$PastImpacts->{NewFiles}};
+      map { delete $Impacts->{WineFiles}->{$_} } keys %{$PastImpacts->{DeletedFiles}};
+    }
+    else
+    {
+      $Impacts->{NewFiles} = $PastImpacts->{NewFiles};
+      $Impacts->{DeletedFiles} = $PastImpacts->{DeletedFiles};
+    }
+
     foreach my $PastInfo (values %{$PastImpacts->{Tests}})
     {
       if ($PastInfo->{Files})
@@ -207,6 +275,7 @@ sub GetPatchImpact($;$$)
       }
     }
   }
+
   my ($Path, $Change);
   while (my $Line = <$fh>)
   {
@@ -221,6 +290,7 @@ sub GetPatchImpact($;$$)
     elsif ($Line =~ m=^--- \w+/tools/make_makefiles$=)
     {
       $Impacts->{WineBuild} = $Impacts->{Makefiles} = 1;
+      $Impacts->{IsWinePatch} = 1;
     }
     elsif ($Line =~ m=^--- /dev/null$=)
     {

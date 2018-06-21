@@ -31,7 +31,8 @@ use vars qw (@ISA @EXPORT @EXPORT_OK $UseSSL $LogDir $DataDir $BinDir
              $MaxVMsWhenIdle $SleepAfterRevert $WaitForToolsInVM
              $VMToolTimeout $MaxVMErrors $MaxTaskTries $AdminEMail $RobotEMail
              $WinePatchToOverride $WinePatchCc $SuiteTimeout $SingleTimeout
-             $BuildTimeout $ReconfigTimeout $TimeoutMargin $TagPrefix
+             $BuildTimeout $ReconfigTimeout $WineReconfigTimeout $TimeoutMargin
+             $TagPrefix
              $MaxUnitSize $ProjectName $PatchesMailingList $LDAPServer
              $LDAPBindDN $LDAPSearchBase $LDAPSearchFilter
              $LDAPRealNameAttribute $LDAPEMailAttribute $AgentPort $Tunnel
@@ -45,7 +46,8 @@ require Exporter;
              $MaxRunningVMs $MaxVMsWhenIdle $SleepAfterRevert $WaitForToolsInVM
              $VMToolTimeout $MaxVMErrors $MaxTaskTries $AdminEMail
              $RobotEMail $WinePatchToOverride $WinePatchCc $SuiteTimeout
-             $SingleTimeout $BuildTimeout $ReconfigTimeout $TimeoutMargin
+             $SingleTimeout $BuildTimeout $ReconfigTimeout $WineReconfigTimeout
+             $TimeoutMargin
              $TagPrefix $MaxUnitSize $ProjectName $PatchesMailingList
              $LDAPServer $LDAPBindDN $LDAPSearchBase $LDAPSearchFilter
              $LDAPRealNameAttribute $LDAPEMailAttribute $AgentPort $Tunnel
@@ -101,6 +103,9 @@ $BuildTimeout = 5 * 60;
 # (in seconds). Note that this includes building the native Wine build tools,
 # and the 32 and 64 bit test executables.
 $ReconfigTimeout = (1 + 2 * 5) * 60;
+# How long to let a full Wine recompilation run before forcibly shutting it
+# down (in seconds).
+$WineReconfigTimeout = 20 * 60;
 # How much to add to the task timeout to account for file transfers, etc.
 $TimeoutMargin = 2 * 60;
 # Maximum amount of traces for a test unit.

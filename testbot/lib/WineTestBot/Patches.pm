@@ -135,32 +135,24 @@ sub Submit($$$)
   my $PastImpacts;
   $PastImpacts = GetPatchImpact($PatchFileName) if ($IsSet);
   my $Impacts = GetPatchImpact("$DataDir/patches/" . $self->Id, undef, $PastImpacts);
-  if (!$Impacts->{UnitCount})
-  {
-    $self->Disposition(($IsSet ? "Part" : "Patch") .
-                       " doesn't affect tests");
-    return undef;
-  }
 
-  my $User;
-  my $Users = CreateUsers();
-  if (defined($self->FromEMail))
+  if (!$Impacts->{WineBuild} and !$Impacts->{TestBuild})
   {
-    $Users->AddFilter("EMail", [$self->FromEMail]);
-    if (! $Users->IsEmpty())
+    if ($Impacts->{IsWinePatch})
     {
-      $User = @{$Users->GetItems()}[0];
+      $self->Disposition(($IsSet ? "Part does" : "Does")
+                         ." not impact the Wine build");
     }
-  }
-  if (! defined($User))
-  {
-    $User = GetBatchUser();
+    else
+    {
+      $self->Disposition(($IsSet ? "Part is not" : "Not") ." a Wine patch");
+    }
+    return undef;
   }
 
   # Create a new job for this patch
   my $Jobs = CreateJobs();
   my $NewJob = $Jobs->Add();
-  $NewJob->User($User);
   $NewJob->Priority(6);
   my $PropertyDescriptor = $Jobs->GetPropertyDescriptorByName("Remarks");
   my $Subject = $self->Subject;
@@ -171,28 +163,127 @@ sub Submit($$$)
                           $PropertyDescriptor->GetMaxLength()));
   $NewJob->Patch($self);
 
-  # Add build step to the job
-  my $BuildStep = $NewJob->Steps->Add();
-  $BuildStep->FileName("patch.diff");
-  $BuildStep->FileType("patchdlls"); # This is irrelevant now
-  $BuildStep->InStaging(!1);
-  $BuildStep->Type("build");
-  $BuildStep->DebugLevel(0);
-  
-  # Add build task
-  my $VMs = CreateVMs();
-  $VMs->AddFilter("Type", ["build"]);
-  $VMs->AddFilter("Role", ["base"]);
-  my $BuildVM = ${$VMs->GetItems()}[0];
-  my $Task = $BuildStep->Tasks->Add();
-  $Task->VM($BuildVM);
-  $Task->Timeout($BuildTimeout);
-
-  # Save the build step so the others can reference it.
-  my ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
-  if (defined($ErrMessage))
+  my $User;
+  my $Users = CreateUsers();
+  if (defined $self->FromEMail)
   {
-    $self->Disposition("Failed to submit build step");
+    $Users->AddFilter("EMail", [$self->FromEMail]);
+    $User = @{$Users->GetItems()}[0] if (!$Users->IsEmpty());
+  }
+  $NewJob->User($User || GetBatchUser());
+
+  my $BuildVMs = CreateVMs();
+  $BuildVMs->AddFilter("Type", ["build"]);
+  $BuildVMs->AddFilter("Role", ["base"]);
+  if ($Impacts->{UnitCount} and !$BuildVMs->IsEmpty())
+  {
+    # Create the Build Step
+    my $BuildStep = $NewJob->Steps->Add();
+    $BuildStep->FileName("patch.diff");
+    $BuildStep->FileType("patchdlls");
+    $BuildStep->InStaging(!1);
+    $BuildStep->Type("build");
+    $BuildStep->DebugLevel(0);
+
+    # Add build task
+    my $BuildVM = ${$BuildVMs->GetItems()}[0];
+    my $Task = $BuildStep->Tasks->Add();
+    $Task->VM($BuildVM);
+    $Task->Timeout($BuildTimeout);
+
+    # Save the build step so the others can reference it.
+    my ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
+    if (defined($ErrMessage))
+    {
+      $self->Disposition("Failed to submit build step");
+      return $ErrMessage;
+    }
+
+    # Create steps for the Windows tests
+    foreach my $Module (sort keys %{$Impacts->{Tests}})
+    {
+      my $TestInfo = $Impacts->{Tests}->{$Module};
+      foreach my $Unit (sort keys %{$TestInfo->{Units}})
+      {
+        foreach my $Bits ("32", "64")
+        {
+          my $WinVMs = CreateVMs();
+          $WinVMs->AddFilter("Type", $Bits eq "32" ? ["win32", "win64"] : ["win64"]);
+          $WinVMs->AddFilter("Role", ["base"]);
+          if (!$WinVMs->IsEmpty())
+          {
+            # Create one Step per (module, unit, bitness) combination
+            my $NewStep = $NewJob->Steps->Add();
+            $NewStep->PreviousNo($BuildStep->No);
+            my $FileName = $TestInfo->{ExeBase};
+            $FileName .= "64" if ($Bits eq "64");
+            $NewStep->FileName("$FileName.exe");
+            $NewStep->FileType("exe$Bits");
+            $NewStep->InStaging(!1);
+
+            # And a task for each VM
+            my $Tasks = $NewStep->Tasks;
+            my $SortedKeys = $WinVMs->SortKeysBySortOrder($WinVMs->GetKeys());
+            foreach my $VMKey (@$SortedKeys)
+            {
+              my $VM = $WinVMs->GetItem($VMKey);
+              my $Task = $Tasks->Add();
+              $Task->VM($VM);
+              $Task->Timeout($SingleTimeout);
+              $Task->CmdLineArg($Unit);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  my $WineVMs = CreateVMs();
+  $WineVMs->AddFilter("Type", ["wine"]);
+  $WineVMs->AddFilter("Role", ["base"]);
+  if (!$WineVMs->IsEmpty())
+  {
+    # Add a Wine step to the job
+    my $NewStep = $NewJob->Steps->Add();
+    $NewStep->FileName("patch.diff");
+    $NewStep->FileType("patchdlls");
+    $NewStep->InStaging(!1);
+    $NewStep->DebugLevel(0);
+
+    # And a task for each VM
+    my $Tasks = $NewStep->Tasks;
+    my $SortedKeys = $WineVMs->SortKeysBySortOrder($WineVMs->GetKeys());
+    foreach my $VMKey (@$SortedKeys)
+    {
+      my $VM = $WineVMs->GetItem($VMKey);
+      my $Task = $Tasks->Add();
+      $Task->VM($VM);
+      # Only verify that the win32 version compiles
+      $Task->Timeout($WineReconfigTimeout);
+      $Task->CmdLineArg("win32");
+    }
+  }
+
+  if ($NewJob->Steps->IsEmpty())
+  {
+    # This may be a Wine patch but there is no suitable VM to test it!
+    if ($Impacts->{UnitCount})
+    {
+      $self->Disposition("No build or test VM!");
+    }
+    else
+    {
+      $self->Disposition(($IsSet ? "Part does" : "Does") ." not impact the ".
+                         ($WineVMs->IsEmpty() ? "Windows " : "") ."tests");
+    }
+    return undef;
+  }
+
+  # Save it all
+  my ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
+  if (defined $ErrMessage)
+  {
+    $self->Disposition("Failed to submit job");
     return $ErrMessage;
   }
 
@@ -201,52 +292,6 @@ sub Submit($$$)
   {
     $self->Disposition("Failed to stage the patch file");
     return $!;
-  }
-
-  foreach my $Module (sort keys %{$Impacts->{Tests}})
-  {
-    my $TestInfo = $Impacts->{Tests}->{$Module};
-    foreach my $Unit (sort keys %{$TestInfo->{Units}})
-    {
-      # Add 32 and 64-bit tasks
-      foreach my $Bits ("32", "64")
-      {
-        $VMs = CreateVMs();
-        $VMs->AddFilter("Type", $Bits eq "32" ? ["win32", "win64"] : ["win64"]);
-        $VMs->AddFilter("Role", ["base"]);
-        if (@{$VMs->GetKeys()})
-        {
-          # Create the corresponding Step
-          my $NewStep = $NewJob->Steps->Add();
-          $NewStep->PreviousNo($BuildStep->No);
-          my $FileName = $TestInfo->{ExeBase};
-          $FileName .= "64" if ($Bits eq "64");
-          $NewStep->FileName("$FileName.exe");
-          $NewStep->FileType("exe$Bits");
-          $NewStep->InStaging(!1);
-
-          # And a task for each VM
-          my $Tasks = $NewStep->Tasks;
-          my $SortedKeys = $VMs->SortKeysBySortOrder($VMs->GetKeys());
-          foreach my $VMKey (@$SortedKeys)
-          {
-            my $VM = $VMs->GetItem($VMKey);
-            my $Task = $Tasks->Add();
-            $Task->VM($VM);
-            $Task->Timeout($SingleTimeout);
-            $Task->CmdLineArg($Unit);
-          }
-        }
-      }
-    }
-  }
-
-  # Save it all
-  ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
-  if (defined $ErrMessage)
-  {
-    $self->Disposition("Failed to submit job");
-    return $ErrMessage;
   }
 
   # Switch Status to staging to indicate we are done setting up the job
@@ -348,27 +393,6 @@ sub IsPatch($$)
   return !1;
 }
 
-sub IsTestPatch($$)
-{
-  my ($self, $Body) = @_;
-
-  if (open(BODY, "<" . $Body->path))
-  {
-    my $Line;
-    while (defined($Line = <BODY>))
-    {
-      if ($Line =~ m/^\+\+\+ .*\/(dlls|programs)\/[^\/]+\/tests\/[^\/\s]+/)
-      {
-        close BODY;
-        return 1;
-      }
-    }
-    close BODY;
-  }
-
-  return !1;
-}
-
 =pod
 =over 12
 
@@ -412,7 +436,6 @@ sub NewPatch($$$)
   my $ErrMessage;
   if (scalar(@PatchBodies) == 1)
   {
-    $Patch->AffectsTests($self->IsTestPatch($PatchBodies[0]));
     my $Subject = $Patch->Subject;
     $Subject =~ s/32\/64//;
     $Subject =~ s/64\/32//;
