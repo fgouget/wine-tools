@@ -408,127 +408,109 @@ sub GenerateBody($)
     my $LogName = $MoreInfo->{Full} || $MoreInfo->{Logs}->[0] || "log";
     my $ErrName = $LogName eq "log.old" ? "err.old" : "err";
 
-    if (open LOGFILE, "<", "$TaskDir/$LogName")
+    my ($EmptyDiag, $LogFirst);
+    if (open(my $LogFile, "<", "$TaskDir/$LogName"))
     {
-      my $HasLogEntries = !1;
-      my $First = 1;
+      my $HasLogEntries;
       my $CurrentDll = "";
       my $PrintedDll = "";
-      my $Line;
-      while (defined($Line = <LOGFILE>))
+      $LogFirst = 1;
+      foreach my $Line (<$LogFile>)
       {
         $HasLogEntries = 1;
-        chomp($Line);
+        chomp $Line;
         if ($Line =~ m/^([^:]+):[^ ]+ start [^ ]+ -\s*$/)
         {
           $CurrentDll = $1;
         }
         my ($Highlight, $Plain) = $self->GetHtmlLine($MoreInfo->{Full}, $Line);
-        if ($MoreInfo->{Full} || defined $Highlight)
-        {
-          if ($PrintedDll ne $CurrentDll && !$MoreInfo->{Full})
-          {
-            if ($First)
-            {
-              $First = !1;
-            }
-            else
-            {
-              print "</code></pre>";
-            }
-            print "<div class='LogDllName'>$CurrentDll:</div><pre><code>";
-            $PrintedDll = $CurrentDll;
-          }
-          elsif ($First)
-          {
-            print "<pre><code>";
-            $First = !1;
-          }
-          if (!$MoreInfo->{Full} && $Line =~ m/^[^:]+:([^:]*)(?::[0-9a-f]+)? done \(258\)/)
-          {
-            my $Unit = $1 ne "" ? "$1: " : "";
-            print "${Unit}Timeout\n";
-          }
-          else
-          {
-            print(($Highlight || $Plain), "\n");
-          }
-        }
-      }
-      close LOGFILE;
+        next if (!$MoreInfo->{Full} and !defined $Highlight);
 
-      if (open ERRFILE, "<", "$TaskDir/$ErrName")
-      {
-        $CurrentDll = "*err*";
-        while (defined($Line = <ERRFILE>))
+        if ($PrintedDll ne $CurrentDll && !$MoreInfo->{Full})
         {
-          $HasLogEntries = 1;
-          chomp($Line);
-          if ($PrintedDll ne $CurrentDll)
-          {
-            if ($First)
-            {
-              $First = !1;
-            }
-            else
-            {
-              print "</code></pre>\n";
-            }
-            print "<br><pre><code>";
-            $PrintedDll = $CurrentDll;
-          }
-          print $self->escapeHTML($Line), "\n";
+          print "</code></pre>" if (!$LogFirst);
+          print "<div class='LogDllName'>$CurrentDll:</div><pre><code>";
+          $PrintedDll = $CurrentDll;
+          $LogFirst = 0;
         }
-        close ERRFILE;
-      }
-
-      if (! $First)
-      {
-        print "</code></pre>\n";
-      }
-      else
-      {
-        print $HasLogEntries ? "No " .
-                               ($StepTask->Type eq "single" ||
-                                $StepTask->Type eq "suite" ? "test" : "build") .
-                               " failures found" : "Empty log";
-      }
-    }
-    elsif (open ERRFILE, "<", "$TaskDir/$ErrName")
-    {
-      my $HasErrEntries = !1;
-      my $Line;
-      while (defined($Line = <ERRFILE>))
-      {
-        chomp($Line);
-        if (! $HasErrEntries)
+        elsif ($LogFirst)
         {
           print "<pre><code>";
-          $HasErrEntries = 1;
+          $LogFirst = 0;
         }
-        print $self->escapeHTML($Line), "\n";
+        if (!$MoreInfo->{Full} && $Line =~ m/^[^:]+:([^:]*)(?::[0-9a-f]+)? done \(258\)/)
+        {
+          my $Unit = $1 ne "" ? "$1: " : "";
+          print "${Unit}Timeout\n";
+        }
+        else
+        {
+          print(($Highlight || $Plain), "\n");
+        }
       }
-      if ($HasErrEntries)
+      close($LogFile);
+
+      if (!$LogFirst)
       {
         print "</code></pre>\n";
+      }
+      elsif ($HasLogEntries)
+      {
+        # Here we know we did not show the full log since it was not empty,
+        # and yet we did not show anything to the user. But don't claim there
+        # is no failure if the error log is not empty.
+        if (-z "$TaskDir/$ErrName")
+        {
+          print "No ". ($StepTask->Type eq "single" ||
+                        $StepTask->Type eq "suite" ? "test" : "build") .
+                " failures found";
+          $LogFirst = 0;
+        }
+      }
+      elsif ($StepTask->Status eq "canceled")
+      {
+        $EmptyDiag = "<p>No log, task was canceled</p>\n";
+      }
+      elsif ($StepTask->Status eq "skipped")
+      {
+        $EmptyDiag = "<p>No log, task skipped</p>\n";
       }
       else
       {
         print "Empty log";
+        $LogFirst = 0;
       }
-      close ERRFILE;
-    }
-    elsif ($StepTask->Status eq "canceled")
-    {
-      print "<p>No log, task was canceled</p>\n";
-    }
-    elsif ($StepTask->Status eq "skipped")
-    {
-      print "<p>No log, task skipped</p>\n";
     }
     else
     {
-      print "<p>No log available yet</p>\n";
+      print "No log". ($StepTask->Status =~ /^(?:queued|running)$/ ? " yet" : "");
+      $LogFirst = 0;
+    }
+
+    if (open(my $ErrFile, "<", "$TaskDir/$ErrName"))
+    {
+      my $ErrFirst = 1;
+      foreach my $Line (<$ErrFile>)
+      {
+        chomp $Line;
+        if ($ErrFirst)
+        {
+          print "<hr>\n" if (!$LogFirst);
+          print "<pre><code>";
+          $ErrFirst = 0;
+        }
+        print $self->escapeHTML($Line), "\n";
+      }
+      close($ErrFile);
+
+      if (!$ErrFirst)
+      {
+        print "</code></pre>\n";
+      }
+      elsif (defined $EmptyDiag)
+      {
+        print $EmptyDiag;
+      }
     }
   }
   print "</div>\n";
