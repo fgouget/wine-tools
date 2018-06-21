@@ -291,13 +291,20 @@ sub WrapUpAndExit($;$$$)
 
   if ($Status eq 'completed' and $Step->Type eq 'suite')
   {
-    # Update the reference VM suite results for WineSendLog.pl
-    my $LatestBaseName = join("", "$DataDir/latest/", $Task->VM->Name, "_",
-                              $Step->FileType eq "exe64" ? "64" : "32");
-    unlink("$LatestBaseName.log");
-    link("$TaskDir/log", "$LatestBaseName.log") if (-f "$TaskDir/log");
-    unlink("$LatestBaseName.err");
-    link("$TaskDir/err", "$LatestBaseName.err") if (-f "$TaskDir/err");
+    # Keep the old report if the new one is missing
+    if (-f "$TaskDir/log" and !-z "$TaskDir/log")
+    {
+      # Update the reference VM suite results for WineSendLog.pl
+      my $LatestBaseName = join("", "$DataDir/latest/", $Task->VM->Name, "_",
+                                $Step->FileType eq "exe64" ? "64" : "32");
+      unlink("$LatestBaseName.log");
+      link("$TaskDir/log", "$LatestBaseName.log");
+      unlink("$LatestBaseName.err");
+      if (-f "$TaskDir/err" and !-z "$TaskDir/err")
+      {
+        link("$TaskDir/err", "$LatestBaseName.err");
+      }
+    }
   }
 
   my $Result = $VM->Name .": ". $VM->Status ." Status: $Status Failures: ". (defined $TestFailures ? $TestFailures : "unset");
