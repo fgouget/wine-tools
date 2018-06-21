@@ -283,9 +283,12 @@ sub GetHtmlLine($$$)
   return (undef, $Line);
 }
 
+my @MILogFiles = qw(exe32.report exe64.report log log.old);
 my %MILogLabels = (
-  "log" => "task log",
-  "log.old" => "old logs",
+  "exe32.report" => "32 bit Windows report",
+  "exe64.report" => "64 bit Windows report",
+  "log"          => "task log",
+  "log.old"      => "old logs",
 );
 
 sub InitMoreInfo($)
@@ -301,7 +304,7 @@ sub InitMoreInfo($)
 
     my $Value = $self->GetParam("f$Key");
     my $TaskDir = $StepTask->GetTaskDir();
-    foreach my $Log ("log", "log.old")
+    foreach my $Log (@MILogFiles)
     {
       if (!-f "$TaskDir/$Log" or -z "$TaskDir/$Log")
       {

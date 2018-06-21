@@ -195,7 +195,7 @@ my $OldUMask = umask(002);
 my $TaskDir = $Task->CreateDir();
 umask($OldUMask);
 my $VM = $Task->VM;
-my $RptFileName = $VM->Name . ".rpt";
+my $RptFileName = $Step->FileType .".report";
 
 
 my $Start = Time();
@@ -292,13 +292,13 @@ sub WrapUpAndExit($;$$$)
   if ($Step->Type eq 'suite' and $Status eq 'completed' and !$TimedOut)
   {
     # Keep the old report if the new one is missing
-    if (-f "$TaskDir/log" and !-z "$TaskDir/log")
+    if (-f "$TaskDir/$RptFileName" and !-z "$TaskDir/$RptFileName")
     {
       # Update the reference VM suite results for WineSendLog.pl
       my $LatestBaseName = join("", "$DataDir/latest/", $Task->VM->Name, "_",
                                 $Step->FileType eq "exe64" ? "64" : "32");
       unlink("$LatestBaseName.log");
-      link("$TaskDir/log", "$LatestBaseName.log");
+      link("$TaskDir/$RptFileName", "$LatestBaseName.log");
       unlink("$LatestBaseName.err");
       if (-f "$TaskDir/err" and !-z "$TaskDir/err")
       {
@@ -518,11 +518,11 @@ if (!defined $TA->Wait($Pid, $Timeout, $Keepalive))
 }
 
 my $TimedOut;
-Debug(Elapsed($Start), " Retrieving the report file to 'log'\n");
-if ($TA->GetFile($RptFileName, "$TaskDir/log"))
+Debug(Elapsed($Start), " Retrieving the report file to '$RptFileName'\n");
+if ($TA->GetFile($RptFileName, "$TaskDir/$RptFileName"))
 {
-  chmod 0664, "$TaskDir/log";
-  if (open(my $LogFile, "<", "$TaskDir/log"))
+  chmod 0664, "$TaskDir/$RptFileName";
+  if (open(my $LogFile, "<", "$TaskDir/$RptFileName"))
   {
     # There is more than one test unit when running the full test suite so keep
     # track of the current one. Note that for the TestBot we don't count or
@@ -788,7 +788,7 @@ if ($TA->GetFile($RptFileName, "$TaskDir/log"))
   else
   {
     $NewStatus = 'boterror';
-    Error "Unable to open 'log' for reading: $!\n";
+    Error "Unable to open '$RptFileName' for reading: $!\n";
     LogTaskError("Unable to open the log file for reading: $!\n");
   }
 }
