@@ -253,9 +253,12 @@ sub GetHtmlLine($$$)
       $Line =~ / done \(258\)/ or
       $Line =~ /: unhandled exception [0-9a-fA-F]{8} at / or
       $Line =~ /^Unhandled exception: / or
+      # Git errors
+      $Line =~ /^CONFLICT / or
+      $Line =~ /^error: patch failed:/ or
+      $Line =~ /^error: corrupt patch / or
       # Build errors
       $Line =~ /: error: / or
-      $Line =~ /^error: patch failed:/ or
       $Line =~ /^Makefile:[0-9]+: recipe for target .* failed$/ or
       $Line =~ /^(?:Build|Reconfig|Task): (?!ok)/ or
       # Typical perl errors
