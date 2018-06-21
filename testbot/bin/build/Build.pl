@@ -82,7 +82,7 @@ sub ApplyPatch($)
   my ($PatchFile) = @_;
 
   InfoMsg "Applying patch\n";
-  system("cd $DataDir/wine && set -x && ".
+  system("cd '$DataDir/wine' && set -x && ".
          "git apply --verbose ". ShQuote($PatchFile) ." && ".
          "git add -A");
   if ($? != 0)
@@ -95,7 +95,7 @@ sub ApplyPatch($)
   if ($Impacts->{Makefiles})
   {
     InfoMsg "\nRunning make_makefiles\n";
-    system("cd $DataDir/wine && set -x && ./tools/make_makefiles");
+    system("cd '$DataDir/wine' && set -x && ./tools/make_makefiles");
     if ($? != 0)
     {
       LogMsg "make_makefiles failed\n";
@@ -106,7 +106,7 @@ sub ApplyPatch($)
   if ($Impacts->{Autoconf} && !$Impacts->{HasConfigure})
   {
     InfoMsg "\nRunning autoconf\n";
-    system("cd $DataDir/wine && set -x && autoconf");
+    system("cd '$DataDir/wine' && set -x && autoconf");
     if ($? != 0)
     {
       LogMsg "Autoconf failed\n";
@@ -122,7 +122,7 @@ sub BuildNative()
   mkdir "$DataDir/build-native" if (! -d "$DataDir/build-native");
 
   InfoMsg "\nRebuilding native tools\n";
-  system("cd $DataDir/build-native && set -x && ".
+  system("cd '$DataDir/build-native' && set -x && ".
          "time make -j$ncpus __tooldeps__");
   if ($? != 0)
   {
@@ -147,7 +147,7 @@ sub BuildTestExecutables($$)
   }
 
   InfoMsg "\nBuilding the $Bits-bit test executable(s)\n";
-  system("cd $DataDir/build-mingw$Bits && set -x && ".
+  system("cd '$DataDir/build-mingw$Bits' && set -x && ".
          "time make -j$ncpus ". join(" ", sort @BuildDirs));
   if ($? != 0)
   {
@@ -224,6 +224,12 @@ if ($BitIndicators =~ m/^([\d,]+)$/)
 else
 {
   FatalError "Invalid number of bits $BitIndicators\n";
+}
+
+if ($DataDir =~ /'/)
+{
+    LogMsg "The install path contains invalid characters\n";
+    exit(1);
 }
 
 my $Impacts = ApplyPatch($PatchFile);

@@ -73,7 +73,7 @@ sub BuildTestAgentd()
   if (! -x "$BinDir/build/testagentd")
   {
     InfoMsg "\nBuilding the native testagentd\n";
-    system("cd $::RootDir/src/testagentd && set -x && ".
+    system("cd '$::RootDir/src/testagentd' && set -x && ".
            "time make -j$ncpus build");
     if ($? != 0)
     {
@@ -83,7 +83,7 @@ sub BuildTestAgentd()
   }
 
   InfoMsg "\nRebuilding the Windows TestAgentd\n";
-  system("cd $::RootDir/src/testagentd && set -x && ".
+  system("cd '$::RootDir/src/testagentd' && set -x && ".
          "time make -j$ncpus iso");
   if ($? != 0)
   {
@@ -97,7 +97,7 @@ sub BuildTestAgentd()
 sub BuildTestLauncher()
 {
   InfoMsg "\nRebuilding TestLauncher\n";
-  system("cd $::RootDir/src/TestLauncher && set -x && ".
+  system("cd '$::RootDir/src/TestLauncher' && set -x && ".
          "time make -j$ncpus");
   if ($? != 0)
   {
@@ -111,7 +111,7 @@ sub BuildTestLauncher()
 sub GitPull()
 {
   InfoMsg "\nUpdating the Wine source\n";
-  system("cd $DataDir/wine && git pull");
+  system("cd '$DataDir/wine' && git pull");
   if ($? != 0)
   {
     LogMsg "Git pull failed\n";
@@ -134,7 +134,7 @@ sub BuildNative()
 
   # Rebuild from scratch to make sure cruft will not accumulate
   InfoMsg "\nRebuilding native tools\n";
-  system("cd $DataDir/build-native && set -x && ".
+  system("cd '$DataDir/build-native' && set -x && ".
          "rm -rf * && ".
          "time ../wine/configure --enable-win64 --without-x --without-freetype --disable-winetest && ".
          "time make -j$ncpus __tooldeps__");
@@ -157,7 +157,7 @@ sub BuildCross($)
 
   # Rebuild from scratch to make sure cruft will not accumulate
   InfoMsg "\nRebuilding the $Bits-bit test executables\n";
-  system("cd $DataDir/build-mingw$Bits && set -x && ".
+  system("cd '$DataDir/build-mingw$Bits' && set -x && ".
          "rm -rf * && ".
          "time ../wine/configure --host=$Host --with-wine-tools=../build-native --without-x --without-freetype --disable-winetest && ".
          "time make -j$ncpus buildtests");
@@ -173,6 +173,11 @@ sub BuildCross($)
 $ENV{PATH} = "/usr/lib/ccache:/usr/bin:/bin";
 delete $ENV{ENV};
 
+if ($DataDir =~ /'/)
+{
+    LogMsg "The install path contains invalid characters\n";
+    exit(1);
+}
 if (! -d "$DataDir/staging" and ! mkdir "$DataDir/staging")
 {
     LogMsg "Unable to create '$DataDir/staging': $!\n";
