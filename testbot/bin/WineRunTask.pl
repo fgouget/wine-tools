@@ -789,12 +789,12 @@ if ($TA->GetFile($RptFileName, "$TaskDir/$RptFileName"))
   {
     $NewStatus = 'boterror';
     Error "Unable to open '$RptFileName' for reading: $!\n";
-    LogTaskError("Unable to open the log file for reading: $!\n");
+    LogTaskError("Unable to open '$RptFileName' for reading: $!\n");
   }
 }
 elsif (!defined $TAError)
 {
-  $TAError = "An error occurred while retrieving the test report: ". $TA->GetLastError();
+  $TAError = "An error occurred while retrieving $RptFileName: ". $TA->GetLastError();
 }
 $TA->Disconnect();
 
