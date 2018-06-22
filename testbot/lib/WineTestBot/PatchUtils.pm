@@ -298,7 +298,7 @@ sub GetPatchImpact($;$$)
       }
     }
 
-    $TestInfo->{UnitCount} = scalar(%{$TestInfo->{Units}});
+    $TestInfo->{UnitCount} = scalar(keys %{$TestInfo->{Units}});
     if ($TestInfo->{UnitCount})
     {
       $Impacts->{ModuleCount}++;
