@@ -583,7 +583,7 @@ while ($line = <IN>) {
     next if ($line =~ /^\s*$/);
     chomp $line;
     $line =~ s/\r+$//;
-    if ($line =~ m%^([_.a-z0-9-]+):([_a-z0-9]+) (start|skipped) (-|[/_.a-z0-9]+) (-|[.0-9a-f]+)\r?$%)
+    if ($line =~ m%^([_.a-z0-9-]+):([_a-z0-9]+) (start|skipped) (-|[/_.a-z0-9-]+) (-|[.0-9a-f]+)\r?$%)
     {
         my ($l_dll, $l_unit, $l_type, $l_source, $l_rev) = ($1, $2, $3, $4, $5);
 
