@@ -36,13 +36,46 @@ sub BEGIN
     unshift @INC, "$::RootDir/lib";
   }
 }
+my $Name0 = $0;
+$Name0 =~ s+^.*/++;
+
 
 use Algorithm::Diff;
+
 use WineTestBot::Config;
 use WineTestBot::Jobs;
 use WineTestBot::Log;
 use WineTestBot::StepsTasks;
 
+
+#
+# Logging and error handling helpers
+#
+
+my $Debug;
+sub Debug(@)
+{
+  print STDERR @_ if ($Debug);
+}
+
+sub DebugTee($@)
+{
+  my ($File) = shift;
+  print $File @_;
+  Debug(@_);
+}
+
+my $LogOnly;
+sub Error(@)
+{
+  print STDERR "$Name0:error: ", @_ if (!$LogOnly);
+  LogMsg @_;
+}
+
+
+#
+# Log analysis
+#
 
 sub IsBotFailure($)
 {
@@ -121,7 +154,7 @@ sub ReadLog($$$)
   }
   else
   {
-    LogMsg "Unable to open '$LogName' for reading: $!\n";
+    Error "Unable to open '$LogName' for reading: $!\n";
   }
 
   return \@Messages;
@@ -179,7 +212,19 @@ sub SendLog($)
   my $StepsTasks = CreateStepsTasks(undef, $Job);
   my @SortedKeys = sort @{$StepsTasks->GetKeys()};
 
-  open (SENDMAIL, "|/usr/sbin/sendmail -oi -t -odq");
+  #
+  # Send a job summary and all the logs as attachments to the developer
+  #
+
+  Debug("-------------------- Developer email --------------------\n");
+  if ($Debug)
+  {
+    open(SENDMAIL, ">>&=", 1);
+  }
+  else
+  {
+    open (SENDMAIL, "|/usr/sbin/sendmail -oi -t -odq");
+  }
   print SENDMAIL "From: $RobotEMail\n";
   print SENDMAIL "To: $To\n";
   my $Subject = "TestBot job " . $Job->Id . " results";
@@ -218,6 +263,7 @@ EOF
                     $TestFailures;
   }
 
+  # Print the job summary
   my @FailureKeys;
   foreach my $Key (@SortedKeys)
   {
@@ -322,6 +368,7 @@ EOF
     }
   }
 
+  # Print the log attachments
   foreach my $Key (@SortedKeys)
   {
     my $StepTask = $StepsTasks->GetItem($Key);
@@ -334,6 +381,7 @@ Content-Transfer-Encoding: 8bit
 EOF
     print SENDMAIL "Content-Disposition: attachment; filename=",
                    $StepTask->VM->Name, ".log\n\n";
+    print SENDMAIL "Not dumping logs in debug mode\n" if ($Debug);
 
     my $PrintSeparator = !1;
     my $TaskDir = $StepTask->GetTaskDir();
@@ -343,7 +391,7 @@ EOF
       while (defined($Line = <LOGFILE>))
       {
         $Line =~ s/\s*$//;
-        print SENDMAIL "$Line\n";
+        print SENDMAIL "$Line\n" if (!$Debug);
         $PrintSeparator = 1;
       }
       close LOGFILE;
@@ -356,11 +404,11 @@ EOF
       {
         if ($PrintSeparator)
         {
-          print SENDMAIL "\n";
+          print SENDMAIL "\n" if (!$Debug);
           $PrintSeparator = !1;
         }
         $Line =~ s/\s*$//;
-        print SENDMAIL "$Line\n";
+        print SENDMAIL "$Line\n" if (!$Debug);
       }
       close ERRFILE;
     }
@@ -369,10 +417,12 @@ EOF
   print SENDMAIL "--==13F70BD1-BA1B-449A-9CCB-B6A8E90CED47==--\n";
   close(SENDMAIL);
 
-  if (! defined($Job->Patch))
-  {
-    return;
-  }
+  # This is all for jobs submitted from the website
+  return if (!defined $Job->Patch);
+
+  #
+  # Build a job summary with only the new errors
+  #
 
   my $Messages = "";
   foreach my $Key (@FailureKeys)
@@ -401,7 +451,7 @@ EOF
       }
       else
       {
-        LogMsg "BotFailure found in ${LatestName}.err\n";
+        Error "BotFailure found in ${LatestName}.err\n";
       }
       if ($MessagesFromErr || $MessagesFromLog)
       {
@@ -411,15 +461,28 @@ EOF
     }
     elsif ($BotFailure)
     {
-      LogMsg "BotFailure found in $TaskDir/err\n";
+      Error "BotFailure found in $TaskDir/err\n";
     }
   }
+
+  #
+  # Send a summary of the new errors to the mailing list
+  #
+
+  Debug("\n-------------------- Mailing list email --------------------\n");
 
   my $WebSite = ($UseSSL ? "https://" : "http://") . $WebHostName;
 
   if ($Messages)
   {
-    open (SENDMAIL, "|/usr/sbin/sendmail -oi -t -odq");
+    if ($Debug)
+    {
+      open(SENDMAIL, ">>&=", 1);
+    }
+    else
+    {
+      open (SENDMAIL, "|/usr/sbin/sendmail -oi -t -odq");
+    }
     print SENDMAIL "From: $RobotEMail\n";
     print SENDMAIL "To: $To\n";
     print SENDMAIL "Cc: $WinePatchCc\n";
@@ -445,6 +508,14 @@ EOF
     print SENDMAIL $Messages;
     close SENDMAIL;
   }
+  else
+  {
+    Debug("Found no error to report to the mailing list\n");
+  }
+
+  #
+  # Create a .testbot file for the patches website
+  #
 
   my $Patch = $Job->Patch;
   if (defined $Patch->WebPatchId and -d "$DataDir/webpatches")
@@ -452,9 +523,12 @@ EOF
     my $BaseName = "$DataDir/webpatches/" . $Patch->WebPatchId;
     if (open (my $result, ">", "$BaseName.testbot"))
     {
-      print $result "Status: " . ($Messages ? "Failed" : "OK") . "\n";
-      print $result "Job-ID: " . $Job->Id . "\n";
-      print $result "URL: $WebSite/JobDetails.pl?Key=" . $Job->GetKey() . "\n";
+      Debug("\n-------------------- WebPatches report --------------------\n");
+      # Only take into account new errors to decide whether the job was
+      # successful or not.
+      DebugTee($result, "Status: ". ($Messages ? "Failed" : "OK") ."\n");
+      DebugTee($result, "Job-ID: ". $Job->Id ."\n");
+      DebugTee($result, "URL: $WebSite/JobDetails.pl?Key=". $Job->GetKey() ."\n");
 
       foreach my $Key (@SortedKeys)
       {
@@ -496,7 +570,7 @@ EOF
     }
     else
     {
-      LogMsg "Job " . $Job->Id . ": Unable to open '$BaseName.testbot' for writing: $!";
+      Error "Job ". $Job->Id .": Unable to open '$BaseName.testbot' for writing: $!";
     }
   }
 }
@@ -509,37 +583,96 @@ EOF
 $ENV{PATH} = "/usr/bin:/bin";
 delete $ENV{ENV};
 
-my $JobId = $ARGV[0];
-if (! $JobId)
+my $Usage;
+sub ValidateNumber($$)
 {
-  die "Usage: WineSendLog.pl JobId";
+  my ($Name, $Value) = @_;
+
+  # Validate and untaint the value
+  return $1 if ($Value =~ /^(\d+)$/);
+  Error "$Value is not a valid $Name\n";
+  $Usage = 2;
+  return undef;
 }
 
-# Untaint parameters
-if ($JobId =~ /^(\d+)$/)
+my ($JobId);
+while (@ARGV)
 {
-  $JobId = $1;
+  my $Arg = shift @ARGV;
+  if ($Arg eq "--debug")
+  {
+    $Debug = 1;
+  }
+  elsif ($Arg eq "--log-only")
+  {
+    $LogOnly = 1;
+  }
+  elsif ($Arg =~ /^(?:-\?|-h|--help)$/)
+  {
+    $Usage = 0;
+    last;
+  }
+  elsif ($Arg =~ /^-/)
+  {
+    Error "unknown option '$Arg'\n";
+    $Usage = 2;
+    last;
+  }
+  elsif (!defined $JobId)
+  {
+    $JobId = ValidateNumber('job id', $Arg);
+  }
+  else
+  {
+    Error "unexpected argument '$Arg'\n";
+    $Usage = 2;
+    last;
+  }
 }
-else
+
+# Check parameters
+if (!defined $Usage)
 {
-  LogMsg "Invalid JobId $JobId\n";
-  exit(1);
+  if (!defined $JobId)
+  {
+    Error "you must specify the job id\n";
+    $Usage = 2;
+  }
+}
+if (defined $Usage)
+{
+  if ($Usage)
+  {
+    Error "try '$Name0 --help' for more information\n";
+    exit $Usage;
+  }
+  print "Usage: $Name0 [--debug] [--help] JOBID\n";
+  print "\n";
+  print "Analyze the job's logs and notifies the developer and the patches website.\n";
+  print "\n";
+  print "Where:\n";
+  print "  JOBID      Id of the job to report on.\n";
+  print "  --debug    More verbose messages for debugging.\n";
+  print "  --log-only Only send error messages to the log instead of also printing them\n";
+  print "             on stderr.\n";
+  print "  --help     Shows this usage message.\n";
+  exit 0;
 }
 
 my $Job = CreateJobs()->GetItem($JobId);
-if (! defined($Job))
+if (!defined $Job)
 {
-  LogMsg "Job $JobId doesn't exist\n";
-  exit(1);
+  Error "Job $JobId doesn't exist\n";
+  exit 1;
 }
 
 
 #
-# Analyze the log and notify the developer
+# Analyze the log, notify the developer and the Patches website
 #
 
 SendLog($Job);
 
 LogMsg "Log for job $JobId sent\n";
 
-exit(0);
+exit 0;

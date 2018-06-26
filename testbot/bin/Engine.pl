@@ -320,7 +320,7 @@ sub HandleJobStatusChange($$$)
       CloseAllDBBackEnds();
       WineTestBot::Log::SetupRedirects();
 
-      exec("$BinDir/${ProjectName}SendLog.pl $JobKey") or
+      exec("$BinDir/${ProjectName}SendLog.pl --log-only $JobKey") or
       LogMsg "Unable to exec ${ProjectName}SendLog.pl: $!\n";
       exit(1);
     }
