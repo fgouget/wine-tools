@@ -116,6 +116,17 @@ if (defined $Usage)
 # Main
 #
 
+sub DeletePath($)
+{
+  my ($Path) = @_;
+
+  Trace "Deleting '$Path'\n";
+  if (!$DryRun and !rmtree($Path))
+  {
+    Error "Could not delete '$Path': $!\n";
+  }
+}
+
 # Delete obsolete Jobs
 if ($JobPurgeDays != 0)
 {
@@ -268,11 +279,7 @@ if (opendir(my $dh, "$DataDir/staging"))
       {
         if ($Age >= $JobPurgeDays + 7)
         {
-          Trace "Deleting '$FileName'\n";
-          if (!$DryRun and !rmtree($FileName))
-          {
-            Error "Could not delete '$FileName': $!\n";
-          }
+          DeletePath($FileName);
         }
         elsif ($Age > $JobPurgeDays)
         {
@@ -282,12 +289,8 @@ if (opendir(my $dh, "$DataDir/staging"))
     }
     elsif ($Age >= 1)
     {
-      Trace "Deleting '$FileName'\n";
-      if (!$DryRun and !unlink $FileName)
-      {
-        # The user abandoned the submit procedure half-way through
-        Error "Could not delete '$FileName': $!\n";
-      }
+      # The user abandoned the submit procedure half-way through
+      DeletePath($FileName);
     }
   }
 }
