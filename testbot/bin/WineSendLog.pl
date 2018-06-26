@@ -48,6 +48,9 @@ use WineTestBot::Log;
 use WineTestBot::StepsTasks;
 
 
+my $PART_BOUNDARY = "==13F70BD1-BA1B-449A-9CCB-B6A8E90CED47==";
+
+
 #
 # Logging and error handling helpers
 #
@@ -241,9 +244,9 @@ sub SendLog($)
   }
   print SENDMAIL <<"EOF";
 MIME-Version: 1.0
-Content-Type: multipart/mixed; boundary="==13F70BD1-BA1B-449A-9CCB-B6A8E90CED47=="
+Content-Type: multipart/mixed; boundary="$PART_BOUNDARY"
 
---==13F70BD1-BA1B-449A-9CCB-B6A8E90CED47==
+--$PART_BOUNDARY
 Content-Type: text/plain; charset="UTF-8"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
@@ -374,7 +377,7 @@ EOF
     my $StepTask = $StepsTasks->GetItem($Key);
 
     print SENDMAIL <<"EOF";
---==13F70BD1-BA1B-449A-9CCB-B6A8E90CED47==
+--$PART_BOUNDARY
 Content-Type: text/plain; charset="UTF-8"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
@@ -414,7 +417,7 @@ EOF
     }
   }
   
-  print SENDMAIL "--==13F70BD1-BA1B-449A-9CCB-B6A8E90CED47==--\n";
+  print SENDMAIL "--$PART_BOUNDARY--\n";
   close(SENDMAIL);
 
   # This is all for jobs submitted from the website
