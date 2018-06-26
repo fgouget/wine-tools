@@ -272,11 +272,13 @@ EOF
   foreach my $Key (@SortedKeys)
   {
     my $StepTask = $StepsTasks->GetItem($Key);
+    my $TaskDir = $StepTask->GetTaskDir();
 
     print SENDMAIL "\n=== ", $StepTask->GetTitle(), " ===\n";
 
-    my $TaskDir = $StepTask->GetTaskDir();
-    if (open LOGFILE, "<$TaskDir/log")
+    my $LogFiles = GetLogFileNames($TaskDir);
+    my $LogName = $LogFiles->[0] || "log";
+    if (open LOGFILE, "<$TaskDir/$LogName")
     {
       my $HasLogEntries = !1;
       my $PrintedSomething = !1;
@@ -376,6 +378,7 @@ EOF
   foreach my $Key (@SortedKeys)
   {
     my $StepTask = $StepsTasks->GetItem($Key);
+    my $TaskDir = $StepTask->GetTaskDir();
 
     print SENDMAIL <<"EOF";
 --$PART_BOUNDARY
@@ -387,9 +390,10 @@ EOF
                    $StepTask->VM->Name, ".log\n\n";
     print SENDMAIL "Not dumping logs in debug mode\n" if ($Debug);
 
+    my $LogFiles = GetLogFileNames($TaskDir);
+    my $LogName = $LogFiles->[0] || "log";
     my $PrintSeparator = !1;
-    my $TaskDir = $StepTask->GetTaskDir();
-    if (open LOGFILE, "<$TaskDir/log")
+    if (open LOGFILE, "<$TaskDir/$LogName")
     {
       my $Line;
       while (defined($Line = <LOGFILE>))
@@ -432,8 +436,8 @@ EOF
   foreach my $Key (@FailureKeys)
   {
     my $StepTask = $StepsTasks->GetItem($Key);
-
     my $TaskDir = $StepTask->GetTaskDir();
+
     my ($BotFailure, $MessagesFromErr) = CheckErrLog("$TaskDir/err");
     if (! $BotFailure)
     {
@@ -449,7 +453,9 @@ EOF
           # Filter out failures that happened in the full test suite:
           # the test suite is run against code which is already in Wine
           # so any failure it reported is not caused by this patch.
-          $MessagesFromLog = CompareLogs("$LatestName.log", "$TaskDir/log",
+          my $LogFiles = GetLogFileNames($TaskDir);
+          my $LogName = $LogFiles->[0] || "log";
+          $MessagesFromLog = CompareLogs("$LatestName.log", "$TaskDir/$LogName",
                                          $BaseName, $StepTask->CmdLineArg);
         }
       }
@@ -537,11 +543,14 @@ EOF
       foreach my $Key (@SortedKeys)
       {
         my $StepTask = $StepsTasks->GetItem($Key);
+        my $TaskDir = $StepTask->GetTaskDir();
+
         print $result "\n=== ", $StepTask->GetTitle(), " ===\n";
 
+        my $LogFiles = GetLogFileNames($TaskDir);
+        my $LogName = $LogFiles->[0] || "log";
         my $PrintSeparator = !1;
-        my $TaskDir = $StepTask->GetTaskDir();
-        if (open(my $logfile, "<", "$TaskDir/log"))
+        if (open(my $logfile, "<", "$TaskDir/$LogName"))
         {
           my $Line;
           while (defined($Line = <$logfile>))
