@@ -439,13 +439,23 @@ EOF
     my $TaskDir = $StepTask->GetTaskDir();
 
     my ($BotFailure, $MessagesFromErr) = CheckErrLog("$TaskDir/err");
-    if (! $BotFailure)
+    if ($BotFailure)
+    {
+      # TestBot errors are not the developer's fault and prevent us from doing
+      # any meaningful analysis. So skip.
+      Error "A TestBot error was found in $TaskDir/err\n";
+      next;
+    }
+
+    my $MessagesFromLog = "";
+    my $LogFiles = GetLogFileNames($TaskDir);
+    my $LogName = $LogFiles->[0] || "log";
+    if ($LogName =~ /\.report$/)
     {
       $StepTask->FileName =~ m/^(.*)_test(64)?\.exe$/;
       my ($BaseName, $Bits) = ($1, $2 || "32");
       my $LatestName = "$DataDir/latest/" . $StepTask->VM->Name . "_$Bits";
       my ($LatestBotFailure, $Dummy) = CheckErrLog("$LatestName.err");
-      my $MessagesFromLog = "";
       if (! $LatestBotFailure)
       {
         if (defined($StepTask->CmdLineArg))
@@ -463,15 +473,20 @@ EOF
       {
         Error "BotFailure found in ${LatestName}.err\n";
       }
-      if ($MessagesFromErr || $MessagesFromLog)
-      {
-        $Messages .= "\n=== " . $StepTask->GetTitle() . " ===\n" .
-                     $MessagesFromLog . $MessagesFromErr;
-      }
     }
-    elsif ($BotFailure)
+    elsif (open(my $LogFile, "<", "$TaskDir/$LogName"))
     {
-      Error "BotFailure found in $TaskDir/err\n";
+      foreach my $Line (<$LogFile>)
+      {
+        my $Category = GetLogLineCategory($Line);
+        $MessagesFromLog .= $Line if ($Category eq "error");
+      }
+      close($LogFile);
+    }
+    if ($MessagesFromErr || $MessagesFromLog)
+    {
+      $Messages .= "\n=== " . $StepTask->GetTitle() . " ===\n" .
+                   $MessagesFromLog . $MessagesFromErr;
     }
   }
 
