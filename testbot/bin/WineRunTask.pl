@@ -441,9 +441,10 @@ if ($Step->Type eq "single")
   }
   $Script .= "> $RptFileName\r\n";
 
-  # If StepNo is 1 then the user gave us an executable. Then there is no
-  # telling if it's going to follow the Wine test standards.
-  $IsWineTest = ($StepNo != 1);
+  # If the user gave us an executable there is no telling
+  # if it is going going to follow the Wine test standards.
+  $IsWineTest = (defined $Step->PreviousNo and
+                 $Job->Steps->GetItem($Step->PreviousNo)->FileType eq "patchdlls");
 }
 elsif ($Step->Type eq "suite")
 {
