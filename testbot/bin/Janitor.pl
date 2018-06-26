@@ -299,6 +299,52 @@ else
   Error "Unable to open '$DataDir/staging': $!";
 }
 
+# Check the content of the latest directory
+if (opendir(my $dh, "$DataDir/latest"))
+{
+  # We will be deleting files so read the directory in one go
+  my @Entries = readdir($dh);
+  close($dh);
+
+  my $AllVMs = $VMs->Clone();
+  foreach my $Entry (@Entries)
+  {
+    next if ($Entry eq "." or $Entry eq "..");
+    $Entry =~ m%^([^/]+)$%;
+    my $FileName = "$DataDir/latest/$1";
+    my $Age = int((-M $FileName) + 0.5);
+
+    if ($Entry =~ /^(.*)_[a-z0-9]+\.(?:err|log)$/)
+    {
+      # Keep the reference WineTest reports for all VMs even if they are
+      # retired or scheduled for deletion.
+      my $VMName = $1;
+      next if ($AllVMs->GetItem($VMName));
+    }
+    elsif ($Entry =~ /^(?:TestLauncher[0-9]*\.exe|winefiles.txt|winetest[0-9]*-latest\.exe)$/)
+    {
+      next;
+    }
+
+    Trace "Found a suspicious latest file: $Entry\n";
+    if ($JobPurgeDays != 0)
+    {
+      if ($Age >= $JobPurgeDays + 7)
+      {
+        DeletePath($FileName);
+      }
+      elsif ($Age > $JobPurgeDays)
+      {
+        Trace "'$FileName' will be deleted in ", $JobPurgeDays + 7 - $Age, " day(s).\n";
+      }
+    }
+  }
+}
+else
+{
+  Error "Unable to open '$DataDir/latest': $!";
+}
+
 # Delete obsolete record groups
 if ($JobPurgeDays != 0)
 {
