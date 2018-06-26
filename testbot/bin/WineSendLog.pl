@@ -45,6 +45,7 @@ use Algorithm::Diff;
 use WineTestBot::Config;
 use WineTestBot::Jobs;
 use WineTestBot::Log;
+use WineTestBot::LogUtils;
 use WineTestBot::StepsTasks;
 
 
@@ -290,8 +291,8 @@ EOF
         {
           $CurrentDll = $1;
         }
-        if ($Line =~ m/: Test failed: / || $Line =~ m/ done \(258\)/ ||
-            $Line =~ m/: unhandled exception [0-9a-fA-F]{8} at /)
+        my $Category = GetLogLineCategory($Line);
+        if ($Category eq "error")
         {
           if ($PrintedDll ne $CurrentDll)
           {
