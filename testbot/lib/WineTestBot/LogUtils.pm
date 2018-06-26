@@ -27,7 +27,7 @@ WineTestBot::LogUtils - Provides functions to parse task logs
 
 
 use Exporter 'import';
-our @EXPORT = qw(GetLogLineCategory ParseTaskLog);
+our @EXPORT = qw(GetLogFileNames GetLogLabel GetLogLineCategory ParseTaskLog);
 
 
 #
@@ -131,6 +131,59 @@ sub GetLogLineCategory($)
   }
 
   return "none";
+}
+
+=pod
+=over 12
+
+=item C<GetLogFileNames()>
+
+Scans the directory for test reports and task logs and returns their filenames.
+The filenames are returned in the order in which the logs are meant to be
+presented.
+
+=back
+=cut
+
+sub GetLogFileNames($;$)
+{
+  my ($Dir, $IncludeOld) = @_;
+
+  my @Candidates = ("exe32.report", "exe64.report",
+                    "log", "err");
+  push @Candidates, "log.old", "err.old" if ($IncludeOld);
+
+  my @Logs;
+  foreach my $FileName (@Candidates)
+  {
+    push @Logs, $FileName if (-f "$Dir/$FileName" and !-z "$Dir/$FileName");
+  }
+  return \@Logs;
+}
+
+my %_LogFileLabels = (
+  "exe32.report" => "32 bit Windows report",
+  "exe64.report" => "64 bit Windows report",
+  "err"          => "task errors",
+  "log"          => "task log",
+  "err.old"      => "old task errors",
+  "log.old"      => "old logs",
+);
+
+=pod
+=over 12
+
+=item C<GetLogLabel()>
+
+Returns a user-friendly description of the content of the specified log file.
+
+=back
+=cut
+
+sub GetLogLabel($)
+{
+  my ($LogFileName) = @_;
+  return $_LogFileLabels{$LogFileName};
 }
 
 1;

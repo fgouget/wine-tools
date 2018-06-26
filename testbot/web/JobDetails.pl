@@ -261,14 +261,6 @@ sub GetHtmlLine($$$)
   return $Html;
 }
 
-my @MILogFiles = qw(exe32.report exe64.report log log.old);
-my %MILogLabels = (
-  "exe32.report" => "32 bit Windows report",
-  "exe64.report" => "64 bit Windows report",
-  "log"          => "task log",
-  "log.old"      => "old logs",
-);
-
 sub InitMoreInfo($)
 {
   my ($self) = @_;
@@ -282,15 +274,15 @@ sub InitMoreInfo($)
 
     my $Value = $self->GetParam("f$Key");
     my $TaskDir = $StepTask->GetTaskDir();
-    foreach my $Log (@MILogFiles)
+    foreach my $Log (@{GetLogFileNames($TaskDir, 1)})
     {
-      if (!-f "$TaskDir/$Log" or -z "$TaskDir/$Log")
+      if ($Log =~ s/^err/log/)
       {
-        my $Err = $Log;
-        next if ($Err !~ s/^log/err/ or !-f "$TaskDir/$Err" or -z "$TaskDir/$Err");
+        # We don't want separate entries for log* and err* but we also want a
+        # log* entry even if only err* exists.
+        next if (($More->{$Key}->{Logs}->[-1] || "") eq $Log);
       }
       push @{$More->{$Key}->{Logs}}, $Log;
-
       $More->{$Key}->{Full} = $Log if (uri_escape($Log) eq $Value);
     }
     $More->{$Key}->{Full} ||= "";
@@ -385,7 +377,7 @@ sub GenerateBody($)
 
     foreach my $Log (@{$MoreInfo->{Logs}})
     {
-      $self->GenerateMoreInfoLink($Key, $MILogLabels{$Log}, "Full", $Log);
+      $self->GenerateMoreInfoLink($Key, GetLogLabel($Log), "Full", $Log);
     }
     print "</div>\n";
 
