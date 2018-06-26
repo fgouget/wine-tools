@@ -103,7 +103,7 @@ sub ApplyPatch($)
   }
 
   my $Impacts = GetPatchImpact($PatchFile, "nounits");
-  if ($Impacts->{Makefiles})
+  if ($Impacts->{MakeMakefiles})
   {
     InfoMsg "\nRunning make_makefiles\n";
     system("cd '$DataDir/wine' && set -x && ./tools/make_makefiles");

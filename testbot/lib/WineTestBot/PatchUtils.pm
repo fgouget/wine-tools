@@ -178,7 +178,7 @@ sub _HandleFile($$$)
       if ($Change eq "new" or $Change eq "rm")
       {
         # This adds / removes a directory
-        $Impacts->{Makefiles} = 1;
+        $Impacts->{MakeMakefiles} = 1;
       }
       return;
     }
@@ -216,7 +216,7 @@ sub _HandleFile($$$)
     {
       # This may or may not be a Wine patch but the new Makefile.in will be
       # added to the build by make_makefiles.
-      $Impacts->{WineBuild} = $Impacts->{Makefiles} = 1;
+      $Impacts->{WineBuild} = $Impacts->{MakeMakefiles} = 1;
     }
   }
 }
@@ -289,7 +289,7 @@ sub GetPatchImpact($;$$)
     }
     elsif ($Line =~ m=^--- \w+/tools/make_makefiles$=)
     {
-      $Impacts->{WineBuild} = $Impacts->{Makefiles} = 1;
+      $Impacts->{WineBuild} = $Impacts->{MakeMakefiles} = 1;
       $Impacts->{IsWinePatch} = 1;
     }
     elsif ($Line =~ m=^--- /dev/null$=)
