@@ -27,7 +27,7 @@ WineTestBot::LogUtils - Provides functions to parse task logs
 
 
 use Exporter 'import';
-our @EXPORT = qw(ParseTaskLog);
+our @EXPORT = qw(GetLogLineCategory ParseTaskLog);
 
 
 #
@@ -72,6 +72,65 @@ sub ParseTaskLog($$)
     return $Result || "missing";
   }
   return "nolog:Unable to open the task log for reading: $!";
+}
+
+
+#
+# Log querying and formatting
+#
+
+=pod
+=over 12
+
+=item C<GetLogLineCategory()>
+
+Identifies the category of the given log line: an error message, a todo, just
+an informational message or none of these. The category can then be used to
+decide whether to hide the line or, on the contrary, highlight it.
+
+=back
+=cut
+
+sub GetLogLineCategory($)
+{
+  my ($Line) = @_;
+
+  if ($Line =~ /: Test marked todo: /)
+  {
+    return "todo";
+  }
+  if ($Line =~ /: Tests skipped: / or
+      $Line =~ /^\w+:\w+ skipped /)
+  {
+    return "skip";
+  }
+  if ($Line =~ /: Test (?:failed|succeeded inside todo block): / or
+      $Line =~ /Fatal: test .* does not exist/ or
+      $Line =~ / done \(258\)/ or
+      $Line =~ /: unhandled exception [0-9a-fA-F]{8} at / or
+      $Line =~ /^Unhandled exception: / or
+      # Git errors
+      $Line =~ /^CONFLICT / or
+      $Line =~ /^error: patch failed:/ or
+      $Line =~ /^error: corrupt patch / or
+      # Build errors
+      $Line =~ /: error: / or
+      $Line =~ /^Makefile:[0-9]+: recipe for target .* failed$/ or
+      $Line =~ /^(?:Build|Reconfig|Task): (?!ok)/ or
+      # Typical perl errors
+      $Line =~ /^Use of uninitialized value/)
+  {
+    return "error";
+  }
+  if ($Line =~ /^\+ \S/ or
+      $Line =~ /^\w+:\w+ start / or
+      # Build messages
+      $Line =~ /^(?:Build|Reconfig|Task): ok/)
+  {
+    return "info";
+  }
+
+  return "none";
 }
 
 1;
