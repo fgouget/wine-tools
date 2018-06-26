@@ -458,7 +458,7 @@ foreach my $TestInfo (values %{$Impacts->{Tests}})
     }
     elsif ($TA->GetLastError() !~ /: No such file or directory/)
     {
-      FatalTAError($TA, "Could not retrieve '$Local'");
+      FatalTAError($TA, "An error occurred while retrieving '$Local'");
     }
   }
 }

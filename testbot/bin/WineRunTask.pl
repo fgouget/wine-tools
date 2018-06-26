@@ -481,7 +481,7 @@ elsif ($Step->Type eq "suite")
 Debug(Elapsed($Start), " Sending the script: [$Script]\n");
 if (!$TA->SendFileFromString($Script, "script.bat", $TestAgent::SENDFILE_EXE))
 {
-  FatalTAError($TA, "Could not send the script to the VM");
+  FatalTAError($TA, "Could not send the task script to the VM");
 }
 
 
