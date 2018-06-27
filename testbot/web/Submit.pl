@@ -858,30 +858,35 @@ sub OnSubmit($)
     my $VMs = CreateVMs();
     $VMs->AddFilter("Type", ["wine"]);
     my $SortedKeys = $VMs->SortKeysBySortOrder($VMs->GetKeys());
-    foreach my $VMKey (@$SortedKeys)
+    foreach my $Build ("win32", "wow64")
     {
-      my $VM = $VMs->GetItem($VMKey);
-      my $FieldName = "vm_" . $self->CGI->escapeHTML($VMKey);
-      next if (!$self->GetParam($FieldName)); # skip unselected VMs
+      next if ($Build eq "wow64" and !defined($self->GetParam("Run64")));
 
-      if (!$Tasks)
+      foreach my $VMKey (@$SortedKeys)
       {
-        # First create the Wine test step
-        my $WineStep = $Steps->Add();
-        $WineStep->FileName($BaseName);
-        $WineStep->FileType($FileType);
-        $WineStep->InStaging(!1);
-        $WineStep->Type("build");
-        $WineStep->DebugLevel($self->GetParam("DebugLevel"));
-        $WineStep->ReportSuccessfulTests(defined($self->GetParam("ReportSuccessfulTests")));
-        $Tasks = $WineStep->Tasks;
-      }
+        my $VM = $VMs->GetItem($VMKey);
+        my $FieldName = "vm_" . $self->CGI->escapeHTML($VMKey);
+        next if (!$self->GetParam($FieldName)); # skip unselected VMs
 
-      # Then add a task for this VM
-      my $Task = $Tasks->Add();
-      $Task->VM($VM);
-      $Task->CmdLineArg("win32");
-      $Task->Timeout($WineReconfigTimeout);
+        if (!$Tasks)
+        {
+          # First create the Wine test step
+          my $WineStep = $Steps->Add();
+          $WineStep->FileName($BaseName);
+          $WineStep->FileType($FileType);
+          $WineStep->InStaging(!1);
+          $WineStep->Type("build");
+          $WineStep->DebugLevel($self->GetParam("DebugLevel"));
+          $WineStep->ReportSuccessfulTests(defined($self->GetParam("ReportSuccessfulTests")));
+          $Tasks = $WineStep->Tasks;
+        }
+
+        # Then add a task for this VM
+        my $Task = $Tasks->Add();
+        $Task->VM($VM);
+        $Task->CmdLineArg($Build);
+        $Task->Timeout($WineReconfigTimeout);
+      }
     }
   }
 
