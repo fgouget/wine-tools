@@ -193,6 +193,19 @@ sub _HandleFile($$$)
     }
     $Tests->{$Module}->{Files}->{$File} = $Change;
   }
+  elsif ($FilePath =~ m~^(dlls|programs)/([^/]+)/([^/\s]+)$~)
+  {
+    my ($Root, $Dir, $File) = ($1, $2, $3);
+    my $Module = ($Root eq "programs") ? "$Dir.exe" : $Dir;
+    $Impacts->{IsWinePatch} = 1;
+    $Impacts->{ModuleBuild} = 1;
+
+    if ($File eq "Makefile.in" and $Change ne "modify")
+    {
+      # This adds / removes a directory
+      $Impacts->{MakeMakefiles} = 1;
+    }
+  }
   else
   {
     my $WineFiles = $Impacts->{WineFiles} || $_WineFiles;
