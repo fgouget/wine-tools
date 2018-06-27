@@ -356,8 +356,8 @@ if (!$Pid)
 
 
 #
-# From that point on we want to at least try to grab the task
-# log before giving up
+# From that point on we want to at least try to grab the task log
+# before giving up
 #
 
 my ($NewStatus, $ErrMessage, $TAError, $TaskTimedOut);
@@ -391,7 +391,9 @@ if ($TA->GetFile("Task.log", "$TaskDir/log"))
   }
   elsif ($Result eq "badpatch")
   {
+    # This too is conclusive enough to ignore other errors.
     $NewStatus = "badpatch";
+    $TAError = $ErrMessage = undef;
   }
   elsif ($Result =~ s/^nolog://)
   {
