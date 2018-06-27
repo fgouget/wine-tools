@@ -286,7 +286,9 @@ sub AddReconfigJob($)
     Debug("  $VMKey $VMType reconfig\n");
     my $Task = $BuildStep->Tasks->Add();
     $Task->VM($VM);
-    $Task->Timeout($ReconfigTimeout);
+    $Task->Timeout($VMType eq "wine" ?
+                   3 * $WineReconfigTimeout : # 3 full Wine builds
+                   $ReconfigTimeout);         # 1 overall timeout
   }
 
   # Save the build step so the others can reference it.
