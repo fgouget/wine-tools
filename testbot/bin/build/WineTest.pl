@@ -145,6 +145,62 @@ sub BuildWine($$)
 
 
 #
+# Test helpers
+#
+
+# See also WineReconfig.pl
+sub SetupWineEnvironment($)
+{
+  my ($Build) = @_;
+
+  $ENV{WINEPREFIX} = "$DataDir/wineprefix-$Build";
+  $ENV{DISPLAY} ||= ":0.0";
+}
+
+# See also WineReconfig.pl
+sub RunWine($$$)
+{
+  my ($Build, $Cmd, $CmdArgs) = @_;
+
+  my $Magic = `cd '$DataDir/build-$Build' && file $Cmd`;
+  my $Wine = ($Magic =~ /ELF 64/ ? "./wine64" : "./wine");
+  return system("cd '$DataDir/build-$Build' && set -x && ".
+                "time $Wine $Cmd $CmdArgs");
+}
+
+sub DailyWineTest($$$$)
+{
+  my ($Targets, $Build, $BaseTag, $Args) = @_;
+
+  return 1 if (!$Targets->{$Build});
+
+  InfoMsg "\nRunning WineTest in the $Build Wine\n";
+  SetupWineEnvironment($Build);
+
+  # Run WineTest. Ignore the exit code since it returns non-zero whenever
+  # there are test failures.
+  RunWine($Build, "./programs/winetest/winetest.exe.so",
+          "-c -o '../$Build.report' -t $BaseTag-$Build ". ShArgv2Cmd(@$Args));
+  if (!-f "$Build.report")
+  {
+    LogMsg "WineTest did not produce a report file\n";
+    return 0;
+  }
+
+  # Send the report to the website
+  if ($Targets->{submit} and
+      RunWine($Build, "./programs/winetest/winetest.exe.so",
+              "-c -s '../$Build.report'"))
+  {
+    LogMsg "WineTest failed to send the $Build report\n";
+    # Soldier on in case it's just a network issue
+  }
+
+  return 1;
+}
+
+
+#
 # Setup and command line processing
 #
 
@@ -152,9 +208,9 @@ $ENV{PATH} = "/usr/lib/ccache:/usr/bin:/bin";
 delete $ENV{ENV};
 
 my %AllTargets;
-map { $AllTargets{$_} = 1 } qw(win32 wow32 wow64);
+map { $AllTargets{$_} = 1 } qw(win32 wow32 wow64 submit);
 
-my ($Usage, $TargetList, $Action, $FileName);
+my ($Usage, $TargetList, $Action, $FileName, $BaseTag);
 while (@ARGV)
 {
   my $Arg = shift @ARGV;
@@ -176,6 +232,12 @@ while (@ARGV)
   elsif (!defined $Action)
   {
     $Action = $Arg;
+  }
+  elsif (($Action || "") eq "winetest")
+  {
+    $BaseTag = $Arg;
+    # The remaining arguments are meant for WineTest
+    last;
   }
   elsif (!defined $FileName)
   {
@@ -230,6 +292,23 @@ if (!defined $Usage)
     Error "you must specify the action to perform\n";
     $Usage = 2;
   }
+  elsif ($Action eq "winetest")
+  {
+    if (!defined $BaseTag)
+    {
+      Error "you must specify a base tag for WineTest\n";
+      $Usage = 2;
+    }
+    elsif ($BaseTag =~ m/^([\w_.\-]+)$/)
+    {
+      $BaseTag = $1;
+    }
+    else
+    {
+      Error "invalid WineTest base tag '$BaseTag'\n";
+      $Usage = 2;
+    }
+  }
   elsif ($Action ne "build")
   {
     Error "invalid '$Action' action\n";
@@ -245,16 +324,23 @@ if (!defined $Usage)
 if (defined $Usage)
 {
   print "Usage: $Name0 [--help] TARGETS build PATCH\n";
+  print "or     $Name0 [--help] TARGETS winetest BASETAG ARGS\n";
   print "\n";
-  print "Applies the specified patch and rebuilds Wine.\n";
+  print "Tests the specified patch or runs WineTest in Wine.\n";
   print "\n";
   print "Where:\n";
-  print "  TARGETS   Is a comma-separated list of targets for the build.\n";
+  print "  TARGETS   Is a comma-separated list of targets for the specified action.\n";
   print "            - win32: The regular 32 bit Wine build.\n";
   print "            - wow32: The 32 bit WoW Wine build.\n";
   print "            - wow64: The 64 bit WoW Wine build.\n";
+  print "            - submit: Send the WineTest result to the website.\n";
   print "  build     Verify that the patch compiles.\n";
   print "  PATCH     Is the staging file containing the patch to test.\n";
+  print "  winetest  Run WineTest and submit the result to the website if the submit\n";
+  print "            task was specified.\n";
+  print "  BASETAG   Is the tag for this WineTest run. Note that the build type is\n";
+  print "            automatically added to this tag.\n";
+  print "  ARGS      The WineTest arguments.\n";
   print "  --help    Shows this usage message.\n";
   exit $Usage;
 }
@@ -267,16 +353,28 @@ if ($DataDir =~ /'/)
 
 
 #
-# Run the builds
+# Run the builds and tests
 #
+
+# Clean up old reports
+map { unlink("$_.report") } keys %AllTargets;
 
 CountCPUs();
 
-my $Impacts = ApplyPatch($FileName);
-exit(1) if (!$Impacts or
-            !BuildWine($Targets, "win32") or
-            !BuildWine($Targets, "wow64") or
-            !BuildWine($Targets, "wow32"));
+if ($Action eq "build")
+{
+  my $Impacts = ApplyPatch($FileName);
+  exit(1) if (!$Impacts or
+              !BuildWine($Targets, "win32") or
+              !BuildWine($Targets, "wow64") or
+              !BuildWine($Targets, "wow32"));
+}
+elsif ($Action eq "winetest")
+{
+  exit(1) if (!DailyWineTest($Targets, "win32", $BaseTag, \@ARGV) or
+              !DailyWineTest($Targets, "wow64", $BaseTag, \@ARGV) or
+              !DailyWineTest($Targets, "wow32", $BaseTag, \@ARGV));
+}
 
 LogMsg "ok\n";
 exit;

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -Tw
 # -*- Mode: Perl; perl-indent-level: 2; indent-tabs-mode: nil -*-
 #
-# Makes sure the Wine patches compile.
+# Makes sure the Wine patches compile or run WineTest.
 # See the bin/build/WineTest.pl script.
 #
 # Copyright 2018 Francois Gouget
@@ -46,6 +46,7 @@ use WineTestBot::PatchUtils;
 use WineTestBot::VMs;
 use WineTestBot::Log;
 use WineTestBot::LogUtils;
+use WineTestBot::Utils;
 use WineTestBot::Engine::Notify;
 
 
@@ -64,6 +65,35 @@ sub Error(@)
 {
   print STDERR "$Name0:error: ", @_ if (!$LogOnly);
   LogMsg @_;
+}
+
+
+#
+# Task helpers
+#
+
+sub TakeScreenshot($$)
+{
+  my ($VM, $FileName) = @_;
+
+  my $Domain = $VM->GetDomain();
+  my ($ErrMessage, $ImageSize, $ImageBytes) = $Domain->CaptureScreenImage();
+  if (!defined $ErrMessage)
+  {
+    if (open(my $Screenshot, ">", $FileName))
+    {
+      print $Screenshot $ImageBytes;
+      close($Screenshot);
+    }
+    else
+    {
+      Error "Could not open the screenshot file for writing: $!\n";
+    }
+  }
+  elsif ($Domain->IsPoweredOn())
+  {
+    Error "Could not capture a screenshot: $ErrMessage\n";
+  }
 }
 
 
@@ -190,15 +220,17 @@ sub LogTaskError($)
   }
 }
 
-sub WrapUpAndExit($;$$)
+sub WrapUpAndExit($;$$$)
 {
-  my ($Status, $Retry, $Timeout) = @_;
+  my ($Status, $TestFailures, $Retry, $TimedOut) = @_;
   my $NewVMStatus = $Status eq 'queued' ? 'offline' : 'dirty';
   my $VMResult = $Status eq "boterror" ? "boterror" :
                  $Status eq "queued" ? "error" :
-                 $Timeout ? "timeout" : "";
+                 $TimedOut ? "timeout" : "";
 
-  my $TestFailures;
+  Debug(Elapsed($Start), " Taking a screenshot\n");
+  TakeScreenshot($VM, "$TaskDir/screenshot.png");
+
   my $Tries = $Task->TestFailures || 0;
   if ($Retry)
   {
@@ -253,6 +285,30 @@ sub WrapUpAndExit($;$$)
     $VM->Save();
   }
 
+  if ($Step->Type eq 'suite' and $Status eq 'completed' and !$TimedOut)
+  {
+    my $BuildList = $Task->CmdLineArg;
+    $BuildList =~ s/ .*$//;
+    foreach my $Build (split /,/, $BuildList)
+    {
+      # Keep the old report if the new one is missing
+      my $RptFileName = "$Build.report";
+      if (-f "$TaskDir/$RptFileName" and !-z "$TaskDir/$RptFileName")
+      {
+        # Update the reference VM suite results for WineSendLog.pl
+        my $LatestBaseName = join("", "$DataDir/latest/", $Task->VM->Name,
+                                  "_$Build");
+        unlink("$LatestBaseName.log");
+        link("$TaskDir/$RptFileName", "$LatestBaseName.log");
+        unlink("$LatestBaseName.err");
+        if (-f "$TaskDir/err" and !-z "$TaskDir/err")
+        {
+          link("$TaskDir/err", "$LatestBaseName.err");
+        }
+      }
+    }
+  }
+
   my $Result = $VM->Name .": ". $VM->Status ." Status: $Status Failures: ". (defined $TestFailures ? $TestFailures : "unset");
   LogMsg "Task $JobId/$StepNo/$TaskNo done ($Result)\n";
   Debug(Elapsed($Start), " Done. $Result\n");
@@ -266,12 +322,12 @@ sub FatalError($;$)
   LogMsg "$JobId/$StepNo/$TaskNo $ErrMessage";
   LogTaskError($ErrMessage);
 
-  WrapUpAndExit('boterror', $Retry);
+  WrapUpAndExit('boterror', undef, $Retry);
 }
 
-sub FatalTAError($$)
+sub FatalTAError($$;$)
 {
-  my ($TA, $ErrMessage) = @_;
+  my ($TA, $ErrMessage, $PossibleCrash) = @_;
   $ErrMessage .= ": ". $TA->GetLastError() if (defined $TA);
 
   # A TestAgent operation failed, see if the VM is still accessible
@@ -297,7 +353,13 @@ sub FatalTAError($$)
   else
   {
     # Ignore the TestAgent error, it's irrelevant
-    $ErrMessage = "The test VM is powered off!\n";
+    $ErrMessage = "The test VM is powered off! Did the test shut it down?\n";
+  }
+  if ($PossibleCrash and !$Task->CanRetry())
+  {
+    # The test did it!
+    LogTaskError($ErrMessage);
+    WrapUpAndExit('completed', 1);
   }
   FatalError($ErrMessage, $Retry);
 }
@@ -320,32 +382,77 @@ elsif (!$VM->GetDomain()->IsPoweredOn())
   FatalError("The VM is not powered on\n");
 }
 
-if ($Step->FileType ne "patchdlls")
+if (($Step->Type eq "suite" and $Step->FileType ne "none") or
+    ($Step->Type ne "suite" and $Step->FileType ne "patchdlls"))
 {
   FatalError("Unexpected file type '". $Step->FileType ."' found\n");
 }
 
 
 #
-# Run the task
+# Setup the VM
 #
+my $TA = $VM->GetAgent();
+Debug(Elapsed($Start), " Setting the time\n");
+if (!$TA->SetTime())
+{
+  # Not a fatal error. Try the next port in case the VM runs a privileged
+  # TestAgentd daemon there.
+  my $PrivilegedTA = $VM->GetAgent(1);
+  if (!$PrivilegedTA->SetTime())
+  {
+    LogTaskError("Unable to set the VM system time: ". $PrivilegedTA->GetLastError() .". Maybe the TestAgentd process is missing the required privileges.\n");
+    $PrivilegedTA->Disconnect();
+  }
+}
 
 my $FileName = $Step->GetFullFileName();
-my $TA = $VM->GetAgent();
-Debug(Elapsed($Start), " Sending '$FileName'\n");
-if (!$TA->SendFile($FileName, "staging/patch.diff", 0))
+if (defined $FileName)
 {
-  FatalTAError($TA, "Could not copy the patch to the VM");
+  Debug(Elapsed($Start), " Sending '$FileName'\n");
+  if (!$TA->SendFile($FileName, "staging/patch.diff", 0))
+  {
+    FatalTAError($TA, "Could not copy the patch to the VM");
+  }
 }
+
 my $Script = "#!/bin/sh\n".
-             "( set -x\n" .
-             "  ../bin/build/WineTest.pl ". $Task->CmdLineArg ." build patch.diff\n".
-             ") >Task.log 2>&1\n";
+             "( set -x\n".
+             "  ../bin/build/WineTest.pl ";
+if ($Step->Type eq "suite")
+{
+  my $Tag = lc($VM->Name);
+  $Tag =~ s/^$TagPrefix//;
+  $Tag =~ s/[^a-zA-Z0-9]/-/g;
+  $Script .= $Task->CmdLineArg .",submit winetest $TagPrefix-$Tag ";
+  if (defined $WebHostName)
+  {
+    my $StepTask = 100 * $StepNo + $TaskNo;
+    $Script .= "-u \"http://$WebHostName/JobDetails.pl?Key=$JobId&s$StepTask=1#k$StepTask\" ";
+  }
+  my $Info = $VM->Description ? $VM->Description : "";
+  if ($VM->Details)
+  {
+      $Info .= ": " if ($Info ne "");
+      $Info .=  $VM->Details;
+  }
+  $Script .= join(" ", "-m", ShQuote($AdminEMail), "-i", ShQuote($Info));
+}
+else
+{
+  $Script .= $Task->CmdLineArg ." build patch.diff";
+}
+$Script .= "\n) >Task.log 2>&1\n";
 Debug(Elapsed($Start), " Sending the script: [$Script]\n");
 if (!$TA->SendFileFromString($Script, "task", $TestAgent::SENDFILE_EXE))
 {
   FatalTAError($TA, "Could not send the task script to the VM");
 }
+
+
+#
+# Run the test
+#
 
 Debug(Elapsed($Start), " Starting the script\n");
 my $Pid = $TA->Run(["./task"], 0);
@@ -357,10 +464,11 @@ if (!$Pid)
 
 #
 # From that point on we want to at least try to grab the task log
-# before giving up
+# and a screenshot before giving up
 #
 
-my ($NewStatus, $ErrMessage, $TAError, $TaskTimedOut);
+my $NewStatus = 'completed';
+my ($TaskFailures, $TaskTimedOut, $ErrMessage, $TAError, $PossibleCrash);
 Debug(Elapsed($Start), " Waiting for the script (", $Task->Timeout, "s timeout)\n");
 if (!defined $TA->Wait($Pid, $Task->Timeout, 60))
 {
@@ -368,11 +476,19 @@ if (!defined $TA->Wait($Pid, $Task->Timeout, 60))
   if ($ErrMessage =~ /timed out waiting for the child process/)
   {
     $ErrMessage = "The task timed out\n";
-    $NewStatus = "badbuild";
+    if ($Step->Type eq "build")
+    {
+      $NewStatus = "badbuild";
+    }
+    else
+    {
+      $TaskFailures = 1;
+    }
     $TaskTimedOut = 1;
   }
   else
   {
+    $PossibleCrash = 1 if ($Step->Type ne "build");
     $TAError = "An error occurred while waiting for the task to complete: $ErrMessage";
     $ErrMessage = undef;
   }
@@ -399,10 +515,11 @@ if ($TA->GetFile("Task.log", "$TaskDir/log"))
   {
     FatalError("$Result\n", "retry");
   }
-  else
+  elsif ($Result ne "missing" or $Step->Type ne "suite")
   {
-    # If the result line is missing we probably already have an error message
-    # that explains why.
+    # There is no build and thus no result line when running WineTest.
+    # Otherwise if the result line is missing we probably already have an
+    # error message that explains why.
     $NewStatus = "badbuild";
   }
 }
@@ -411,15 +528,62 @@ elsif (!defined $TAError)
   $TAError = "An error occurred while retrieving the task log: ". $TA->GetLastError();
 }
 
+#
+# Grab the test logs if any
+#
+
+my $TimedOut;
+if ($Step->Type ne "build")
+{
+  my $TaskDir = $Task->CreateDir();
+  my $BuildList = $Task->CmdLineArg;
+  $BuildList =~ s/ .*$//;
+  foreach my $Build (split /,/, $BuildList)
+  {
+    my $RptFileName = "$Build.report";
+    Debug(Elapsed($Start), " Retrieving '$RptFileName'\n");
+    if ($TA->GetFile($RptFileName, "$TaskDir/$RptFileName"))
+    {
+      chmod 0664, "$TaskDir/$RptFileName";
+
+      (my $LogFailures, my $LogErrors, $TimedOut) = ParseWineTestReport("$TaskDir/$RptFileName", 1, $Step->Type eq "suite", $TaskTimedOut);
+      if (!defined $LogFailures and @$LogErrors == 1)
+      {
+        # Could not open the file
+        $NewStatus = 'boterror';
+        Error "Unable to open '$RptFileName' for reading: $!\n";
+        LogTaskError("Unable to open '$RptFileName' for reading: $!\n");
+      }
+      else
+      {
+        # $LogFailures can legitimately be undefined in case of a timeout
+        $TaskFailures += $LogFailures || 0;
+        foreach my $Error (@$LogErrors)
+        {
+          LogTaskError("$Error\n");
+        }
+      }
+    }
+    elsif (!defined $TAError and
+           $TA->GetLastError() !~ /: No such file or directory/)
+    {
+      $TAError = "An error occurred while retrieving $RptFileName: ". $TA->GetLastError();
+      $NewStatus = 'boterror';
+    }
+  }
+}
+
+Debug(Elapsed($Start), " Disconnecting\n");
+$TA->Disconnect();
+
 # Report the task errors even though they may have been caused by
 # TestAgent trouble.
 LogTaskError($ErrMessage) if (defined $ErrMessage);
-FatalTAError(undef, $TAError) if (defined $TAError);
-$TA->Disconnect();
+FatalTAError(undef, $TAError, $PossibleCrash) if (defined $TAError);
 
 
 #
 # Wrap up
 #
 
-WrapUpAndExit($NewStatus, undef, $TaskTimedOut);
+WrapUpAndExit($NewStatus, $TaskFailures, undef, $TaskTimedOut || $TimedOut);

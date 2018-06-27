@@ -273,10 +273,10 @@ sub AddReconfigJob($)
 
   # Add a step to the job
   my $Steps = $NewJob->Steps;
-  my $NewStep = $Steps->Add();
-  $NewStep->Type("reconfig");
-  $NewStep->FileType("none");
-  $NewStep->InStaging(!1);
+  my $BuildStep = $Steps->Add();
+  $BuildStep->Type("reconfig");
+  $BuildStep->FileType("none");
+  $BuildStep->InStaging(!1);
 
   # And a task for each VM
   my $SortedKeys = $VMs->SortKeysBySortOrder($VMs->GetKeys());
@@ -284,13 +284,45 @@ sub AddReconfigJob($)
   {
     my $VM = $VMs->GetItem($VMKey);
     Debug("  $VMKey $VMType reconfig\n");
-    my $Task = $NewStep->Tasks->Add();
+    my $Task = $BuildStep->Tasks->Add();
     $Task->VM($VM);
     $Task->Timeout($ReconfigTimeout);
   }
 
-  # Save it all
+  # Save the build step so the others can reference it.
   my ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
+  if (defined $ErrMessage)
+  {
+    Error "Failed to save the build step: $ErrMessage\n";
+    return 0;
+  }
+
+  if ($VMType eq "wine")
+  {
+    # Add steps to run WineTest on Wine
+    foreach my $Build ("win32", "wow32", "wow64")
+    {
+      # Add a step to the job
+      my $NewStep = $Steps->Add();
+      $NewStep->PreviousNo($BuildStep->No);
+      $NewStep->Type("suite");
+      $NewStep->FileType("none");
+      $NewStep->InStaging(!1);
+
+      foreach my $VMKey (@$SortedKeys)
+      {
+        my $VM = $VMs->GetItem($VMKey);
+        Debug("  $VMKey $Build\n");
+        my $Task = $NewStep->Tasks->Add();
+        $Task->VM($VM);
+        $Task->CmdLineArg($Build);
+        $Task->Timeout($SuiteTimeout);
+      }
+    }
+  }
+
+  # Save it all
+  ($ErrKey, $ErrProperty, $ErrMessage) = $Jobs->Save();
   if (defined $ErrMessage)
   {
     Error "Failed to save the Reconfig job: $ErrMessage\n";

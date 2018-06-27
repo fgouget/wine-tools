@@ -458,6 +458,7 @@ sub GetLogFileNames($;$)
   my ($Dir, $IncludeOld) = @_;
 
   my @Candidates = ("exe32.report", "exe64.report",
+                    "win32.report", "wow32.report", "wow64.report",
                     "log", "err");
   push @Candidates, "log.old", "err.old" if ($IncludeOld);
 
@@ -472,10 +473,13 @@ sub GetLogFileNames($;$)
 my %_LogFileLabels = (
   "exe32.report" => "32 bit Windows report",
   "exe64.report" => "64 bit Windows report",
-  "err"          => "task errors",
+  "win32.report" => "32 bit Wine report",
+  "wow32.report" => "32 bit WoW Wine report",
+  "wow64.report" => "64 bit Wow Wine report",
   "log"          => "task log",
-  "err.old"      => "old task errors",
+  "err"          => "task errors",
   "log.old"      => "old logs",
+  "err.old"      => "old task errors",
 );
 
 =pod

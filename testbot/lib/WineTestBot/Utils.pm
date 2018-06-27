@@ -29,7 +29,7 @@ use Exporter 'import';
 our @EXPORT = qw(MakeSecureURL SecureConnection GenerateRandomString
                  OpenNewFile CreateNewFile CreateNewLink CreateNewDir
                  DurationToString BuildEMailRecipient IsValidFileName
-                 ShQuote);
+                 ShQuote ShArgv2Cmd);
 
 use Fcntl;
 
@@ -218,6 +218,23 @@ sub ShQuote($)
   $Str =~ s%\"%\\\"%g;
   $Str =~ s%\`%\\\`%g;
   return "\"$Str\"";
+}
+
+=pod
+=over 12
+
+=item C<ShArgv2Cmd()>
+
+Converts an argument list into a command line suitable for use in a shell.
+
+See also ShQuote().
+
+=back
+=cut
+
+sub ShArgv2Cmd(@)
+{
+  return join(' ', map { /[^a-zA-Z0-9\/.,+_-]/ ? ShQuote($_) : $_ } @_);
 }
 
 1;
