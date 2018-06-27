@@ -253,6 +253,11 @@ sub GetHtmlLine($$$)
   return undef if ($Category ne "error" and !$FullLog);
 
   my $Html = $self->escapeHTML($Line);
+  if (!$FullLog and $Html =~ m/^[^:]+:([^:]*)(?::[0-9a-f]+)? done \(258\)/)
+  {
+    my $Unit = $1;
+    return $Unit ne "" ? "$Unit: Timeout" : "Timeout";
+  }
   if ($FullLog and $Category ne "none")
   {
     # Highlight all line categories in the full log
@@ -414,15 +419,7 @@ sub GenerateBody($)
           print "<pre><code>";
           $LogFirst = 0;
         }
-        if (!$MoreInfo->{Full} && $Line =~ m/^[^:]+:([^:]*)(?::[0-9a-f]+)? done \(258\)/)
-        {
-          my $Unit = $1 ne "" ? "$1: " : "";
-          print "${Unit}Timeout\n";
-        }
-        else
-        {
-          print "$Html\n";
-        }
+        print "$Html\n";
       }
       close($LogFile);
 
