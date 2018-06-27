@@ -320,7 +320,7 @@ sub FatalError($;$)
   my ($ErrMessage, $Retry) = @_;
 
   LogMsg "$JobId/$StepNo/$TaskNo $ErrMessage";
-  LogTaskError($ErrMessage);
+  LogTaskError("BotError: $ErrMessage");
 
   WrapUpAndExit('boterror', undef, $Retry);
 }
