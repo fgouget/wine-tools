@@ -408,7 +408,7 @@ sub GetLogLineCategory($)
     return "todo";
   }
   if ($Line =~ /: Tests skipped: / or
-      $Line =~ /^\w+:\w+ skipped /)
+      $Line =~ /^[_.a-z0-9-]+:[_a-z0-9]* skipped /)
   {
     return "skip";
   }
@@ -431,7 +431,7 @@ sub GetLogLineCategory($)
     return "error";
   }
   if ($Line =~ /^\+ \S/ or
-      $Line =~ /^\w+:\w+ start / or
+      $Line =~ /^[_.a-z0-9-]+:[_a-z0-9]* start / or
       # Build messages
       $Line =~ /^(?:Build|Reconfig|Task): ok/)
   {
