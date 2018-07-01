@@ -368,6 +368,8 @@ foreach my $entry (@idmatch)
         last;
     }
 }
+# Give a little slack to the Windows 10 1709.
+$maxfailedtests += 20 if ($version eq "win10");
 
 if ($prediluvian and not $acceptprediluvianwin)
 {
