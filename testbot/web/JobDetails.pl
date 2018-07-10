@@ -300,7 +300,7 @@ sub GenerateMoreInfoLink($$$;$)
 
   my $Url = $ENV{"SCRIPT_NAME"} ."?Key=". uri_escape($self->{JobId});
 
-  my $Action = "Show";
+  my $Action = "Show". ($Set eq "Full" and $Label !~ /old/ ? " full" : "");
   foreach my $Key (sort keys %{$self->{More}})
   {
     my $MoreInfo = $self->{More}->{$Key};
