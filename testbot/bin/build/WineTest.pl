@@ -315,9 +315,9 @@ if (!defined $Usage)
     $Usage = 2;
   }
 
-  if (!defined $FileName and $Action eq "build")
+  if (!defined $FileName and ($Action || "") eq "build")
   {
-    Error "you must provide a patch file\n";
+    Error "you must provide a patch to test\n";
     $Usage = 2;
   }
 }
