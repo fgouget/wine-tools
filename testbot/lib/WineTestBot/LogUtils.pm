@@ -423,6 +423,7 @@ sub GetLogLineCategory($)
       $Line =~ /^error: corrupt patch / or
       # Build errors
       $Line =~ /: error: / or
+      $Line =~ /^make: [*]{3} No rule to make target / or
       $Line =~ /^Makefile:[0-9]+: recipe for target .* failed$/ or
       $Line =~ /^(?:Build|Reconfig|Task): (?!ok)/ or
       # Typical perl errors
