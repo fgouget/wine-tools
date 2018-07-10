@@ -484,7 +484,7 @@ sub Validate($)
   {
     if (($self->GetParam("FileType") eq "patchdlls" &&
          $self->GetParam("TestExecutable") !~ m/^[\w_.]+_test\.exe$/) ||
-        ($self->GetParam("TestExecutable") =~ m=(?:[a-z]:|[/\\])=i))
+        !IsValidFileName($self->GetParam("TestExecutable")))
     {
       $self->{ErrField} = "TestExecutable";
       $self->{ErrMessage} = "Invalid test executable filename";
