@@ -338,8 +338,12 @@ sub GenerateMoreInfoLink($$$;$)
   }
   $Url .= "#k" . uri_escape($LinkKey);
 
-  print "<div class='TaskMoreInfoLink'><a href='",
-        $self->CGI->escapeHTML($Url), "'>$Action $Label</a></div>\n";
+  my $Html = "<a href='". $self->CGI->escapeHTML($Url) ."'>$Action $Label</a>";
+  if ($Action eq "Hide")
+  {
+    $Html = "<span class='TaskMoreInfoSelected'>$Html</span>";
+  }
+  print "<div class='TaskMoreInfoLink'>$Html</div>\n";
 }
 
 sub GenerateBody($)

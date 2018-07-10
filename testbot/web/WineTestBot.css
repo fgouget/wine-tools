@@ -310,6 +310,12 @@ h2
   margin-right: 2em;
 }
 
+.TaskMoreInfoSelected
+{
+    border: 1px solid #a50d0d;
+    padding: 2px;
+}
+
 .LogDllName
 {
   font-weight: bold;
