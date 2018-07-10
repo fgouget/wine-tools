@@ -223,13 +223,13 @@ while (@ARGV)
       $PatchFile = "$DataDir/staging/$Arg";
       if (!-r $PatchFile)
       {
-        Error "patch file '$Arg' is not readable\n";
+        Error "'$Arg' is not readable\n";
         $Usage = 2;
       }
     }
     else
     {
-      Error "the patch filename '$Arg' contains invalid characters\n";
+      Error "the '$Arg' filename contains invalid characters\n";
       $Usage = 2;
       last;
     }

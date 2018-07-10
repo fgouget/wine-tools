@@ -252,7 +252,7 @@ while (@ARGV)
     }
     else
     {
-      Error "invalid file name '$Arg'\n";
+      Error "the '$Arg' filename contains invalid characters\n";
       $Usage = 2;
       last;
     }
