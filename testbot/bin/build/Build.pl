@@ -193,19 +193,10 @@ my %AllTargets;
 map { $AllTargets{$_} = 1 } qw(exe32 exe64);
 
 my ($Usage, $PatchFile, $TargetList);
-my $IgnoreNext = 0; # FIXME Backward compatibility
 while (@ARGV)
 {
   my $Arg = shift @ARGV;
-  if ($Arg =~ /^patch(?:dlls|programs)$/)
-  {
-    $IgnoreNext ||= 1; # Ignore this legacy parameter
-  }
-  elsif ($IgnoreNext == 1)
-  {
-    $IgnoreNext = 2; # Ignore this legacy parameter
-  }
-  elsif ($Arg =~ /^(?:-\?|-h|--help)$/)
+  if ($Arg =~ /^(?:-\?|-h|--help)$/)
   {
     $Usage = 0;
     last;
