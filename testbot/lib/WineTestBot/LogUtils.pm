@@ -430,6 +430,10 @@ sub GetLogLineCategory($)
   {
     return "error";
   }
+  if ($Line =~ /^BotError:/)
+  {
+    return "boterror";
+  }
   if ($Line =~ /^\+ \S/ or
       $Line =~ /^[_.a-z0-9-]+:[_a-z0-9]* start / or
       # Build messages

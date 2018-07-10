@@ -250,7 +250,7 @@ sub GetHtmlLine($$$)
   my ($self, $FullLog, $Line) = @_;
 
   my $Category = GetLogLineCategory($Line);
-  return undef if ($Category ne "error" and !$FullLog);
+  return undef if ($Category !~ /error/ and !$FullLog);
 
   my $Html = $self->escapeHTML($Line);
   if (!$FullLog and $Html =~ m/^[^:]+:([^:]*)(?::[0-9a-f]+)? done \(258\)/)
@@ -481,7 +481,7 @@ sub GenerateBody($)
           print "<pre><code>";
           $ErrFirst = 0;
         }
-        print $self->escapeHTML($Line), "\n";
+        print $self->GetHtmlLine(1, $Line), "\n";
       }
       close($ErrFile);
 
