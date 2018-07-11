@@ -153,11 +153,6 @@ sub GetFullFileName($)
   return undef if (!defined $self->FileName);
 
   my ($JobId, $StepNo) = @{$self->GetMasterKey()};
-  # FIXME: Remove legacy support once no such job remains (so after
-  #        $JobPurgeDays).
-  my $LegacyPath = "$DataDir/jobs/$JobId/$StepNo/" . $self->FileName;
-  return $LegacyPath if (-f $LegacyPath);
-
   my $Path = "$DataDir/jobs/$JobId/";
   $Path .= $self->PreviousNo ."/" if ($self->PreviousNo);
   return $Path . $self->FileName;
