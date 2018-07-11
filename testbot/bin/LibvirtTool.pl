@@ -344,7 +344,7 @@ sub Monitor()
         return 1 if (ChangeStatus("offline", "off", "done"));
         NotifyAdministrator("The $VMKey VM is working again",
                             "The $VMKey VM started working again after ".
-                            PrettyElapsed($Start) ." seconds.");
+                            PrettyElapsed($Start) .".");
         return 0;
       }
     }
@@ -483,6 +483,6 @@ else
   Error("Unsupported action $Action!\n");
   $Rc = 1;
 }
-LogMsg "$Action on $VMKey completed in ", PrettyElapsed($Start), " s\n";
+LogMsg "$Action on $VMKey completed in ", PrettyElapsed($Start), "\n";
 
 exit $Rc;
