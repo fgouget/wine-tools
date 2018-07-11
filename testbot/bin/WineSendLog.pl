@@ -426,7 +426,11 @@ EOF
   close(SENDMAIL);
 
   # This is all for jobs submitted from the website
-  return if (!defined $Job->Patch);
+  if (!defined $Job->Patch)
+  {
+    Debug("Not a mailing list patch -> all done.\n");
+    return;
+  }
 
   #
   # Build a job summary with only the new errors
