@@ -411,19 +411,25 @@ sub Revert()
   }
   $CurrentStatus = "reverting";
 
-  # Some QEmu/KVM versions are buggy and cannot revert a running VM
-  Debug(Elapsed($Start), " Powering off the VM\n");
+  # Revert the VM (and power it on if necessary)
   my $Domain = $VM->GetDomain();
-  my $ErrMessage = $Domain->PowerOff();
+  Debug(Elapsed($Start), " Reverting $VMKey to ", $VM->IdleSnapshot, "\n");
+  my $ErrMessage = $Domain->RevertToSnapshot();
   if (defined $ErrMessage)
   {
-    LogMsg "Could not power off $VMKey: $ErrMessage\n";
-    LogMsg "Trying the revert anyway...\n";
-  }
+    # Libvirt/QEmu is buggy and cannot revert a running VM from one hardware
+    # configuration to another. So try again after powering off the VM, though
+    # this can be much slower.
+    Debug(Elapsed($Start), " Powering off the VM\n");
+    $ErrMessage = $Domain->PowerOff();
+    if (defined $ErrMessage)
+    {
+      FatalError("Could not power off $VMKey: $ErrMessage\n");
+    }
 
-  # Revert the VM (and power it on if necessary)
-  Debug(Elapsed($Start), " Reverting $VMKey to ", $VM->IdleSnapshot, "\n");
-  $ErrMessage = $Domain->RevertToSnapshot();
+    Debug(Elapsed($Start), " Reverting $VMKey to ", $VM->IdleSnapshot, "... again\n");
+    $ErrMessage = $Domain->RevertToSnapshot();
+  }
   if (defined $ErrMessage)
   {
     FatalError("Could not revert $VMKey to ". $VM->IdleSnapshot .": $ErrMessage\n");
