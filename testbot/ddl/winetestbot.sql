@@ -134,7 +134,6 @@ CREATE TABLE Steps
   Status                ENUM('queued', 'running', 'completed', 'badpatch', 'badbuild', 'boterror', 'canceled', 'skipped') NOT NULL,
   FileName              VARCHAR(100) NULL,
   FileType              ENUM('none', 'exe32', 'exe64', 'patchdlls', 'patchprograms') NOT NULL,
-  InStaging             ENUM('Y', 'N') NOT NULL,
   DebugLevel            INT(2) NOT NULL,
   ReportSuccessfulTests ENUM('Y', 'N') NOT NULL,
   PRIMARY KEY (JobId, No),

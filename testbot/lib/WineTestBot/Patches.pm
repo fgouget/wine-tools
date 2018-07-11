@@ -182,7 +182,6 @@ sub Submit($$$)
     my $BuildStep = $NewJob->Steps->Add();
     $BuildStep->FileName("patch.diff");
     $BuildStep->FileType("patchdlls");
-    $BuildStep->InStaging(!1);
     $BuildStep->Type("build");
     $BuildStep->DebugLevel(0);
 
@@ -220,7 +219,6 @@ sub Submit($$$)
             $FileName .= "64" if ($Bits eq "64");
             $NewStep->FileName("$FileName.exe");
             $NewStep->FileType("exe$Bits");
-            $NewStep->InStaging(!1);
 
             # And a task for each VM
             my $Tasks = $NewStep->Tasks;
@@ -248,7 +246,6 @@ sub Submit($$$)
     my $NewStep = $NewJob->Steps->Add();
     $NewStep->FileName("patch.diff");
     $NewStep->FileType("patchdlls");
-    $NewStep->InStaging(!1);
     $NewStep->DebugLevel(0);
 
     # And a task for each VM

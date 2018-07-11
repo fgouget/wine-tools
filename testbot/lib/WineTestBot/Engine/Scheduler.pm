@@ -572,8 +572,6 @@ sub _ScheduleTasks($)
       my $Previous = "";  # Avoid undefined values for hash indices
       if (!$Step->PreviousNo)
       {
-        # The first step may need to get files from the staging area
-        $Step->HandleStaging() if ($Step->Status eq "queued");
         $StepRank = 0;
         $StepVMs{$Step} = [];
       }

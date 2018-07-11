@@ -145,22 +145,7 @@ sub _initialize($$)
       $StepTask->Status($Task->Status);
       $StepTask->VM($Task->VM);
       $StepTask->Timeout($Task->Timeout);
-      if ($Step->InStaging)
-      {
-        my $FileName = $Step->FileName;
-        if ($FileName =~ m/^[\da-fA-F]+ (.*)$/)
-        {
-          $StepTask->FileName("$1");
-        }
-        else
-        {
-          $StepTask->FileName("unknown");
-        }
-      }
-      else
-      {
-        $StepTask->FileName($Step->FileName);
-      }
+      $StepTask->FileName($Step->FileName);
       $StepTask->FileType($Step->FileType);
       $StepTask->CmdLineArg($Task->CmdLineArg);
       $StepTask->Started($Task->Started);

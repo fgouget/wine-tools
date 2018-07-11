@@ -207,7 +207,6 @@ sub AddJob($$$)
   $NewStep->Type("suite");
   $NewStep->FileName($LatestBaseName);
   $NewStep->FileType($Bits == 64 ? "exe64" : "exe32");
-  $NewStep->InStaging(!1);
 
   # Add a task for each VM
   my $Tasks = $NewStep->Tasks;
@@ -276,7 +275,6 @@ sub AddReconfigJob($)
   my $BuildStep = $Steps->Add();
   $BuildStep->Type("reconfig");
   $BuildStep->FileType("none");
-  $BuildStep->InStaging(!1);
 
   # And a task for each VM
   my $SortedKeys = $VMs->SortKeysBySortOrder($VMs->GetKeys());
@@ -309,7 +307,6 @@ sub AddReconfigJob($)
       $NewStep->PreviousNo($BuildStep->No);
       $NewStep->Type("suite");
       $NewStep->FileType("none");
-      $NewStep->InStaging(!1);
 
       foreach my $VMKey (@$SortedKeys)
       {

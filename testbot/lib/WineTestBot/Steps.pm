@@ -90,7 +90,6 @@ sub InitializeNew($$)
   $self->Status("queued");
   $self->Type("single");
   $self->FileType("none");
-  $self->InStaging(1);
   $self->DebugLevel(1);
   $self->ReportSuccessfulTests(!1);
 
@@ -162,33 +161,6 @@ sub GetFullFileName($)
   my $Path = "$DataDir/jobs/$JobId/";
   $Path .= $self->PreviousNo ."/" if ($self->PreviousNo);
   return $Path . $self->FileName;
-}
-
-sub HandleStaging($$)
-{
-  my ($self) = @_;
-
-  # Always at least create the step's directory
-  my $StepDir = $self->CreateDir();
-  return undef if (! $self->InStaging);
-
-  my $FileName = $self->FileName;
-  if ($FileName !~ m/^[0-9a-z-]+_(.*)$/)
-  {
-    return "Can't split staging filename";
-  }
-  my $BaseName = $1;
-  $self->FileName($BaseName);
-  my $StagingFileName = "$DataDir/staging/$FileName";
-  if (!move($StagingFileName, $self->GetFullFileName()))
-  {
-    return "Could not move the staging file: $!";
-  }
-
-  $self->InStaging(!1);
-  my ($ErrProperty, $ErrMessage) = $self->Save();
-
-  return $ErrMessage;
 }
 
 sub UpdateStatus($$)
@@ -266,7 +238,6 @@ my @PropertyDescriptors = (
   CreateEnumPropertyDescriptor("Type", "Step type",  !1,  1, ['suite', 'single', 'build', 'reconfig']),
   CreateBasicPropertyDescriptor("FileName", "File name",  !1, !1, "A", 100),
   CreateEnumPropertyDescriptor("FileType", "File type",  !1,  1, ['none', 'exe32', 'exe64', 'patchdlls', 'patchprograms']),
-  CreateBasicPropertyDescriptor("InStaging", "File is in staging area", !1, 1, "B", 1),
   CreateBasicPropertyDescriptor("DebugLevel", "Debug level (WINETEST_DEBUG)", !1, 1, "N", 2),
   CreateBasicPropertyDescriptor("ReportSuccessfulTests", "Report successful tests (WINETEST_REPORT_SUCCESS)", !1, 1, "B", 1),
   CreateDetailrefPropertyDescriptor("Tasks", "Tasks", !1, !1, \&CreateTasks),

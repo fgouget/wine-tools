@@ -801,7 +801,6 @@ sub OnSubmit($)
           $BuildStep = $Steps->Add();
           $BuildStep->FileName($BaseName);
           $BuildStep->FileType($FileType);
-          $BuildStep->InStaging(!1);
           $BuildStep->Type("build");
           $BuildStep->DebugLevel(0);
 
@@ -836,7 +835,6 @@ sub OnSubmit($)
         {
           $TestStep->FileName($BaseName);
         }
-        $TestStep->InStaging(!1);
         $TestStep->FileType("exe$Bits");
         $TestStep->Type("single");
         $TestStep->DebugLevel($self->GetParam("DebugLevel"));
@@ -874,7 +872,6 @@ sub OnSubmit($)
           my $WineStep = $Steps->Add();
           $WineStep->FileName($BaseName);
           $WineStep->FileType($FileType);
-          $WineStep->InStaging(!1);
           $WineStep->Type("build");
           $WineStep->DebugLevel($self->GetParam("DebugLevel"));
           $WineStep->ReportSuccessfulTests(defined($self->GetParam("ReportSuccessfulTests")));
