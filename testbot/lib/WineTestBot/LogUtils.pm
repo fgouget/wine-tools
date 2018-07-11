@@ -431,7 +431,13 @@ sub GetLogLineCategory($)
   {
     return "error";
   }
-  if ($Line =~ /^BotError:/)
+  if ($Line =~ /:winediag:/)
+  {
+    return "diag";
+  }
+  if ($Line =~ /^BotError:/ or
+      $Line =~ /^X Error of failed request: / or
+      $Line =~ / opcode of failed request: /)
   {
     return "boterror";
   }
