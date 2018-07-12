@@ -246,6 +246,7 @@ sub Submit($$$)
     my $NewStep = $NewJob->Steps->Add();
     $NewStep->FileName("patch.diff");
     $NewStep->FileType("patch");
+    $NewStep->Type("build");
     $NewStep->DebugLevel(0);
 
     # And a task for each VM
