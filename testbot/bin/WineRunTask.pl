@@ -445,7 +445,7 @@ if ($Step->Type eq "single")
   # If the user gave us an executable there is no telling
   # if it is going going to follow the Wine test standards.
   $IsWineTest = (defined $Step->PreviousNo and
-                 $Job->Steps->GetItem($Step->PreviousNo)->FileType eq "patchdlls");
+                 $Job->Steps->GetItem($Step->PreviousNo)->FileType eq "patch");
 }
 elsif ($Step->Type eq "suite")
 {

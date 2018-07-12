@@ -383,7 +383,7 @@ elsif (!$VM->GetDomain()->IsPoweredOn())
 }
 
 if (($Step->Type eq "suite" and $Step->FileType ne "none") or
-    ($Step->Type ne "suite" and $Step->FileType ne "patchdlls"))
+    ($Step->Type ne "suite" and $Step->FileType ne "patch"))
 {
   FatalError("Unexpected file type '". $Step->FileType ."' found\n");
 }

@@ -325,7 +325,7 @@ elsif (!$VM->GetDomain()->IsPoweredOn())
   FatalError("The VM is not powered on\n");
 }
 
-if ($Step->FileType ne "patchdlls")
+if ($Step->FileType ne "patch")
 {
   FatalError("Unexpected file type '". $Step->FileType ."' found\n");
 }

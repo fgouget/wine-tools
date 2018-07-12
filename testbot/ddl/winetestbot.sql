@@ -133,7 +133,7 @@ CREATE TABLE Steps
   Type                  ENUM('suite', 'single', 'build', 'reconfig') NOT NULL,
   Status                ENUM('queued', 'running', 'completed', 'badpatch', 'badbuild', 'boterror', 'canceled', 'skipped') NOT NULL,
   FileName              VARCHAR(100) NULL,
-  FileType              ENUM('none', 'exe32', 'exe64', 'patchdlls', 'patchprograms') NOT NULL,
+  FileType              ENUM('none', 'exe32', 'exe64', 'patch') NOT NULL,
   DebugLevel            INT(2) NOT NULL,
   ReportSuccessfulTests ENUM('Y', 'N') NOT NULL,
   PRIMARY KEY (JobId, No),

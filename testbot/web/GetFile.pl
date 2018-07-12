@@ -86,8 +86,8 @@ sub GetFile($$$)
   $Request->headers_out->add("Pragma", "no-cache");
 
   # Text or binary file
-  my $MIME = $Step->FileType eq "patchdlls" ? "text/plain" :
-                                              "application/octet-stream";
+  my $MIME = $Step->FileType eq "patch" ? "text/plain" :
+                                          "application/octet-stream";
   $Request->content_type($MIME);
   $Request->headers_out->add("Content-Disposition",
                              'attachment; filename="' . $Step->FileName . '"');

@@ -232,7 +232,7 @@ my @PropertyDescriptors = (
   CreateEnumPropertyDescriptor("Status", "Status",  !1,  1, ['queued', 'running', 'completed', 'badpatch', 'badbuild', 'boterror', 'canceled', 'skipped']),
   CreateEnumPropertyDescriptor("Type", "Step type",  !1,  1, ['suite', 'single', 'build', 'reconfig']),
   CreateBasicPropertyDescriptor("FileName", "File name",  !1, !1, "A", 100),
-  CreateEnumPropertyDescriptor("FileType", "File type",  !1,  1, ['none', 'exe32', 'exe64', 'patchdlls', 'patchprograms']),
+  CreateEnumPropertyDescriptor("FileType", "File type",  !1,  1, ['none', 'exe32', 'exe64', 'patch']),
   CreateBasicPropertyDescriptor("DebugLevel", "Debug level (WINETEST_DEBUG)", !1, 1, "N", 2),
   CreateBasicPropertyDescriptor("ReportSuccessfulTests", "Report successful tests (WINETEST_REPORT_SUCCESS)", !1, 1, "B", 1),
   CreateDetailrefPropertyDescriptor("Tasks", "Tasks", !1, !1, \&CreateTasks),

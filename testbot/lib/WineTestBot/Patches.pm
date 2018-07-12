@@ -181,7 +181,7 @@ sub Submit($$$)
     # Create the Build Step
     my $BuildStep = $NewJob->Steps->Add();
     $BuildStep->FileName("patch.diff");
-    $BuildStep->FileType("patchdlls");
+    $BuildStep->FileType("patch");
     $BuildStep->Type("build");
     $BuildStep->DebugLevel(0);
 
@@ -245,7 +245,7 @@ sub Submit($$$)
     # Add a Wine step to the job
     my $NewStep = $NewJob->Steps->Add();
     $NewStep->FileName("patch.diff");
-    $NewStep->FileType("patchdlls");
+    $NewStep->FileType("patch");
     $NewStep->DebugLevel(0);
 
     # And a task for each VM
