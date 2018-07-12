@@ -127,11 +127,12 @@ sub _LoadWineFiles()
       chomp $Line;
       $_WineFiles->{$Line} = 1;
 
-      if ($Line =~ m~^\w+/([^/]+)/tests/([^/]+)$~)
+      if ($Line =~ m~^(dlls|programs)/([^/]+)/tests/([^/]+)$~)
       {
-        my ($Module, $File) = ($1, $2);
+        my ($Root, $Module, $File) = ($1, $2, $3);
         next if ($File eq "testlist.c");
         next if ($File !~ /\.(?:c|spec)$/);
+        $Module .= ".exe" if ($Root eq "programs");
         $_TestList->{$Module}->{$File} = 1;
       }
     }
@@ -156,19 +157,18 @@ sub _HandleFile($$$)
 
   if ($FilePath =~ m~^(dlls|programs)/([^/]+)/tests/([^/\s]+)$~)
   {
-    my ($Root, $Module, $File) = ($1, $2, $3);
+    my ($Root, $Dir, $File) = ($1, $2, $3);
     $Impacts->{IsWinePatch} = 1;
     $Impacts->{TestBuild} = 1;
 
     my $Tests = $Impacts->{Tests};
+    my $Module = ($Root eq "programs") ? "$Dir.exe" : $Dir;
     if (!$Tests->{$Module})
     {
-      my $ExeBase = ($Root eq "programs") ? "${Module}.exe_test" :
-                                            "${Module}_test";
       $Tests->{$Module} = {
         "Module"  => $Module,
-        "Path"    => "$Root/$Module/tests",
-        "ExeBase" => $ExeBase,
+        "Path"    => "$Root/$Dir/tests",
+        "ExeBase" => "${Module}_test",
       };
     }
 
