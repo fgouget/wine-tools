@@ -393,21 +393,16 @@ sub GenerateBody($)
     my $LogName = $MoreInfo->{Full} || $MoreInfo->{Logs}->[0] || "log";
     my $ErrName = $LogName eq "log.old" ? "err.old" : "err";
 
-    my ($EmptyDiag, $LogFirst);
+    my ($EmptyDiag, $LogFirst) = (undef, 1);
     if (open(my $LogFile, "<", "$TaskDir/$LogName"))
     {
       my $HasLogEntries;
-      my $CurrentDll = "";
-      my $PrintedDll = "";
-      $LogFirst = 1;
+      my ($CurrentDll, $PrintedDll) = ("", "");
       foreach my $Line (<$LogFile>)
       {
         $HasLogEntries = 1;
         chomp $Line;
-        if ($Line =~ m/^([^:]+):[^ ]+ start [^ ]+ -\s*$/)
-        {
-          $CurrentDll = $1;
-        }
+        $CurrentDll = $1 if ($Line =~ m/^([_.a-z0-9-]+):[_a-z0-9]* start /);
         my $Html = $self->GetHtmlLine($MoreInfo->{Full}, $Line);
         next if (!defined $Html);
 
