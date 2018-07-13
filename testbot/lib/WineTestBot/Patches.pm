@@ -346,7 +346,6 @@ my @PropertyDescriptors = (
   CreateBasicPropertyDescriptor("Id", "Patch id", 1, 1, "S",  7),
   CreateBasicPropertyDescriptor("WebPatchId", "Wine Web Patch id", !1, !1, "N",  7),
   CreateBasicPropertyDescriptor("Received", "Received", !1, 1, "DT", 19),
-  CreateBasicPropertyDescriptor("AffectsTests", "Affects tests", !1, 1, "B", 1),
   CreateBasicPropertyDescriptor("FromName", "Author", !1, !1, "A", 40),
   CreateBasicPropertyDescriptor("FromEMail", "Author's email address", !1, !1, "A", 40),
   CreateBasicPropertyDescriptor("Subject", "Subject", !1, !1, "A", 120),
