@@ -139,9 +139,9 @@ sub ReadLog($$$)
       while (! $Found && defined($Line = <LOG>))
       {
         $Line =~ s/[\r\n]*$//;
-        if ($Line =~ m/${BaseName}:${TestSet} done/)
+        if ($Line =~ m/${BaseName}:${TestSet}(?::[0-9a-f]+)? done/)
         {
-          if ($Line =~ m/${BaseName}:${TestSet} done \(258\)/)
+          if ($Line =~ m/${BaseName}:${TestSet}(?::[0-9a-f]+)? done \(258\)/)
           {
             push @Messages, "The test timed out";
           }
@@ -192,7 +192,7 @@ sub CompareLogs($$$$)
       {
         if ($Line =~ m/: Test failed: / || 
             $Line =~ m/: unhandled exception [0-9a-fA-F]{8} at / ||
-            $Line =~ m/Timeout/i)
+            $Line =~ m/The test timed out/)
         {
           $Messages .= "$Line\n";
         }
@@ -301,7 +301,7 @@ EOF
             print SENDMAIL "\n$CurrentDll:\n";
             $PrintedDll = $CurrentDll;
           }
-          if ($Line =~ m/^[^:]+:([^ ]+) done \(258\)/)
+          if ($Line =~ m/^[^:]+:([^ ]+)(?::[0-9a-f]+)? done \(258\)/)
           {
             print SENDMAIL "$1: The test timed out\n";
           }
