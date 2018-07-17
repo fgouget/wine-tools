@@ -221,29 +221,30 @@ sub SendLog($)
   #
 
   Debug("-------------------- Developer email --------------------\n");
+  my $Sendmail;
   if ($Debug)
   {
-    open(SENDMAIL, ">>&=", 1);
+    open($Sendmail, ">>&=", 1);
   }
   else
   {
-    open (SENDMAIL, "|/usr/sbin/sendmail -oi -t -odq");
+    open($Sendmail, "|-", "/usr/sbin/sendmail -oi -t -odq");
   }
-  print SENDMAIL "From: $RobotEMail\n";
-  print SENDMAIL "To: $To\n";
+  print $Sendmail "From: $RobotEMail\n";
+  print $Sendmail "To: $To\n";
   my $Subject = "TestBot job " . $Job->Id . " results";
   my $Description = $Job->GetDescription();
   if ($Description)
   {
     $Subject .= ": " . $Description;
   }
-  print SENDMAIL "Subject: $Subject\n";
+  print $Sendmail "Subject: $Subject\n";
   if ($Job->Patch and $Job->Patch->MessageId)
   {
-    print SENDMAIL "In-Reply-To: ", $Job->Patch->MessageId, "\n";
-    print SENDMAIL "References: ", $Job->Patch->MessageId, "\n";
+    print $Sendmail "In-Reply-To: ", $Job->Patch->MessageId, "\n";
+    print $Sendmail "References: ", $Job->Patch->MessageId, "\n";
   }
-  print SENDMAIL <<"EOF";
+  print $Sendmail <<"EOF";
 MIME-Version: 1.0
 Content-Type: multipart/mixed; boundary="$PART_BOUNDARY"
 
@@ -263,8 +264,8 @@ EOF
     {
       $TestFailures = "";
     }
-    printf SENDMAIL "%-20s %-9s %s\n", $StepTask->VM->Name, $StepTask->Status,
-                    $TestFailures;
+    printf $Sendmail "%-20s %-9s %s\n", $StepTask->VM->Name, $StepTask->Status,
+                     $TestFailures;
   }
 
   # Print the job summary
@@ -274,7 +275,7 @@ EOF
     my $StepTask = $StepsTasks->GetItem($Key);
     my $TaskDir = $StepTask->GetTaskDir();
 
-    print SENDMAIL "\n=== ", $StepTask->GetTitle(), " ===\n";
+    print $Sendmail "\n=== ", $StepTask->GetTitle(), " ===\n";
 
     my $LogFiles = GetLogFileNames($TaskDir);
     my $LogName = $LogFiles->[0] || "log";
@@ -298,16 +299,16 @@ EOF
         {
           if ($PrintedDll ne $CurrentDll)
           {
-            print SENDMAIL "\n$CurrentDll:\n";
+            print $Sendmail "\n$CurrentDll:\n";
             $PrintedDll = $CurrentDll;
           }
           if ($Line =~ m/^[^:]+:([^ ]+)(?::[0-9a-f]+)? done \(258\)/)
           {
-            print SENDMAIL "$1: The test timed out\n";
+            print $Sendmail "$1: The test timed out\n";
           }
           else
           {
-            print SENDMAIL "$Line\n";
+            print $Sendmail "$Line\n";
           }
           $PrintedSomething = 1;
         }
@@ -321,12 +322,12 @@ EOF
         {
           if ($First)
           {
-            print SENDMAIL "\n";
+            print $Sendmail "\n";
             $First = !1;
           }
           $HasLogEntries = 1;
           $Line =~ s/\s*$//;
-          print SENDMAIL "$Line\n";
+          print $Sendmail "$Line\n";
           $PrintedSomething = 1;
         }
         close ERRFILE;
@@ -336,15 +337,15 @@ EOF
       {
         if (! $HasLogEntries)
         {
-          print SENDMAIL "Empty test log and no error message\n";
+          print $Sendmail "Empty test log and no error message\n";
         }
         elsif ($StepTask->Type eq "build")
         {
-          print SENDMAIL "No build failures found\n";
+          print $Sendmail "No build failures found\n";
         }
         else
         {
-          print SENDMAIL "No test failures found\n";
+          print $Sendmail "No test failures found\n";
         }
       }
       else
@@ -360,12 +361,12 @@ EOF
       {
         $HasErrEntries = 1;
         $Line =~ s/\s*$//;
-        print SENDMAIL "$Line\n";
+        print $Sendmail "$Line\n";
       }
       close ERRFILE;
       if (! $HasErrEntries)
       {
-        print SENDMAIL "No test log and no error message";
+        print $Sendmail "No test log and no error message";
       }
       else
       {
@@ -380,15 +381,15 @@ EOF
     my $StepTask = $StepsTasks->GetItem($Key);
     my $TaskDir = $StepTask->GetTaskDir();
 
-    print SENDMAIL <<"EOF";
+    print $Sendmail <<"EOF";
 --$PART_BOUNDARY
 Content-Type: text/plain; charset="UTF-8"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 EOF
-    print SENDMAIL "Content-Disposition: attachment; filename=",
-                   $StepTask->VM->Name, ".log\n\n";
-    print SENDMAIL "Not dumping logs in debug mode\n" if ($Debug);
+    print $Sendmail "Content-Disposition: attachment; filename=",
+                    $StepTask->VM->Name, ".log\n\n";
+    print $Sendmail "Not dumping logs in debug mode\n" if ($Debug);
 
     my $LogFiles = GetLogFileNames($TaskDir);
     my $LogName = $LogFiles->[0] || "log";
@@ -399,7 +400,7 @@ EOF
       while (defined($Line = <LOGFILE>))
       {
         $Line =~ s/\s*$//;
-        print SENDMAIL "$Line\n" if (!$Debug);
+        print $Sendmail "$Line\n" if (!$Debug);
         $PrintSeparator = 1;
       }
       close LOGFILE;
@@ -412,18 +413,18 @@ EOF
       {
         if ($PrintSeparator)
         {
-          print SENDMAIL "\n" if (!$Debug);
+          print $Sendmail "\n" if (!$Debug);
           $PrintSeparator = !1;
         }
         $Line =~ s/\s*$//;
-        print SENDMAIL "$Line\n" if (!$Debug);
+        print $Sendmail "$Line\n" if (!$Debug);
       }
       close ERRFILE;
     }
   }
   
-  print SENDMAIL "--$PART_BOUNDARY--\n";
-  close(SENDMAIL);
+  print $Sendmail "--$PART_BOUNDARY--\n";
+  close($Sendmail);
 
   # This is all for jobs submitted from the website
   if (!defined $Job->Patch)
@@ -506,22 +507,22 @@ EOF
   {
     if ($Debug)
     {
-      open(SENDMAIL, ">>&=", 1);
+      open($Sendmail, ">>&=", 1);
     }
     else
     {
-      open (SENDMAIL, "|/usr/sbin/sendmail -oi -t -odq");
+      open($Sendmail, "|-", "/usr/sbin/sendmail -oi -t -odq");
     }
-    print SENDMAIL "From: $RobotEMail\n";
-    print SENDMAIL "To: $To\n";
-    print SENDMAIL "Cc: $WinePatchCc\n";
-    print SENDMAIL "Subject: Re: ", $Job->Patch->Subject, "\n";
+    print $Sendmail "From: $RobotEMail\n";
+    print $Sendmail "To: $To\n";
+    print $Sendmail "Cc: $WinePatchCc\n";
+    print $Sendmail "Subject: Re: ", $Job->Patch->Subject, "\n";
     if ($Job->Patch->MessageId)
     {
-      print SENDMAIL "In-Reply-To: ", $Job->Patch->MessageId, "\n";
-      print SENDMAIL "References: ", $Job->Patch->MessageId, "\n";
+      print $Sendmail "In-Reply-To: ", $Job->Patch->MessageId, "\n";
+      print $Sendmail "References: ", $Job->Patch->MessageId, "\n";
     }
-    print SENDMAIL <<"EOF";
+    print $Sendmail <<"EOF";
 
 Hi,
 
@@ -530,12 +531,12 @@ Being a bot and all I'm not very good at pattern recognition, so I might be
 wrong, but could you please double-check?
 Full results can be found at
 EOF
-    print SENDMAIL "$WebSite/JobDetails.pl?Key=",
+    print $Sendmail "$WebSite/JobDetails.pl?Key=",
                    $Job->GetKey(), "\n\n";
-    print SENDMAIL "Your paranoid android.\n\n";
+    print $Sendmail "Your paranoid android.\n\n";
 
-    print SENDMAIL $Messages;
-    close SENDMAIL;
+    print $Sendmail $Messages;
+    close($Sendmail);
   }
   else
   {
