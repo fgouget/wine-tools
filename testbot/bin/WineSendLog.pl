@@ -216,6 +216,10 @@ sub SendLog($)
   my $StepsTasks = CreateStepsTasks(undef, $Job);
   my @SortedKeys = sort @{$StepsTasks->GetKeys()};
 
+  my $JobURL = ($UseSSL ? "https://" : "http://") .
+               "$WebHostName/JobDetails.pl?Key=". $Job->GetKey();
+
+
   #
   # Send a job summary and all the logs as attachments to the developer
   #
@@ -267,6 +271,8 @@ EOF
     printf $Sendmail "%-20s %-9s %s\n", $StepTask->VM->Name, $StepTask->Status,
                      $TestFailures;
   }
+
+  print $Sendmail "\nYou can also see the results at:\n$JobURL\n\n";
 
   # Print the job summary
   my @FailureKeys;
@@ -501,8 +507,6 @@ EOF
 
   Debug("\n-------------------- Mailing list email --------------------\n");
 
-  my $WebSite = ($UseSSL ? "https://" : "http://") . $WebHostName;
-
   if ($Messages)
   {
     if ($Debug)
@@ -529,11 +533,13 @@ Hi,
 While running your changed tests on Windows, I think I found new failures.
 Being a bot and all I'm not very good at pattern recognition, so I might be
 wrong, but could you please double-check?
-Full results can be found at
+
+Full results can be found at:
+$JobURL
+
+Your paranoid android.
+
 EOF
-    print $Sendmail "$WebSite/JobDetails.pl?Key=",
-                   $Job->GetKey(), "\n\n";
-    print $Sendmail "Your paranoid android.\n\n";
 
     print $Sendmail $Messages;
     close($Sendmail);
@@ -558,7 +564,7 @@ EOF
       # successful or not.
       DebugTee($Result, "Status: ". ($Messages ? "Failed" : "OK") ."\n");
       DebugTee($Result, "Job-ID: ". $Job->Id ."\n");
-      DebugTee($Result, "URL: $WebSite/JobDetails.pl?Key=". $Job->GetKey() ."\n");
+      DebugTee($Result, "URL: $JobURL\n");
 
       foreach my $Key (@SortedKeys)
       {
