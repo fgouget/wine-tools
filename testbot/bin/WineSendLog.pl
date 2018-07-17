@@ -557,9 +557,10 @@ EOF
   if (defined $Patch->WebPatchId and -d "$DataDir/webpatches")
   {
     my $BaseName = "$DataDir/webpatches/" . $Patch->WebPatchId;
+    Debug("\n-------------------- WebPatches report --------------------\n");
+    Debug("-- $BaseName.testbot --\n");
     if (open(my $Result, ">", "$BaseName.testbot"))
     {
-      Debug("\n-------------------- WebPatches report --------------------\n");
       # Only take into account new errors to decide whether the job was
       # successful or not.
       DebugTee($Result, "Status: ". ($Messages ? "Failed" : "OK") ."\n");
