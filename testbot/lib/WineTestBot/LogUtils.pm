@@ -361,7 +361,7 @@ sub ParseWineTestReport($$$$)
         }
         elsif ($Parser->{IsWineTest} and !$Cur->{IsBroken})
         {
-           _AddError($Parser, "$Dll:$Unit has no test summary line (early exit of the main process?)");
+          _AddError($Parser, "$Dll:$Unit has no test summary line (early exit of the main process?)");
         }
       }
       elsif ($Rc & 0xc0000000)
