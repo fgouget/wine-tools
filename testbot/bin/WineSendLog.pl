@@ -388,6 +388,7 @@ EOF
     my $TaskDir = $StepTask->GetTaskDir();
 
     print $Sendmail <<"EOF";
+
 --$PART_BOUNDARY
 Content-Type: text/plain; charset="UTF-8"
 MIME-Version: 1.0
@@ -429,7 +430,7 @@ EOF
     }
   }
   
-  print $Sendmail "--$PART_BOUNDARY--\n";
+  print $Sendmail "\n--$PART_BOUNDARY--\n";
   close($Sendmail);
 
   # This is all for jobs submitted from the website
