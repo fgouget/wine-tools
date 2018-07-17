@@ -551,21 +551,21 @@ EOF
   if (defined $Patch->WebPatchId and -d "$DataDir/webpatches")
   {
     my $BaseName = "$DataDir/webpatches/" . $Patch->WebPatchId;
-    if (open (my $result, ">", "$BaseName.testbot"))
+    if (open(my $Result, ">", "$BaseName.testbot"))
     {
       Debug("\n-------------------- WebPatches report --------------------\n");
       # Only take into account new errors to decide whether the job was
       # successful or not.
-      DebugTee($result, "Status: ". ($Messages ? "Failed" : "OK") ."\n");
-      DebugTee($result, "Job-ID: ". $Job->Id ."\n");
-      DebugTee($result, "URL: $WebSite/JobDetails.pl?Key=". $Job->GetKey() ."\n");
+      DebugTee($Result, "Status: ". ($Messages ? "Failed" : "OK") ."\n");
+      DebugTee($Result, "Job-ID: ". $Job->Id ."\n");
+      DebugTee($Result, "URL: $WebSite/JobDetails.pl?Key=". $Job->GetKey() ."\n");
 
       foreach my $Key (@SortedKeys)
       {
         my $StepTask = $StepsTasks->GetItem($Key);
         my $TaskDir = $StepTask->GetTaskDir();
 
-        print $result "\n=== ", $StepTask->GetTitle(), " ===\n";
+        print $Result "\n=== ", $StepTask->GetTitle(), " ===\n";
 
         my $LogFiles = GetLogFileNames($TaskDir);
         my $LogName = $LogFiles->[0] || "log";
@@ -576,7 +576,7 @@ EOF
           while (defined($Line = <$logfile>))
           {
             $Line =~ s/\s*$//;
-            print $result "$Line\n";
+            print $Result "$Line\n";
             $PrintSeparator = 1;
           }
           close($logfile);
@@ -589,17 +589,17 @@ EOF
           {
             if ($PrintSeparator)
             {
-              print $result "\n";
+              print $Result "\n";
               $PrintSeparator = !1;
             }
             $Line =~ s/\s*$//;
-            print $result "$Line\n";
+            print $Result "$Line\n";
           }
           close($errfile);
         }
       }
-      print $result "--- END FULL_LOGS ---\n";
-      close($result);
+      print $Result "--- END FULL_LOGS ---\n";
+      close($Result);
     }
     else
     {
