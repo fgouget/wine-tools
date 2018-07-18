@@ -475,8 +475,6 @@ EOF
           # Filter out failures that happened in the full test suite:
           # the test suite is run against code which is already in Wine
           # so any failure it reported is not caused by this patch.
-          my $LogFiles = GetLogFileNames($TaskDir);
-          my $LogName = $LogFiles->[0] || "log";
           $MessagesFromLog = CompareLogs("$LatestName.log", "$TaskDir/$LogName",
                                          $BaseName, $StepTask->CmdLineArg);
         }
