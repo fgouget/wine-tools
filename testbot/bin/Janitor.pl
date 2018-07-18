@@ -310,9 +310,6 @@ if (opendir(my $dh, "$DataDir/latest"))
   foreach my $Entry (@Entries)
   {
     next if ($Entry eq "." or $Entry eq "..");
-    $Entry =~ m%^([^/]+)$%;
-    my $FileName = "$DataDir/latest/$1";
-    my $Age = int((-M $FileName) + 0.5);
 
     if ($Entry =~ /^(.*)_[a-z0-9]+\.(?:err|log)$/)
     {
@@ -329,6 +326,9 @@ if (opendir(my $dh, "$DataDir/latest"))
     Trace "Found a suspicious latest file: $Entry\n";
     if ($JobPurgeDays != 0)
     {
+      $Entry =~ m%^([^/]+)$%; # untaint
+      my $FileName = "$DataDir/latest/$1";
+      my $Age = int((-M $FileName) + 0.5);
       if ($Age >= $JobPurgeDays + 7)
       {
         DeletePath($FileName);
