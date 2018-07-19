@@ -300,7 +300,9 @@ EOF
         {
           $CurrentDll = $1;
         }
-        my $Category = GetLogLineCategory($Line);
+        my $Category = $LogName =~ /\.report$/ ?
+                       GetReportLineCategory($Line) :
+                       GetLogLineCategory($Line);
         if ($Category eq "error")
         {
           if ($PrintedDll ne $CurrentDll)
@@ -488,7 +490,9 @@ EOF
     {
       foreach my $Line (<$LogFile>)
       {
-        my $Category = GetLogLineCategory($Line);
+        my $Category = $LogName =~ /\.report$/ ?
+                       GetReportLineCategory($Line) :
+                       GetLogLineCategory($Line);
         $MessagesFromLog .= $Line if ($Category eq "error");
       }
       close($LogFile);

@@ -27,7 +27,8 @@ WineTestBot::LogUtils - Provides functions to parse task logs
 
 
 use Exporter 'import';
-our @EXPORT = qw(GetLogFileNames GetLogLabel GetLogLineCategory
+our @EXPORT = qw(GetLogFileNames GetLogLabel
+                 GetLogLineCategory GetReportLineCategory
                  ParseTaskLog ParseWineTestReport);
 
 use File::Basename;
@@ -77,6 +78,59 @@ sub ParseTaskLog($$)
     return $Result || "missing";
   }
   return "nolog:Unable to open the task log for reading: $!";
+}
+
+
+=pod
+=over 12
+
+=item C<GetLogLineCategory()>
+
+Identifies the category of the given log line: an error message, a Wine
+diagnostic line, a TestBot error, etc.
+
+The category can then be used to decide whether to hide the line or, on
+the contrary, highlight it.
+
+=back
+=cut
+
+sub GetLogLineCategory($)
+{
+  my ($Line) = @_;
+
+  if (# Git errors
+      $Line =~ /^CONFLICT / or
+      $Line =~ /^error: patch failed:/ or
+      $Line =~ /^error: corrupt patch / or
+      # Build errors
+      $Line =~ /: error: / or
+      $Line =~ /^make: [*]{3} No rule to make target / or
+      $Line =~ /^Makefile:[0-9]+: recipe for target .* failed$/ or
+      $Line =~ /^(?:Build|Reconfig|Task): (?!ok)/ or
+      # Typical perl errors
+      $Line =~ /^Use of uninitialized value/)
+  {
+    return "error";
+  }
+  if ($Line =~ /:winediag:/)
+  {
+    return "diag";
+  }
+  if ($Line =~ /^BotError:/ or
+      $Line =~ /^X Error of failed request: / or
+      $Line =~ / opcode of failed request: /)
+  {
+    return "boterror";
+  }
+  if (# Build messages
+      $Line =~ /^\+ \S/ or
+      $Line =~ /^(?:Build|Reconfig|Task): ok/)
+  {
+    return "info";
+  }
+
+  return "none";
 }
 
 
@@ -383,23 +437,21 @@ sub ParseWineTestReport($$$$)
 }
 
 
-#
-# Log querying and formatting
-#
-
 =pod
 =over 12
 
-=item C<GetLogLineCategory()>
+=item C<GetReportLineCategory()>
 
-Identifies the category of the given log line: an error message, a todo, just
-an informational message or none of these. The category can then be used to
-decide whether to hide the line or, on the contrary, highlight it.
+Identifies the category of the given test report line: an error message,
+a todo, just an informational message or none of these.
+
+The category can then be used to decide whether to hide the line or, on
+the contrary, highlight it.
 
 =back
 =cut
 
-sub GetLogLineCategory($)
+sub GetReportLineCategory($)
 {
   my ($Line) = @_;
 
@@ -416,41 +468,22 @@ sub GetLogLineCategory($)
       $Line =~ /Fatal: test .* does not exist/ or
       $Line =~ / done \(258\)/ or
       $Line =~ /: unhandled exception [0-9a-fA-F]{8} at / or
-      $Line =~ /^Unhandled exception: / or
-      # Git errors
-      $Line =~ /^CONFLICT / or
-      $Line =~ /^error: patch failed:/ or
-      $Line =~ /^error: corrupt patch / or
-      # Build errors
-      $Line =~ /: error: / or
-      $Line =~ /^make: [*]{3} No rule to make target / or
-      $Line =~ /^Makefile:[0-9]+: recipe for target .* failed$/ or
-      $Line =~ /^(?:Build|Reconfig|Task): (?!ok)/ or
-      # Typical perl errors
-      $Line =~ /^Use of uninitialized value/)
+      $Line =~ /^Unhandled exception: /)
   {
     return "error";
   }
-  if ($Line =~ /:winediag:/)
-  {
-    return "diag";
-  }
-  if ($Line =~ /^BotError:/ or
-      $Line =~ /^X Error of failed request: / or
-      $Line =~ / opcode of failed request: /)
-  {
-    return "boterror";
-  }
-  if ($Line =~ /^\+ \S/ or
-      $Line =~ /^[_.a-z0-9-]+:[_a-z0-9]* start / or
-      # Build messages
-      $Line =~ /^(?:Build|Reconfig|Task): ok/)
+  if ($Line =~ /^[_.a-z0-9-]+:[_a-z0-9]* start /)
   {
     return "info";
   }
 
   return "none";
 }
+
+
+#
+# Log querying and formatting
+#
 
 =pod
 =over 12

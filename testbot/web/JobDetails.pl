@@ -245,11 +245,13 @@ highlighted to make the log more readable.
 =back
 =cut
 
-sub GetHtmlLine($$$)
+sub GetHtmlLine($$$$)
 {
-  my ($self, $FullLog, $Line) = @_;
+  my ($self, $LogName, $FullLog, $Line) = @_;
 
-  my $Category = GetLogLineCategory($Line);
+  my $Category = $LogName =~ /\.report$/ ?
+                 GetReportLineCategory($Line) :
+                 GetLogLineCategory($Line);
   return undef if ($Category !~ /error/ and !$FullLog);
 
   my $Html = $self->escapeHTML($Line);
@@ -403,7 +405,7 @@ sub GenerateBody($)
         $HasLogEntries = 1;
         chomp $Line;
         $CurrentDll = $1 if ($Line =~ m/^([_.a-z0-9-]+):[_a-z0-9]* start /);
-        my $Html = $self->GetHtmlLine($MoreInfo->{Full}, $Line);
+        my $Html = $self->GetHtmlLine($LogName, $MoreInfo->{Full}, $Line);
         next if (!defined $Html);
 
         if ($PrintedDll ne $CurrentDll && !$MoreInfo->{Full})
@@ -476,7 +478,7 @@ sub GenerateBody($)
           print "<pre><code>";
           $ErrFirst = 0;
         }
-        print $self->GetHtmlLine(1, $Line), "\n";
+        print $self->GetHtmlLine($ErrName, 1, $Line), "\n";
       }
       close($ErrFile);
 
