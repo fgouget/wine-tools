@@ -258,7 +258,7 @@ MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Content-Disposition: inline
 
-VM                   Status   Number of test failures
+VM                   Status   Failures Command
 EOF
   foreach my $Key (@SortedKeys)
   {
@@ -268,9 +268,12 @@ EOF
     $TestFailures = "" if (!defined $TestFailures);
     my $Status = $StepTask->Status;
     $Status = $TestFailures ? "failed" : "success" if ($Status eq "completed");
+    my $Cmd = "";
+    $Cmd = $StepTask->FileName ." " if ($StepTask->FileType =~ /^exe/);
+    $Cmd .= $StepTask->CmdLineArg if (defined $StepTask->CmdLineArg);
 
-    printf $Sendmail "%-20s %-8s %s\n", $StepTask->VM->Name, $Status,
-                     $TestFailures;
+    printf $Sendmail "%-20s %-8s %-8s %s\n", $StepTask->VM->Name, $Status,
+                     $TestFailures, $Cmd;
   }
 
   print $Sendmail "\nYou can also see the results at:\n$JobURL\n\n";
