@@ -214,7 +214,7 @@ sub SendLog($)
   }
 
   my $StepsTasks = CreateStepsTasks(undef, $Job);
-  my @SortedKeys = sort @{$StepsTasks->GetKeys()};
+  my @SortedKeys = sort { $a <=> $b } @{$StepsTasks->GetKeys()};
 
   my $JobURL = ($UseSSL ? "https://" : "http://") .
                "$WebHostName/JobDetails.pl?Key=". $Job->GetKey();
