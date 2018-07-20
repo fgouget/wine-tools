@@ -258,17 +258,18 @@ MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Content-Disposition: inline
 
-VM                   Status    Number of test failures
+VM                   Status   Number of test failures
 EOF
   foreach my $Key (@SortedKeys)
   {
     my $StepTask = $StepsTasks->GetItem($Key);
+
     my $TestFailures = $StepTask->TestFailures;
-    if (! defined($TestFailures))
-    {
-      $TestFailures = "";
-    }
-    printf $Sendmail "%-20s %-9s %s\n", $StepTask->VM->Name, $StepTask->Status,
+    $TestFailures = "" if (!defined $TestFailures);
+    my $Status = $StepTask->Status;
+    $Status = $TestFailures ? "failed" : "success" if ($Status eq "completed");
+
+    printf $Sendmail "%-20s %-8s %s\n", $StepTask->VM->Name, $Status,
                      $TestFailures;
   }
 
